@@ -1,0 +1,11 @@
+UPLOAD_DIR = "uploads"
+SUPPORTED_FILE_TYPES = (".pdf", ".docx")
+
+
+DEFAULT_CHUNK_SIZE = 500
+
+
+MIN_TEXT_LENGTH = 10 
+
+
+MAX_FILE_SIZE_MB = 10  
