@@ -2,22 +2,20 @@ import re
 
 def clean_text(text: str) -> str:
     try:
-        text = re.sub(r"\s+", " ", text)
         text = re.sub(r"[^\w\s.,;:()\-\n]", "", text)
-
+        text = re.sub(r"[ \t]+", " ", text)
         return text.strip()
-
     except Exception as e:
         print(f"Error cleaning text: {e}")
         return ""
-    
+
 def normalize_text(text: str) -> str:
     try:
         return text.lower()
     except Exception as e:
         print(f"Error normalizing text: {e}")
         return ""
-    
+
 def remove_empty_lines(text: str) -> str:
     try:
         lines = text.splitlines()
@@ -26,7 +24,7 @@ def remove_empty_lines(text: str) -> str:
     except Exception as e:
         print(f"Error removing empty lines: {e}")
         return ""
-    
+
 def preprocess_text(text: str) -> str:
     try:
         text = remove_empty_lines(text)

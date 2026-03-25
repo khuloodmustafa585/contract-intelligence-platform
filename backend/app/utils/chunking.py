@@ -1,7 +1,7 @@
 import re
-from backend.app.core.constants import DEFAULT_CHUNK_SIZE
+from app.core.constants import DEFAULT_CHUNK_SIZE
 
-def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list:
+def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
     words = text.split()
     chunks = []
 
@@ -11,34 +11,34 @@ def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list:
 
     return chunks
 
-def split_by_clauses(text: str) -> list:
+def split_by_clauses(text: str) -> list[str]:
     try:
         clauses = re.split(r"(Article \d+|Section \d+|Clause \d+)", text)
         return [c.strip() for c in clauses if c.strip()]
-    
     except Exception as e:
         print(f"Error splitting clauses: {e}")
         return []
 
-def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list:
+def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
     clauses = split_by_clauses(text)
-    chunks = []
-    current_chunk = ""
 
     if len(clauses) <= 1:
         return chunk_text(text, chunk_size)
-    for clause in clauses:
-        if len(current_chunk) + len(clause) + 1 <= chunk_size:
-            if current_chunk:
-                current_chunk += " " + clause
-            else:
-                current_chunk = clause
-        else:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-            current_chunk = clause
 
-    if current_chunk:
-        chunks.append(current_chunk.strip())
+    chunks = []
+    current_words = []
+
+    for clause in clauses:
+        clause_words = clause.split()
+
+        if len(current_words) + len(clause_words) <= chunk_size:
+            current_words.extend(clause_words)
+        else:
+            if current_words:
+                chunks.append(" ".join(current_words))
+            current_words = clause_words
+
+    if current_words:
+        chunks.append(" ".join(current_words))
 
     return chunks

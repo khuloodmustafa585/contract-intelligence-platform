@@ -1,6 +1,6 @@
 from PyPDF2 import PdfReader
 from fastapi import UploadFile
-from backend.app.core.constants import UPLOAD_DIR, SUPPORTED_FILE_TYPES
+from app.core.constants import UPLOAD_DIR, SUPPORTED_FILE_TYPES
 import os
 import docx
 
