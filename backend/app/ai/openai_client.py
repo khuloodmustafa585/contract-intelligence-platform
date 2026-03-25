@@ -1,11 +1,9 @@
 from openai import OpenAI
-import os
+from app.core.config import settings
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def ask_ai(prompt: str):
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+def get_openai_client() -> OpenAI:
+    if not settings.OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY is not set.")
+
+    return OpenAI(api_key=settings.OPENAI_API_KEY)
