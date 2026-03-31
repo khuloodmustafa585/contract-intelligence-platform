@@ -10,7 +10,7 @@ class Contract(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     status = Column(String(50), nullable=False, default="pending")
-    raw_text = Column(Text, nullable=True)
+    extracted_text = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
