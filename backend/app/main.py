@@ -8,8 +8,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Contract Intelligence")
 
-@app.get("/")
-def read_root():
-    return {"message": "API is running"}
-
 app.include_router(api_router)
+
+@app.get("/")
+def root():
+    return {"message": "API is running"}
