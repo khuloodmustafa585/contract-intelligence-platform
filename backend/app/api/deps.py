@@ -1,3 +1,2 @@
-from app.core.database import get_db
-
-__all__ = ["get_db"]
+def get_current_user():
+    return {"email": "test@test.com"}

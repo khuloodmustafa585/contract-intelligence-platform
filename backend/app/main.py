@@ -7,6 +7,7 @@ from app.models.contract import Contract
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Contract Intelligence")
+print("MAIN LOADED")
 
 @app.get("/")
 def read_root():
