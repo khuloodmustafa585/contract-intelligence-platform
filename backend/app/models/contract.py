@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Date
 from sqlalchemy.orm import relationship
-from app.core.database import Base
 from datetime import datetime
+
+from app.core.database import Base
 
 
 class Contract(Base):
@@ -12,10 +13,13 @@ class Contract(Base):
     status = Column(String(50), nullable=False, default="pending")
     extracted_text = Column(Text, nullable=True)
 
+    effective_date = Column(Date, nullable=True)
+    expiration_date = Column(Date, nullable=True)
+    notice_period_days = Column(Integer, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     owner = relationship("User", back_populates="contracts")
-    
