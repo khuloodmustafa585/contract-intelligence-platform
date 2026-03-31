@@ -1,6 +1,7 @@
 import re
 from app.core.constants import DEFAULT_CHUNK_SIZE
 
+
 def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
     words = text.split()
     chunks = []
@@ -11,13 +12,36 @@ def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
 
     return chunks
 
+
 def split_by_clauses(text: str) -> list[str]:
     try:
-        clauses = re.split(r"(Article \d+|Section \d+|Clause \d+)", text)
-        return [c.strip() for c in clauses if c.strip()]
+        pattern = r"(Article\s+\d+|Section\s+\d+|Clause\s+\d+)"
+        parts = re.split(pattern, text)
+
+        clauses = []
+        current = ""
+
+        for part in parts:
+            part = part.strip()
+            if not part:
+                continue
+
+            if re.match(pattern, part):
+                if current:
+                    clauses.append(current.strip())
+                current = part
+            else:
+                current += " " + part
+
+        if current:
+            clauses.append(current.strip())
+
+        return clauses
+
     except Exception as e:
         print(f"Error splitting clauses: {e}")
         return []
+
 
 def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
     clauses = split_by_clauses(text)

@@ -1,8 +1,23 @@
+from fileinput import filename
+
 from PyPDF2 import PdfReader
 from fastapi import UploadFile
-from app.core.constants import UPLOAD_DIR, SUPPORTED_FILE_TYPES
+from backend.app.core.constants import UPLOAD_DIR, SUPPORTED_FILE_TYPES
 import os
 import docx
+import uuid
+
+def generate_unique_filename(filename: str) -> str:
+    ext = filename.split(".")[-1] if "." in filename else ""
+    return f"{uuid.uuid4()}.{ext}"
+
+
+def get_file_type(filename: str) -> str:
+    return filename.split(".")[-1].lower()
+
+
+def is_allowed_file(filename: str) -> bool:
+    return get_file_type(filename) in SUPPORTED_FILE_TYPES
 
 def read_pdf(file_path: str) -> str:
     try:
@@ -27,9 +42,10 @@ def read_docx(file_path: str) -> str:
     
 def save_file(file: UploadFile, filename:str) -> str:
     try:
-        if not filename.lower().endswith(SUPPORTED_FILE_TYPES):
+        if not is_allowed_file(filename):
             return ""
         os.makedirs(UPLOAD_DIR, exist_ok=True)
+        filename = generate_unique_filename(filename)
         file.file.seek(0)
         file_path = os.path.join(UPLOAD_DIR, filename)
         with open(file_path, "wb") as f:
