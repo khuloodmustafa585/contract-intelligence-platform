@@ -1,55 +1,39 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.schemas.user import UserCreate, UserResponse
+from app.schemas.auth import (
+    LoginRequest,
+    Token,
+    VerifyEmailRequest,
+    ResendVerificationRequest,
+)
 from app.services.auth_service import (
     register_user,
     login_user,
-    verify_email_token,
-    resend_verification_email
+    verify_user_email,
+    resend_verification_email,
 )
-#from app.utils.email import send_verification_email
-from app.services.email_service import send_verification_email
-from app.schemas.user import UserCreate
 
 router = APIRouter()
 
-# ✅ REGISTER
-@router.post("/register")
-def register(data: UserCreate):
-    try:
-        print("STEP 1: calling register_user")
 
-        user = register_user(data)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(data: UserCreate, db: Session = Depends(get_db)):
+    return register_user(db, data)
 
-        print("STEP 2: user created", user)
 
-        send_verification_email(user.email, user.verification_token)
+@router.post("/login", response_model=Token)
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    return login_user(db, data.email, data.password)
 
-        print("STEP 3: email sent")
 
-        return {"msg": "Check your email to verify your account"}
+@router.post("/verify-email", response_model=UserResponse)
+def verify_email(data: VerifyEmailRequest, db: Session = Depends(get_db)):
+    return verify_user_email(db, data.email, data.code)
 
-    except Exception as e:
-        print("ERROR:", e)
-        return {"error": str(e)}
 
-# ✅ LOGIN
-@router.post("/login")
-def login(data: UserCreate):
-    user = login_user(data)
-
-    if not user.is_verified:
-        raise HTTPException(status_code=403, detail="Email not verified")
-
-    return {"msg": "login success"}
-
-# ✅ VERIFY EMAIL
-@router.get("/verify-email")
-def verify_email(token: str):
-    return verify_email_token(token)
-
-# ✅ RESEND EMAIL
 @router.post("/resend-verification")
-def resend_verification(email: str):
-    return resend_verification_email(email)
-
-
-print("AUTH LOADED")
+def resend_verification(data: ResendVerificationRequest, db: Session = Depends(get_db)):
+    return resend_verification_email(db, data.email)

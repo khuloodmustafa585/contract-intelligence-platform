@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.services.contract_service import (
+from app.services.contract_services import (
     create_contract,
     get_contracts,
     get_contract_by_id,
