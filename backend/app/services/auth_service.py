@@ -13,8 +13,16 @@ def generate_verification_code():
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email.lower()).first()
+#----------------------------------------------------------------------
+def verify_email_token(token: str):
+    # مؤقت (mock logic)
+    print(f"Verifying token: {token}")
 
-
+    return {"msg": "Email verified successfully"}
+#----------------------------------------------------------------------
+def resend_verification_email(email: str):
+    return {"msg": "Verification email resent"}
+#----------------------------------------------------------------------
 def register_user(db: Session, user_data: UserCreate) -> User:
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
