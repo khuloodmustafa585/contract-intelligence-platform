@@ -115,6 +115,9 @@ def resend_verification_email(db: Session, email: str) -> dict:
     db.commit()
     db.refresh(user)
 
-    send_verification_email(user.email, code)
+    try:
+        send_verification_email(user.email, code)
+    except Exception as e:
+        print(f"Email sending failed: {e}")
 
     return {"msg": "Verification email resent successfully"}

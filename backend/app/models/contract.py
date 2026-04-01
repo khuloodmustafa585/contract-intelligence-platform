@@ -10,7 +10,7 @@ class Contract(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    status = Column(String(50), nullable=False, default="pending")
+    status = Column(String(50), nullable=False, default="uploaded")   
     extracted_text = Column(Text, nullable=True)
 
     effective_date = Column(Date, nullable=True)

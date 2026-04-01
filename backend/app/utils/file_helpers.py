@@ -25,10 +25,14 @@ def read_docx(file_path: str) -> str:
         print(f"Error reading DOCX: {e}")
         return ""
     
-def save_file(file: UploadFile, filename: str) -> str:
+def save_file(file: UploadFile) -> str:
     try:
+        filename = file.filename or ""
         if not filename.lower().endswith(SUPPORTED_FILE_TYPES):
-            return ""
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported file type",
+            )
 
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -38,15 +42,25 @@ def save_file(file: UploadFile, filename: str) -> str:
 
         max_size_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
         if file_size > max_size_bytes:
-            return ""
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File is too large",
+            )
 
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        ext = os.path.splitext(filename)[1]
+        unique_name = f"{uuid.uuid4()}{ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_name)
+
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
         return file_path
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error saving file: {e}")
-        return ""
-    
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save file",
+        )
     
