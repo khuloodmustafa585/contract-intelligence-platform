@@ -10,7 +10,7 @@ class ContractCreate(ContractBase):
     pass
 
 class ContractResponse(ContractBase):
-    contract_id: int
+    id: int
     owner_id: int
     extracted_text: Optional[str] = None
     created_at: Optional[datetime]
