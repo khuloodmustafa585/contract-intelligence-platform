@@ -7,8 +7,7 @@ class ContractBase(BaseModel):
 
 
 class ContractCreate(BaseModel):
-    title: str
-
+    pass
 
 class ContractResponse(ContractBase):
     id: int
@@ -19,6 +18,14 @@ class ContractResponse(ContractBase):
     expiration_date: date | None = None
     notice_period_days: int | None = None
     created_at: datetime | None = None
+
+    ile_name: str | None = None
+    file_path: str | None = None
+    file_type: str | None = None
+
+    ocr_used: bool
+    parse_method: str | None = None
+
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

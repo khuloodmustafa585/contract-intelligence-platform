@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.auth import (
-    LoginRequest,
     Token,
     VerifyEmailRequest,
     ResendVerificationRequest,
@@ -25,8 +25,11 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-def login(data: LoginRequest, db: Session = Depends(get_db)):
-    return login_user(db, data.email, data.password)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    return login_user(db, form_data.username, form_data.password)
 
 
 @router.post("/verify-email", response_model=UserResponse)

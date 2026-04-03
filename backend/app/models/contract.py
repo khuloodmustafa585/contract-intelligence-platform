@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Date
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Date, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -10,7 +10,7 @@ class Contract(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    status = Column(String(50), nullable=False, default="uploaded")   
+    status = Column (String(50), nullable=False, default="uploaded", index=True)   
     extracted_text = Column(Text, nullable=True)
 
     effective_date = Column(Date, nullable=True)
@@ -22,4 +22,10 @@ class Contract(Base):
 
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
+    file_name = Column(String(255), nullable = True)
+    file_path = Column(String(500), nullable=True, unique=True)
+    file_type = Column(String(50), nullable=True)
+
+    ocr_used = Column(Boolean, nullable=False, default=False)
+    parse_method= Column(String(20), nullable=True)
     owner = relationship("User", back_populates="contracts")
