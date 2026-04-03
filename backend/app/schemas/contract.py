@@ -1,20 +1,24 @@
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime, date
+
 
 class ContractBase(BaseModel):
     title: str
-    status: Optional[str] = "uploaded"
 
-class ContractCreate(ContractBase):
-    pass
+
+class ContractCreate(BaseModel):
+    title: str
+
 
 class ContractResponse(ContractBase):
     id: int
     owner_id: int
-    extracted_text: Optional[str] = None
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    status: str
+    extracted_text: str | None = None
+    effective_date: date | None = None
+    expiration_date: date | None = None
+    notice_period_days: int | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

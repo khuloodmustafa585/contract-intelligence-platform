@@ -7,7 +7,7 @@ from app.schemas.contract import ContractCreate
 def create_contract(db: Session, contract_data: ContractCreate, user_id: int) -> Contract:
     new_contract = Contract(
         title=contract_data.title,
-        status=contract_data.status,
+        status="uploaded",
         owner_id=user_id,
     )
 
