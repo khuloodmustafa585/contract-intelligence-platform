@@ -36,7 +36,7 @@ def register_user(db: Session, user_data: UserCreate) -> User:
         hashed_password=hashed_password,
         verification_code=code,
         code_expires_at=datetime.utcnow() + timedelta(minutes=10),
-        is_verified=True,
+        is_verified=False,
     )
 
     db.add(new_user)
