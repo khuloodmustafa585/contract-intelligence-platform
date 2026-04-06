@@ -14,13 +14,28 @@ def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
 
     return chunks
 
-def split_by_clauses(text: str) -> list[str]:
+def split_by_clauses(text: str) -> list[dict]:
     if not text:
         return []
 
-    pattern = r"(Article\s+\d+|Section\s+\d+|Clause\s+\d+|\d+\.\d+|\d+\.)"
-    clauses = re.split(pattern, text)
-    return [c.strip() for c in clauses if c.strip()]
+    pattern = r"(Article\s+\d+|Section\s+\d+|Clause\s+\d+|\d+\.\d+|\d+\.)\s*"
+
+    matches = list(re.finditer(pattern, text))
+    clauses = []
+
+    for i, match in enumerate(matches):
+        start = match.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+
+        clause_text = text[start:end].strip()
+        clause_title = match.group().strip()
+
+        clauses.append({
+            "title": clause_title,
+            "text": clause_text
+        })
+
+    return clauses
 
 def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
     if not text:
@@ -32,19 +47,23 @@ def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
         return chunk_text(text, chunk_size)
 
     chunks = []
-    current_words = []
+    current_chunk = ""
+    current_size = 0
 
     for clause in clauses:
-        clause_words = clause.split()
+        clause_text = clause["text"]
+        clause_length = len(clause_text.split())
 
-        if len(current_words) + len(clause_words) <= chunk_size:
-            current_words.extend(clause_words)
+        if current_size + clause_length <= chunk_size:
+            current_chunk += " " + clause_text
+            current_size += clause_length
         else:
-            if current_words:
-                chunks.append(" ".join(current_words))
-            current_words = clause_words
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = clause_text
+            current_size = clause_length
 
-    if current_words:
-        chunks.append(" ".join(current_words))
+    if current_chunk:
+        chunks.append(current_chunk.strip())
 
     return chunks

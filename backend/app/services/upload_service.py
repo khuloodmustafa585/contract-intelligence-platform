@@ -3,6 +3,10 @@ import uuid
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from app.models.contract import Contract
+from app.services.parser_service import extract_text
+from app.utils.text_cleaner import preprocess_text
+from app.utils.chunking import split_by_clauses
+from app.services.clause_service import save_clauses
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "jpg", "jpeg", "png"}
 
@@ -39,7 +43,7 @@ async def handle_upload(file: UploadFile, db: Session, user_id: int):
     file_ext = validate_file(file)
 
     contents = await validate_size(file)
-
+    await file.seek(0)
     unique_filename = generate_unique_filename(file_ext)
 
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -47,15 +51,34 @@ async def handle_upload(file: UploadFile, db: Session, user_id: int):
 
     save_file(file_path, contents)
 
+    parse_method = "ocr" if file_ext in ["jpg", "jpeg", "png"] else "direct"
+
     contract = Contract(
-        title=file.filename,
+        title=os.path.splitext(file.filename)[0],
+        file_name=unique_filename,
+        file_path=file_path,
+        file_type=file_ext,
         status="uploaded",
-        owner_id=user_id
+        owner_id=user_id,
+        parse_method=parse_method
     )
 
     db.add(contract)
     db.commit()
     db.refresh(contract)
+
+    extracted_text = extract_text(file_path, file_ext)
+    cleaned_text = preprocess_text(extracted_text)
+    clauses = split_by_clauses(cleaned_text)
+
+    save_clauses(db, contract.id, clauses)
+    
+    contract.extracted_text = extracted_text
+    contract.cleaned_text = cleaned_text
+    contract.status = "parsed"
+    contract.ocr_used = (parse_method == "ocr") 
+
+    db.commit()
 
     return {
         "id": contract.id,

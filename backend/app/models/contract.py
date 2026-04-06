@@ -12,6 +12,7 @@ class Contract(Base):
     title = Column(String(255), nullable=False)
     status = Column (String(50), nullable=False, default="uploaded", index=True)   
     extracted_text = Column(Text, nullable=True)
+    cleaned_text = Column(Text, nullable=True)
 
     effective_date = Column(Date, nullable=True)
     expiration_date = Column(Date, nullable=True)

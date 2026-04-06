@@ -12,3 +12,6 @@ python-multipart
 openai
 PyPDF2
 python-docx
+PyMuPDF
+pytesseract
+Pillow
