@@ -3,6 +3,10 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 
 from app.core.database import Base
+from app.core.constants import (
+    CONTRACT_STATUS_UPLOADED,
+    EMBEDDING_STATUS_PENDING,
+)
 
 
 class Contract(Base):
@@ -10,8 +14,17 @@ class Contract(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    status = Column (String(50), nullable=False, default="uploaded", index=True)   
+    status = Column(
+        String(50),
+        nullable=False,
+        default=CONTRACT_STATUS_UPLOADED,
+        index=True,
+    )
+
     extracted_text = Column(Text, nullable=True)
+    cleaned_text = Column(Text, nullable=True)
+
+    processing_error = Column(Text, nullable=True)
 
     effective_date = Column(Date, nullable=True)
     expiration_date = Column(Date, nullable=True)
@@ -25,6 +38,15 @@ class Contract(Base):
     file_name = Column(String(255), nullable = True)
     file_path = Column(String(500), nullable=True, unique=True)
     file_type = Column(String(50), nullable=True)
+
+    is_indexed = Column(Boolean, nullable=False, default=False)
+    embedding_status = Column(
+        String(50),
+        nullable=False,
+        default=EMBEDDING_STATUS_PENDING,
+    )    
+    
+    extracted_metadata_json = Column(Text, nullable=True)
 
     ocr_used = Column(Boolean, nullable=False, default=False)
     parse_method= Column(String(20), nullable=True)
