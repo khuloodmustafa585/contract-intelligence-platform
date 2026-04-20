@@ -26,6 +26,7 @@ def get_contract_by_id(db: Session, contract_id: int, user_id: int) -> Optional[
         .filter(Contract.id == contract_id, Contract.owner_id == user_id)
         .first()
     )
+
 def get_contract_status_counts(db: Session):
     results = (
         db.query(Contract.status, func.count(Contract.id))
@@ -38,6 +39,6 @@ def get_contract_status_counts(db: Session):
     for status, count in results:
         counts[status] = count
 
-    counts["total"] = sum(counts.values())
+    counts["total_contracts"] = sum(counts.values())
 
     return counts
