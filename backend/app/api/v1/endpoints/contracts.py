@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
-
 from app.core.database import get_db
 from app.services.contract_service import (
     create_contract,
@@ -11,6 +10,8 @@ from app.services.contract_service import (
 from app.schemas.contract import ContractCreate, ContractResponse
 from app.models.user import User
 from app.api.deps import get_current_user
+from app.services.retrieval_service import search_in_contract
+from app.models.contract import Contract
 
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
@@ -45,3 +46,27 @@ def read_contract(
         )
 
     return contract
+
+@router.get("/{contract_id}/search")
+def search_contract(
+    contract_id: int,
+    query: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check contract belongs to user
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.owner_id == current_user.id
+    ).first()
+
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    results = search_in_contract(contract_id, query, db)
+
+    return {
+        "contract_id": contract_id,
+        "query": query,
+        "results": results
+    }

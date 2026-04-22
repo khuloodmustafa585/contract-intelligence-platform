@@ -4,6 +4,7 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from app.models.contract import Contract
 from app.services.parser_service import extract_text
+from app.core.database import SessionLocal
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "jpg", "jpeg", "png"}
 
@@ -35,7 +36,7 @@ def save_file(file_path: str, contents: bytes):
     with open(file_path, "wb") as f:
         f.write(contents)
 
-async def handle_upload(file: UploadFile, db: Session, user_id: int):
+async def handle_upload(file: UploadFile, db: Session, user_id: int, background_tasks):
     file_ext = validate_file(file)
     contents = await validate_size(file)
 
@@ -57,35 +58,40 @@ async def handle_upload(file: UploadFile, db: Session, user_id: int):
     db.commit()
     db.refresh(contract)
 
+    background_tasks.add_task(process_contract, contract.id, file_path)
+    return {
+        "id": contract.id,
+        "title": contract.title,
+        "status": contract.status,
+        "message": "File uploaded. Processing in background"
+    }
+
+
+def process_contract(contract_id: int, file_path: str):
+    db = SessionLocal()
+
     try:
-        result = extract_text(file_path, file_ext)
+        contract = db.query(Contract).filter(Contract.id == contract_id).first()
+
+        if not contract:
+            return
+
+        result = extract_text(file_path, contract.file_type)
 
         raw_text = result.get("raw_text")
         cleaned_text = result.get("cleaned_text")
 
         contract.raw_text = raw_text
         contract.cleaned_text = cleaned_text
-
-        contract.ocr_used = file_ext in ["jpg", "jpeg", "png"] or not raw_text
-
+        contract.ocr_used = contract.file_type in ["jpg", "jpeg", "png"] or not raw_text
         contract.status = "parsed"
 
         db.commit()
-        db.refresh(contract)
 
     except Exception as e:
         contract.status = "failed"
         contract.processing_error = str(e)
         db.commit()
 
-        raise HTTPException(
-            status_code=500,
-            detail=f"Processing failed: {str(e)}"
-        )
-
-    return {
-        "id": contract.id,
-        "title": contract.title,
-        "status": contract.status,
-        "message": "File uploaded and processed successfully"
-    }
+    finally:
+        db.close()
