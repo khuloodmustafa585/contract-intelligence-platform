@@ -50,4 +50,6 @@ class Contract(Base):
 
     ocr_used = Column(Boolean, nullable=False, default=False)
     parse_method= Column(String(20), nullable=True)
+
     owner = relationship("User", back_populates="contracts")
+    clauses = relationship("Clause", back_populates="contract", cascade="all, delete-orphan")
