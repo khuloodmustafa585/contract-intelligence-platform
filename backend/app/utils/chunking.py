@@ -48,3 +48,33 @@ def smart_chunk(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE) -> list[str]:
         chunks.append(" ".join(current_words))
 
     return chunks
+
+def split_into_clauses(text: str) -> list[str]:
+    if not text:
+        return []
+
+    pattern = r'\n(?=(Article\s+\d+|Section\s+\d+|Clause\s+\d+|\d+\.\s))'
+
+    clauses = re.split(pattern, text, flags=re.IGNORECASE)
+
+    cleaned = []
+    current = ""
+
+    for part in clauses:
+        part = part.strip()
+
+        if not part:
+            continue
+
+        # If it's a heading, start new clause
+        if re.match(r'^(Article|Section|Clause|\d+\.)', part, re.IGNORECASE):
+            if current:
+                cleaned.append(current.strip())
+            current = part
+        else:
+            current += " " + part
+
+    if current:
+        cleaned.append(current.strip())
+
+    return cleaned
