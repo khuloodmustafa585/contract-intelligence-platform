@@ -16,7 +16,7 @@ def extract_text_from_pdf(file_path: str) -> str:
 
         document.close()
         if not text.strip():
-            return extract_text_from_image(file path)
+            return extract_text_from_image(file_path)
         return text.strip()
     except Exception as e:
         raise Exception(f"PDF parsing failed: {str(e)}")
