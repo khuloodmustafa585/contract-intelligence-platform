@@ -6,6 +6,7 @@ from app.models.contract import Contract
 from app.services.parser_service import extract_text
 from app.core.database import SessionLocal
 from app.services.clause_service import create_clauses
+from app.services.embedding_service import upsert_embeddings
 
 ALLOWED_EXTENSIONS = {"pdf", "docx", "jpg", "jpeg", "png"}
 
@@ -84,11 +85,13 @@ def process_contract(contract_id: int, file_path: str):
 
         contract.raw_text = raw_text
         contract.cleaned_text = cleaned_text
-
-        create_clauses(contract.id, cleaned_text, db)
+        
+        if cleaned_text:
+            create_clauses(contract.id, cleaned_text, db)
+            upsert_embeddings(contract.id, db)
 
         contract.ocr_used = contract.file_type in ["jpg", "jpeg", "png"] or not raw_text
-        contract.status = "parsed"
+        contract.status = "indexed"
 
         db.commit()
 
