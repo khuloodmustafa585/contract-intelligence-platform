@@ -7,7 +7,7 @@ from app.schemas.contract import ContractCreate
 def create_contract(db: Session, contract_data: ContractCreate, user_id: int) -> Contract:
     new_contract = Contract(
         title=contract_data.title,
-        status="created",
+        status="uploaded",
         owner_id=user_id,
     )
 
@@ -26,3 +26,19 @@ def get_contract_by_id(db: Session, contract_id: int, user_id: int) -> Optional[
         .filter(Contract.id == contract_id, Contract.owner_id == user_id)
         .first()
     )
+
+def get_contract_status_counts(db: Session):
+    results = (
+        db.query(Contract.status, func.count(Contract.id))
+        .group_by(Contract.status)
+        .all()
+    )
+
+    counts = {status: 0 for status in CONTRACT_STATUSES}
+
+    for status, count in results:
+        counts[status] = count
+
+    counts["total_contracts"] = sum(counts.values())
+
+    return counts
