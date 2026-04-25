@@ -11,4 +11,5 @@ class StatusResponse(BaseModel):
     contract_id: int
     status: str
     progress: Optional[int] = None
-    error: Optional[str] = None
+    error: Optional[str] = None 
+

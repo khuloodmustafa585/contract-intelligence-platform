@@ -18,7 +18,6 @@ from app.api.deps import get_current_user
 from app.services.retrieval_service import search_in_contract
 from app.models.contract import Contract
 
-
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 
@@ -75,6 +74,31 @@ def get_contract_status(
         )
 
     return contract
+
+
+# Refresh / polling endpoint
+@router.get("/{contract_id}/refresh")
+def refresh_contract(
+    contract_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+
+    if not contract:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Contract not found",
+        )
+
+    return {
+        "success": True,
+        "data": {
+            "id": contract.id,
+            "status": contract.status,
+            "message": "Latest contract status fetched successfully"
+        }
+    }
 
 
 # Search inside contract
