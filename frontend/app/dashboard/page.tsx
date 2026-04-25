@@ -5,13 +5,16 @@ import { useEffect, useState } from "react";
 export default function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
 
+  // حماية الصفحة
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (!token) {
       window.location.href = "/login";
     }
   }, []);
 
+  // upload (حالياً test فقط)
   const handleUpload = () => {
     if (!file) {
       alert("Please select a file");
@@ -23,9 +26,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      
       <div className="bg-white p-8 rounded-2xl shadow-lg w-96">
-        
         <h1 className="text-2xl font-bold mb-6 text-center">
           Dashboard 🎉
         </h1>
@@ -42,7 +43,6 @@ export default function Dashboard() {
         >
           Upload Contract
         </button>
-
       </div>
     </div>
   );
