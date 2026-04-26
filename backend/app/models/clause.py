@@ -7,7 +7,7 @@ class Clause(Base):
     __tablename__ = "clauses"
 
     id = Column(Integer, primary_key= True, index=True)
-    contract_id = Column (Integer, ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False)
+    contract_id = Column (Integer, ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False, index=True)
 
     category = Column(String(100), nullable=True)
     heading = Column(String(255), nullable=True)
@@ -16,3 +16,5 @@ class Clause(Base):
     page_number = Column(Integer, nullable=True)
     source_snippet = Column(Text, nullable=True)
     contract = relationship("Contract", back_populates="clauses")
+    obligations = relationship("Obligation", back_populates="clause")
+    risks = relationship("Risk", back_populates="clause")
