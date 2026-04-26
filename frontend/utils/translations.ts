@@ -5,6 +5,10 @@ export const translations = {
     ocr_processing: "OCR Processing",
     completed: "Completed",
     failed: "Failed",
+    payment: "Payment",
+    termination: "Termination",
+    liability: "Liability",
+    confidentiality: "Confidentiality",
   },
 
   ar: {
@@ -13,5 +17,9 @@ export const translations = {
     ocr_processing: "جاري قراءة النص",
     completed: "مكتمل",
     failed: "فشل",
+    payment: "الدفع",
+    termination: "إنهاء العقد",
+    liability: "المسؤولية",
+    confidentiality: "السرية",
   }
 };
