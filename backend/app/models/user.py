@@ -19,3 +19,5 @@ class User(Base):
         back_populates="owner",
         cascade="all, delete-orphan"
     )
+    email_notifications_enabled = Column(Boolean, nullable=False, default=True)
+    

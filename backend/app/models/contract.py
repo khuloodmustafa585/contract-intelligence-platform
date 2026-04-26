@@ -53,3 +53,7 @@ class Contract(Base):
 
     owner = relationship("User", back_populates="contracts")
     clauses = relationship("Clause", back_populates="contract", cascade="all, delete-orphan")
+    risks = relationship("Risk", back_populates="contract", cascade="all, delete-orphan")
+    summaries = relationship("Summary", back_populates="contract", cascade="all, delete-orphan")
+    obligations = relationship("Obligation", back_populates="contract", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="contract", cascade="all, delete-orphan")

@@ -21,9 +21,18 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from app.core.database import Base
 from app.models.user import User
 from app.models.contract import Contract
+from app.models.clause import Clause
+from app.models.risk import Risk
+from app.models.summary import Summary
+from app.models.obligation import Obligation
+from app.models.alert import Alert
+
+
+from app.core.database import Base
+
+
 
 
 target_metadata = Base.metadata
