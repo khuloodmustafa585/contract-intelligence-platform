@@ -1,16 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
 from app.core.database import Base
-from app.core.constants import (
-    RISK_SEVERITY_MEDIUM,
-    RISK_TYPE_LIABILITY,
-)
+from app.core.constants import OBLIGATION_STATUS_PENDING
 
 
-class Risk(Base):
-    __tablename__ = "risks"
+class Obligation(Base):
+    __tablename__ = "obligations"
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -28,17 +25,20 @@ class Risk(Base):
         index=True,
     )
 
-    risk_type = Column(String(100), nullable=False, index=True, default=RISK_TYPE_LIABILITY)
-    severity = Column(String(20), nullable=False, index=True, default=RISK_SEVERITY_MEDIUM)
-
     title = Column(String(255), nullable=False)
-    explanation = Column(Text, nullable=True)
-    suggested_action = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    owner = Column(String(255), nullable=True)
+
+    due_date = Column(Date, nullable=True)
+    reminder_date = Column(Date, nullable=True)
+
+    status = Column(String(50), nullable=False, default=OBLIGATION_STATUS_PENDING, index=True)
     source_snippet = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    contract = relationship("Contract", back_populates="risks")
-    clause = relationship("Clause", back_populates="risks")
-    alerts = relationship("Alert", back_populates="risk")
+    contract = relationship("Contract", back_populates="obligations")
+    clause = relationship("Clause", back_populates="obligations")
+    alerts = relationship("Alert", back_populates="obligation")
+    

@@ -11,7 +11,8 @@ class Clause(Base):
     contract_id = Column(
         Integer,
         ForeignKey("contracts.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
+        index=True,
     )
 
     category = Column(String(100), nullable=True)
@@ -24,3 +25,5 @@ class Clause(Base):
     source_snippet = Column(Text, nullable=True)
 
     contract = relationship("Contract", back_populates="clauses")
+    obligations = relationship("Obligation", back_populates="clause")
+    risks = relationship("Risk", back_populates="clause")
