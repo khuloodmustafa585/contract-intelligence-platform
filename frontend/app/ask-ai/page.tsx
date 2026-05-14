@@ -1,55 +1,435 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bot, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Send,
+  Sparkles,
+  Bot,
+  User,
+  FileText,
+  ChevronDown,
+  Loader2,
+  AlertCircle,
+  BookOpen,
+  Lightbulb,
+} from "lucide-react";
+import AppShell from "@/components/layout/AppShell";
+import GlassCard from "@/components/ui/GlassCard";
+import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import { api, Contract } from "@/services/api";
 
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: unknown[];
+  timestamp: Date;
+};
+
+const SUGGESTED_QUESTIONS = [
+  "What are the termination conditions?",
+  "Summarize the liability and indemnification clauses.",
+  "Are there any auto-renewal provisions?",
+  "What are the payment terms and penalties for late payment?",
+  "Identify all confidentiality obligations for both parties.",
+];
+
 export default function AskAIPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts]   = useState<Contract[]>([]);
   const [contractId, setContractId] = useState("");
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [question, setQuestion]     = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+  const [loadingContracts, setLoadingContracts] = useState(true);
+  const bottomRef  = useRef<HTMLDivElement>(null);
+  const inputRef   = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.contracts().then((items) => {
-      setContracts(items);
-      if (items[0]) setContractId(String(items[0].id));
-    }).catch((err) => setError(err.message));
+    api.contracts()
+      .then((items) => {
+        setContracts(items);
+        if (items[0]) setContractId(String(items[0].id));
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingContracts(false));
   }, []);
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!contractId) return;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function submit(e: React.FormEvent | null, override?: string) {
+    e?.preventDefault();
+    const q = override ?? question;
+    if (!q.trim() || !contractId || loading) return;
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: q,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setQuestion("");
     setLoading(true);
     setError("");
     try {
-      const result = await api.ask(contractId, question);
-      setAnswer(result.answer);
+      const result = await api.ask(contractId, q);
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: result.answer,
+        sources: result.sources,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "AI request failed");
+      const errMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: err instanceof Error ? err.message : "AI request failed. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
       setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }
 
+  const selectedContract = contracts.find((c) => String(c.id) === contractId);
+
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-24 text-slate-100 md:px-10">
-      <form onSubmit={submit} className="mx-auto max-w-3xl rounded-lg border border-slate-800 bg-slate-900 p-6">
-        <h1 className="flex items-center gap-2 text-3xl font-semibold"><Bot className="text-sky-400" /> Ask AI</h1>
-        <p className="mt-2 text-slate-400">Ask grounded questions against indexed contract clauses.</p>
-        {error && <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</div>}
-        <select className="mt-6 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" value={contractId} onChange={(e) => setContractId(e.target.value)}>
-          {contracts.length === 0 && <option>No contracts available</option>}
-          {contracts.map((contract) => <option key={contract.id} value={contract.id}>{contract.title}</option>)}
-        </select>
-        <div className="mt-4 flex gap-2">
-          <input className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-sky-500" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={1000} placeholder="What are the renewal obligations?" required />
-          <button className="rounded-lg bg-sky-500 p-2 text-slate-950 disabled:opacity-60" disabled={loading || !contractId}><Send /></button>
+    <AppShell>
+      <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
+
+        {/* ── Sidebar ── */}
+        <aside
+          className="flex w-72 shrink-0 flex-col overflow-y-auto"
+          style={{
+            background: "rgba(11,19,38,0.9)",
+            borderRight: "1px solid rgba(99,102,241,0.10)",
+          }}
+        >
+          {/* Contract Selector */}
+          <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(99,102,241,0.08)" }}>
+            <p className="font-mono-label mb-3" style={{ color: "#6366f1", fontSize: "0.62rem" }}>
+              Contract Context
+            </p>
+
+            {loadingContracts ? (
+              <div className="flex items-center gap-2 text-xs" style={{ color: "#64748b" }}>
+                <Loader2 size={12} className="animate-spin" /> Loading contracts...
+              </div>
+            ) : contracts.length === 0 ? (
+              <div className="text-xs" style={{ color: "#64748b" }}>
+                No indexed contracts. Upload a contract first.
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={contractId}
+                  onChange={(e) => {
+                    setContractId(e.target.value);
+                    setMessages([]);
+                  }}
+                  className="w-full appearance-none rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition-all"
+                  style={{
+                    background: "rgba(19,27,46,0.8)",
+                    border: "1px solid rgba(99,102,241,0.18)",
+                    color: "#dae2fd",
+                  }}
+                >
+                  {contracts.map((c) => (
+                    <option key={c.id} value={c.id} style={{ background: "#131b2e" }}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={13}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "#64748b" }}
+                />
+              </div>
+            )}
+
+            {selectedContract && (
+              <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "#64748b" }}>
+                <FileText size={11} style={{ color: "#6366f1" }} />
+                {selectedContract.status} · {selectedContract.embedding_status}
+              </div>
+            )}
+          </div>
+
+          {/* Suggested Questions */}
+          <div className="px-5 py-5 flex-1">
+            <p className="font-mono-label mb-3" style={{ color: "#6366f1", fontSize: "0.62rem" }}>
+              Suggested Questions
+            </p>
+            <div className="space-y-1.5">
+              {SUGGESTED_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => submit(null, q)}
+                  disabled={!contractId || loading}
+                  className="group w-full text-left rounded-xl px-3 py-2.5 text-xs transition-all hover:bg-[rgba(99,102,241,0.08)] disabled:opacity-40"
+                  style={{
+                    border: "1px solid rgba(99,102,241,0.10)",
+                    color: "#94a3b8",
+                    background: "rgba(19,27,46,0.4)",
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* AI note */}
+          <div className="px-5 py-4" style={{ borderTop: "1px solid rgba(99,102,241,0.08)" }}>
+            <AIInsightPanel title="Grounded Answers" compact>
+              Responses are sourced from indexed contract clauses with vector retrieval — not general knowledge.
+            </AIInsightPanel>
+          </div>
+        </aside>
+
+        {/* ── Chat Area ── */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+
+          {/* Chat Header */}
+          <div
+            className="flex items-center gap-3 px-6 py-4 shrink-0"
+            style={{ borderBottom: "1px solid rgba(99,102,241,0.10)", background: "rgba(11,19,38,0.8)" }}
+          >
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                boxShadow: "0 0 16px rgba(99,102,241,0.35)",
+              }}
+            >
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#dae2fd" }}>
+                Contract Intelligence AI
+              </p>
+              <p className="text-xs" style={{ color: "#64748b" }}>
+                {selectedContract ? `Analyzing: ${selectedContract.title}` : "Select a contract to begin"}
+              </p>
+            </div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <div
+                className="h-2 w-2 rounded-full animate-pulse"
+                style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.5)" }}
+              />
+              <span className="text-xs" style={{ color: "#64748b" }}>Online</span>
+            </div>
+          </div>
+
+          {/* Error Banner */}
+          {error && (
+            <div
+              className="mx-6 mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}
+            >
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div
+                  className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
+                  style={{
+                    background: "rgba(99,102,241,0.08)",
+                    border: "1px solid rgba(99,102,241,0.16)",
+                    boxShadow: "0 0 40px rgba(99,102,241,0.1)",
+                  }}
+                >
+                  <Bot size={28} style={{ color: "#6366f1", opacity: 0.7 }} />
+                </div>
+                <h3 className="text-base font-semibold mb-2" style={{ color: "#dae2fd" }}>
+                  Contract Intelligence AI
+                </h3>
+                <p className="text-sm max-w-sm" style={{ color: "#64748b" }}>
+                  Ask natural language questions about your contracts. I'll answer using the actual clause text.
+                </p>
+
+                <div className="mt-8 grid grid-cols-2 gap-3 max-w-lg w-full">
+                  {[
+                    { icon: BookOpen, label: "Clause Analysis",   desc: "Explain specific contract clauses" },
+                    { icon: Lightbulb, label: "Risk Identification", desc: "Find hidden risk exposure" },
+                  ].map(({ icon: Icon, label, desc }) => (
+                    <div
+                      key={label}
+                      className="rounded-xl p-4 text-left"
+                      style={{
+                        background: "rgba(19,27,46,0.7)",
+                        border: "1px solid rgba(99,102,241,0.12)",
+                      }}
+                    >
+                      <div
+                        className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg"
+                        style={{ background: "rgba(99,102,241,0.12)" }}
+                      >
+                        <Icon size={14} style={{ color: "#818cf8" }} />
+                      </div>
+                      <p className="text-xs font-semibold mb-1" style={{ color: "#dae2fd" }}>{label}</p>
+                      <p className="text-xs" style={{ color: "#64748b" }}>{desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 animate-fade-up ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+              >
+                {/* Avatar */}
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: msg.role === "user"
+                      ? "rgba(99,102,241,0.18)"
+                      : "rgba(34,211,238,0.12)",
+                    border: msg.role === "user"
+                      ? "1px solid rgba(99,102,241,0.25)"
+                      : "1px solid rgba(34,211,238,0.20)",
+                  }}
+                >
+                  {msg.role === "user" ? (
+                    <User size={15} style={{ color: "#818cf8" }} />
+                  ) : (
+                    <Sparkles size={15} style={{ color: "#22d3ee" }} />
+                  )}
+                </div>
+
+                {/* Bubble */}
+                <div className={`max-w-[78%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                  <div
+                    className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
+                    style={{
+                      background: msg.role === "user"
+                        ? "rgba(99,102,241,0.14)"
+                        : "rgba(19,27,46,0.8)",
+                      border: msg.role === "user"
+                        ? "1px solid rgba(99,102,241,0.22)"
+                        : "1px solid rgba(99,102,241,0.10)",
+                      color: "#dae2fd",
+                      borderBottomRightRadius: msg.role === "user" ? "4px" : undefined,
+                      borderBottomLeftRadius: msg.role === "assistant" ? "4px" : undefined,
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                  <span className="text-[0.65rem] px-1" style={{ color: "#3a4560" }}>
+                    {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {loading && (
+              <div className="flex gap-3 animate-fade-in">
+                <div
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: "rgba(34,211,238,0.12)",
+                    border: "1px solid rgba(34,211,238,0.20)",
+                  }}
+                >
+                  <Sparkles size={15} style={{ color: "#22d3ee" }} />
+                </div>
+                <div
+                  className="flex items-center gap-1.5 rounded-2xl px-4 py-3"
+                  style={{
+                    background: "rgba(19,27,46,0.8)",
+                    border: "1px solid rgba(99,102,241,0.10)",
+                    borderBottomLeftRadius: "4px",
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{
+                        background: "#6366f1",
+                        display: "inline-block",
+                        animation: `dot-bounce 1.4s ease-in-out ${i * 0.16}s infinite`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input Area */}
+          <div
+            className="shrink-0 px-6 py-4"
+            style={{ borderTop: "1px solid rgba(99,102,241,0.10)", background: "rgba(11,19,38,0.8)" }}
+          >
+            <form onSubmit={submit} className="flex gap-3">
+              <div
+                className="relative flex-1 flex items-center rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(19,27,46,0.8)",
+                  border: "1px solid rgba(99,102,241,0.18)",
+                }}
+              >
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(null); }
+                  }}
+                  placeholder={contractId ? "Ask anything about this contract..." : "Select a contract first"}
+                  disabled={!contractId || loading}
+                  maxLength={1000}
+                  className="flex-1 bg-transparent px-4 py-3 text-sm outline-none disabled:opacity-50 placeholder:text-[#3a4560]"
+                  style={{ color: "#dae2fd" }}
+                />
+                <span
+                  className="mr-3 text-xs px-1"
+                  style={{ color: "#3a4560", fontFamily: "var(--font-mono,monospace)", whiteSpace: "nowrap" }}
+                >
+                  {question.length}/1000
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!question.trim() || !contractId || loading}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-40 hover:opacity-90"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                  boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+                }}
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin text-white" />
+                ) : (
+                  <Send size={18} className="text-white" />
+                )}
+              </button>
+            </form>
+
+            <p className="mt-2 text-center text-xs" style={{ color: "#3a4560" }}>
+              Answers are grounded in your indexed contract clauses
+            </p>
+          </div>
         </div>
-        {answer && <div className="mt-6 rounded-lg border border-slate-800 bg-slate-950 p-4 text-slate-300">{answer}</div>}
-      </form>
-    </main>
+      </div>
+    </AppShell>
   );
 }

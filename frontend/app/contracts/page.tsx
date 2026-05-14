@@ -1,50 +1,317 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FileText,
+  ArrowUpDown,
+  ArrowRight,
+  Calendar,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import AppShell from "@/components/layout/AppShell";
+import GlassCard from "@/components/ui/GlassCard";
+import StatusBadge from "@/components/ui/StatusBadge";
+import EmptyState from "@/components/ui/EmptyState";
+import LoadingState from "@/components/ui/LoadingState";
 import { api, Contract } from "@/services/api";
 
+const PAGE_SIZE = 15;
+
+const STATUS_OPTIONS = ["All", "pending", "processing", "uploaded", "analyzed", "failed"];
+
+type SortField = "title" | "status" | "created_at";
+type SortDir   = "asc" | "desc";
+
 export default function ContractsPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [contracts, setContracts]   = useState<Contract[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
+  const [search, setSearch]         = useState("");
+  const [statusFilter, setStatus]   = useState("All");
+  const [page, setPage]             = useState(1);
+  const [sortField, setSortField]   = useState<SortField>("created_at");
+  const [sortDir, setSortDir]       = useState<SortDir>("desc");
 
   useEffect(() => {
-    api.contracts().then(setContracts).catch((err) => setError(err.message)).finally(() => setLoading(false));
+    api.contracts()
+      .then(setContracts)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortField(field); setSortDir("asc"); }
+    setPage(1);
+  }
+
+  const filtered = useMemo(() => {
+    let rows = contracts;
+    if (statusFilter !== "All") rows = rows.filter((c) => c.status === statusFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((c) => c.title.toLowerCase().includes(q));
+    }
+    rows = [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "title")      cmp = a.title.localeCompare(b.title);
+      else if (sortField === "status") cmp = a.status.localeCompare(b.status);
+      else cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return rows;
+  }, [contracts, search, statusFilter, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const SortIndicator = ({ field }: { field: SortField }) => (
+    <ArrowUpDown
+      size={12}
+      style={{ color: sortField === field ? "#818cf8" : "#3a4560" }}
+    />
+  );
+
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-24 text-slate-100 md:px-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <AppShell>
+      <div className="px-8 py-8">
+
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-semibold">Contracts</h1>
-            <p className="mt-2 text-slate-400">Track ingestion, indexing, analysis, and renewal status.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #22d3ee)" }} />
+              <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>Contract Registry</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Contracts</h1>
+            <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+              {loading ? "Loading..." : `${filtered.length} of ${contracts.length} contracts`}
+            </p>
           </div>
-          <Link href="/upload" className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 font-medium text-slate-950"><Plus size={18} /> Upload</Link>
+          <Link
+            href="/upload"
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all hover:opacity-90"
+            style={{
+              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              color: "white",
+              boxShadow: "0 0 24px rgba(99,102,241,0.35)",
+            }}
+          >
+            <Plus size={15} /> New Contract
+          </Link>
         </div>
-        {error && <div className="mt-6 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</div>}
-        <div className="mt-8 overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900 text-xs uppercase text-slate-400">
-              <tr><th className="p-4">Name</th><th className="p-4">Status</th><th className="p-4">Indexed</th><th className="p-4">Uploaded</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {loading && <tr><td className="p-6 text-slate-400" colSpan={4}>Loading contracts...</td></tr>}
-              {!loading && contracts.length === 0 && <tr><td className="p-6 text-slate-400" colSpan={4}>No contracts uploaded yet.</td></tr>}
-              {contracts.map((contract) => (
-                <tr key={contract.id} className="hover:bg-slate-800/60">
-                  <td className="p-4 font-medium"><Link href={`/contracts/${contract.id}`} className="text-sky-300 hover:underline">{contract.title}</Link></td>
-                  <td className="p-4"><span className="rounded bg-slate-800 px-2 py-1 text-xs uppercase">{contract.status}</span></td>
-                  <td className="p-4 text-slate-300">{contract.embedding_status}</td>
-                  <td className="p-4 text-slate-400">{contract.created_at ? new Date(contract.created_at).toLocaleDateString() : "-"}</td>
-                </tr>
+
+        {/* Error */}
+        {error && (
+          <div
+            className="mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Filters row */}
+        <div className="mb-4 flex flex-wrap gap-3">
+          {/* Search */}
+          <div
+            className="flex items-center gap-2 rounded-xl px-3 py-2 w-64"
+            style={{ background: "rgba(19,27,46,0.8)", border: "1px solid rgba(99,102,241,0.12)" }}
+          >
+            <Search size={14} style={{ color: "#64748b" }} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search contracts..."
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#3a4560]"
+              style={{ color: "#dae2fd" }}
+            />
+          </div>
+
+          {/* Status filter */}
+          <div className="flex items-center gap-1">
+            <Filter size={13} style={{ color: "#64748b" }} />
+            <div className="flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid rgba(99,102,241,0.12)" }}>
+              {STATUS_OPTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => { setStatus(s); setPage(1); }}
+                  className="px-3 py-2 text-xs font-medium capitalize transition-all"
+                  style={{
+                    background: statusFilter === s ? "rgba(99,102,241,0.18)" : "rgba(15,24,41,0.8)",
+                    color: statusFilter === s ? "#818cf8" : "#64748b",
+                    borderRight: "1px solid rgba(99,102,241,0.10)",
+                  }}
+                >
+                  {s}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
+
+        {/* Table */}
+        {loading ? (
+          <LoadingState rows={6} type="table" />
+        ) : filtered.length === 0 ? (
+          <GlassCard>
+            <EmptyState
+              icon={FileText}
+              title={search || statusFilter !== "All" ? "No contracts match your filters" : "No contracts yet"}
+              description={search || statusFilter !== "All" ? "Try adjusting your search or filters." : "Upload your first contract to get started."}
+              action={{ label: "Upload Contract", href: "/upload" }}
+            />
+          </GlassCard>
+        ) : (
+          <GlassCard>
+            {/* Table header */}
+            <div
+              className="grid text-xs uppercase tracking-widest"
+              style={{
+                gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
+                padding: "10px 24px",
+                borderBottom: "1px solid rgba(99,102,241,0.10)",
+                color: "#3a4560",
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+            >
+              <button className="flex items-center gap-1.5 text-left hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("title")}>
+                Contract <SortIndicator field="title" />
+              </button>
+              <button className="flex items-center gap-1.5 hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("status")}>
+                Status <SortIndicator field="status" />
+              </button>
+              <span>Embedding</span>
+              <button className="flex items-center gap-1.5 hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("created_at")}>
+                Uploaded <SortIndicator field="created_at" />
+              </button>
+              <span />
+            </div>
+
+            {/* Rows */}
+            <div>
+              {pageRows.map((contract, i) => (
+                <Link
+                  key={contract.id}
+                  href={`/contracts/${contract.id}`}
+                  className="group grid items-center px-6 py-3.5 transition-all hover:bg-[rgba(99,102,241,0.04)]"
+                  style={{
+                    gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
+                    borderBottom: i < pageRows.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none",
+                  }}
+                >
+                  {/* Name */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all group-hover:bg-[rgba(99,102,241,0.16)]"
+                      style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.14)" }}
+                    >
+                      <FileText size={14} style={{ color: "#6366f1" }} />
+                    </div>
+                    <div className="min-w-0">
+                      <p
+                        className="text-sm font-medium truncate transition-colors group-hover:text-[#818cf8]"
+                        style={{ color: "#dae2fd" }}
+                      >
+                        {contract.title}
+                      </p>
+                      {contract.file_type && (
+                        <p className="text-xs font-mono-label mt-0.5" style={{ color: "#3a4560", fontSize: "0.6rem" }}>
+                          {contract.file_type.toUpperCase()}
+                          {contract.ocr_used ? " · OCR" : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <StatusBadge status={contract.status} pulse={contract.status === "processing"} />
+                  </div>
+
+                  {/* Embedding */}
+                  <div>
+                    <StatusBadge status={contract.embedding_status} />
+                  </div>
+
+                  {/* Date */}
+                  <div className="flex items-center gap-1.5 text-xs" style={{ color: "#64748b" }}>
+                    <Calendar size={11} />
+                    {contract.created_at
+                      ? new Date(contract.created_at).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric", year: "numeric",
+                        })
+                      : "—"}
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="flex justify-end">
+                    <ArrowRight
+                      size={14}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: "#6366f1" }}
+                    />
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div
+                className="flex items-center justify-between px-6 py-3"
+                style={{ borderTop: "1px solid rgba(99,102,241,0.10)" }}
+              >
+                <span className="text-xs" style={{ color: "#64748b" }}>
+                  Page {page} of {totalPages} — {filtered.length} results
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all disabled:opacity-30 hover:bg-[rgba(99,102,241,0.10)]"
+                    style={{ border: "1px solid rgba(99,102,241,0.14)" }}
+                  >
+                    <ChevronLeft size={13} style={{ color: "#94a3b8" }} />
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-xs transition-all"
+                        style={{
+                          background: p === page ? "rgba(99,102,241,0.18)" : "transparent",
+                          border: p === page ? "1px solid rgba(99,102,241,0.35)" : "1px solid transparent",
+                          color: p === page ? "#818cf8" : "#64748b",
+                          fontFamily: "var(--font-mono,monospace)",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all disabled:opacity-30 hover:bg-[rgba(99,102,241,0.10)]"
+                    style={{ border: "1px solid rgba(99,102,241,0.14)" }}
+                  >
+                    <ChevronRight size={13} style={{ color: "#94a3b8" }} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+        )}
       </div>
-    </main>
+    </AppShell>
   );
 }

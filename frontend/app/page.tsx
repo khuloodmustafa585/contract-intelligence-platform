@@ -1,10 +1,13 @@
-//landing page
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  return (
-    <div>
-      <h1>Welcome to Contract Lens</h1>
-      <p>Your one-stop solution for contract management and analysis.</p>
-    </div>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    router.replace(token ? "/dashboard" : "/login");
+  }, [router]);
+  return null;
 }
