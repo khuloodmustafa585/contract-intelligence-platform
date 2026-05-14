@@ -14,34 +14,31 @@ export default function PremiumEmptyState({
   icon: Icon,
   title,
   message,
-  statusLabel = "AWAITING DATA",
+  statusLabel,
   cta,
   compact = false,
 }: PremiumEmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center ${compact ? "py-7 px-4" : "py-11 px-6"}`}
+      className={`flex flex-col items-center justify-center text-center ${compact ? "py-8 px-5" : "py-12 px-8"}`}
     >
       <div
-        className={`flex ${compact ? "h-10 w-10" : "h-12 w-12"} items-center justify-center rounded-2xl mb-4`}
-        style={{
-          background: "rgba(99,102,241,0.05)",
-          border: "1px solid rgba(99,102,241,0.09)",
-        }}
+        className={`flex ${compact ? "h-9 w-9" : "h-11 w-11"} items-center justify-center rounded-xl mb-4`}
+        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <Icon size={compact ? 15 : 19} style={{ color: "#1e2d47" }} />
+        <Icon size={compact ? 14 : 18} style={{ color: "#374151" }} />
       </div>
 
       <p
-        className={`font-semibold ${compact ? "text-xs" : "text-sm"} mb-1.5`}
-        style={{ color: "#2e3d5a" }}
+        className={`font-medium ${compact ? "text-xs" : "text-sm"} mb-1.5`}
+        style={{ color: "#6b7280" }}
       >
         {title}
       </p>
 
       <p
-        className="text-xs leading-relaxed max-w-[200px]"
-        style={{ color: "#1a2538" }}
+        className="text-xs leading-relaxed max-w-[220px]"
+        style={{ color: "#374151" }}
       >
         {message}
       </p>
@@ -49,26 +46,22 @@ export default function PremiumEmptyState({
       {cta && (
         <Link
           href={cta.href}
-          className="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80"
+          className="mt-4 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:opacity-80"
           style={{
-            background: "rgba(99,102,241,0.1)",
-            border: "1px solid rgba(99,102,241,0.2)",
-            color: "#6366f1",
+            background: "rgba(59,130,246,0.1)",
+            border: "1px solid rgba(59,130,246,0.2)",
+            color: "#60a5fa",
           }}
         >
           {cta.label}
         </Link>
       )}
 
-      <div className="mt-4 flex items-center gap-1.5">
-        <div
-          className="h-1 w-1 rounded-full animate-pulse"
-          style={{ background: "#1e2d47" }}
-        />
-        <span className="font-mono-label" style={{ color: "#141e30", fontSize: "0.54rem" }}>
+      {statusLabel && (
+        <p className="mt-3 text-xs" style={{ color: "#1f2937" }}>
           {statusLabel}
-        </span>
-      </div>
+        </p>
+      )}
     </div>
   );
 }

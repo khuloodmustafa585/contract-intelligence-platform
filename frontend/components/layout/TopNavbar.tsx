@@ -3,19 +3,10 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Search,
-  Bell,
-  LogOut,
-  Upload,
-  ChevronRight,
-  User,
-  Command,
-  Zap,
-} from "lucide-react";
+import { Search, Bell, LogOut, User } from "lucide-react";
 import { api } from "@/services/api";
 
-const BREADCRUMB_MAP: Record<string, string> = {
+const PAGE_LABELS: Record<string, string> = {
   "/dashboard":      "Dashboard",
   "/contracts":      "Contracts",
   "/upload":         "Upload Center",
@@ -48,61 +39,37 @@ export default function TopNavbar() {
   };
 
   const segments  = pathname.split("/").filter(Boolean);
-  const pageLabel = BREADCRUMB_MAP[pathname] ?? segments.at(-1) ?? "Dashboard";
+  const pageLabel = PAGE_LABELS[pathname] ?? segments.at(-1) ?? "Dashboard";
 
   return (
     <header
-      className="fixed top-0 right-0 z-40 flex h-16 items-center gap-3 px-6"
+      className="fixed top-0 right-0 z-40 flex h-12 items-center gap-3 px-6"
       style={{
-        left: "256px",
-        background: "rgba(5, 9, 22, 0.92)",
-        backdropFilter: "blur(24px) saturate(180%)",
-        WebkitBackdropFilter: "blur(24px) saturate(180%)",
-        borderBottom: "1px solid rgba(99,102,241,0.08)",
-        boxShadow: "0 1px 24px rgba(0,0,0,0.3)",
+        left: "240px",
+        background: "#0b1120",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 mr-auto min-w-0">
-        <span className="font-mono-label" style={{ color: "#1a2538", fontSize: "0.6rem" }}>
-          CONTRACT LENS
-        </span>
-        <ChevronRight size={11} style={{ color: "#1a2538" }} />
-        <span className="text-sm font-semibold truncate" style={{ color: "#64748b" }}>
-          {pageLabel}
-        </span>
-      </div>
-
-      {/* AI Core Status pill */}
-      <div
-        className="hidden lg:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 shrink-0"
-        style={{
-          background: "rgba(16,185,129,0.04)",
-          border: "1px solid rgba(16,185,129,0.1)",
-        }}
-      >
-        <div
-          className="h-1.5 w-1.5 rounded-full animate-pulse shrink-0"
-          style={{ background: "#10b981", boxShadow: "0 0 5px rgba(16,185,129,0.6)" }}
-        />
-        <Zap size={10} style={{ color: "#059669" }} />
-        <span className="font-mono-label" style={{ color: "#047857", fontSize: "0.56rem" }}>
-          AI CORE ACTIVE
-        </span>
-      </div>
+      {/* Page title */}
+      <span className="mr-auto text-sm font-medium" style={{ color: "#f3f4f6" }}>
+        {pageLabel}
+      </span>
 
       {/* Search */}
       <div
-        className="relative hidden md:flex items-center gap-2 rounded-xl px-3 py-2 transition-all duration-200"
+        className="relative hidden md:flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all duration-150"
         style={{
-          width: searchFocus ? "280px" : "240px",
-          background: searchFocus ? "rgba(7, 12, 26, 0.95)" : "rgba(9, 14, 31, 0.85)",
-          border: `1px solid ${searchFocus ? "rgba(99,102,241,0.35)" : "rgba(99,102,241,0.1)"}`,
-          boxShadow: searchFocus ? "0 0 0 3px rgba(99,102,241,0.06)" : "none",
-          transition: "width 0.2s ease, border-color 0.2s, box-shadow 0.2s",
+          width: searchFocus ? "240px" : "200px",
+          background: "#0f172a",
+          border: `1px solid ${searchFocus ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.07)"}`,
+          boxShadow: searchFocus ? "0 0 0 3px rgba(59,130,246,0.06)" : "none",
+          transition: "width 0.2s ease, border-color 0.15s, box-shadow 0.15s",
         }}
       >
-        <Search size={13} style={{ color: searchFocus ? "#6366f1" : "#2a3550", transition: "color 0.2s" }} />
+        <Search
+          size={12}
+          style={{ color: searchFocus ? "#3b82f6" : "#374151", flexShrink: 0, transition: "color 0.15s" }}
+        />
         <input
           type="text"
           value={search}
@@ -110,49 +77,30 @@ export default function TopNavbar() {
           onFocus={() => setSearchFocus(true)}
           onBlur={() => setSearchFocus(false)}
           placeholder="Search contracts..."
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#1a2538]"
-          style={{ color: "#dae2fd", caretColor: "#6366f1" }}
+          className="flex-1 bg-transparent text-sm outline-none"
+          style={{ color: "#f3f4f6" }}
         />
-        <div
-          className="flex items-center gap-0.5 rounded-md px-1.5 py-0.5 shrink-0"
-          style={{
-            background: "rgba(99,102,241,0.08)",
-            border: "1px solid rgba(99,102,241,0.14)",
-          }}
-        >
-          <Command size={9} style={{ color: "#2a3550" }} />
-          <span className="font-mono-label" style={{ color: "#2a3550", fontSize: "0.56rem" }}>K</span>
-        </div>
       </div>
-
-      {/* Upload CTA */}
-      <Link
-        href="/upload"
-        className="hidden sm:flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-200 hover:opacity-90 shrink-0"
-        style={{
-          background: "linear-gradient(135deg, #5046e5 0%, #4338ca 100%)",
-          boxShadow: "0 0 20px rgba(99,102,241,0.3)",
-          color: "#e0e7ff",
-          letterSpacing: "0.04em",
-        }}
-      >
-        <Upload size={13} />
-        UPLOAD
-      </Link>
 
       {/* Alerts */}
       <Link
         href="/alerts"
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200"
-        style={{ border: "1px solid rgba(99,102,241,0.1)" }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.07)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+        className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
+        style={{ color: "#4b5563" }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+          (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+        }}
       >
-        <Bell size={15} style={{ color: "#3a4560" }} />
+        <Bell size={14} />
         {alerts > 0 && (
           <span
-            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[0.58rem] font-bold text-white"
-            style={{ background: "#ef4444", boxShadow: "0 0 8px rgba(239,68,68,0.55)" }}
+            className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[0.55rem] font-bold text-white"
+            style={{ background: "#ef4444" }}
           >
             {alerts > 9 ? "9+" : alerts}
           </span>
@@ -160,25 +108,38 @@ export default function TopNavbar() {
       </Link>
 
       {/* Avatar */}
-      <button
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200"
-        style={{ border: "1px solid rgba(99,102,241,0.1)" }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.07)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+      <Link
+        href="/profile"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
+        style={{ color: "#4b5563" }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+          (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+        }}
       >
-        <User size={15} style={{ color: "#3a4560" }} />
-      </button>
+        <User size={14} />
+      </Link>
 
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200"
-        style={{ border: "1px solid rgba(239,68,68,0.14)" }}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
+        style={{ color: "#4b5563" }}
         title="Sign out"
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.07)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)";
+          (e.currentTarget as HTMLElement).style.color = "#f87171";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+        }}
       >
-        <LogOut size={14} style={{ color: "#7f1d1d" }} />
+        <LogOut size={14} />
       </button>
     </header>
   );

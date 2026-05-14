@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       dir="ltr"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
+      
     >
       <body className="min-h-full antialiased">
         {children}
