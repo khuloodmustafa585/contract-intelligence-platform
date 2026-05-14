@@ -30,13 +30,13 @@ def upgrade() -> None:
     sa.Column('expected_condition', sa.Text(), nullable=False),
     sa.Column('severity', sa.String(), nullable=False),
     sa.Column('recommendation', sa.Text(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_policy_rules_id'), 'policy_rules', ['id'], unique=False)
-    op.add_column('users', sa.Column('email_notifications_enabled', sa.Boolean(), nullable=False))
+    op.add_column('users', sa.Column('email_notifications_enabled', sa.Boolean(), server_default=sa.text('true'), nullable=False))
     # ### end Alembic commands ###
 
 

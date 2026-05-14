@@ -1,5 +1,3 @@
-print("MAIN LOADED")
-
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
@@ -33,5 +31,3 @@ api_router.include_router(alerts.router)
 api_router.include_router(dashboard.router)
 
 api_router.include_router(insights.router)
-
-print("ROUTER LOADED")

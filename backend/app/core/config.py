@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     QDRANT_URL: Optional[str] = None
     QDRANT_API_KEY: Optional[str] = None
     QDRANT_COLLECTION: str = "contracts"
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: Optional[str] = None
+    SMTP_USE_TLS: bool = True
     
     model_config = SettingsConfigDict(
         env_file=".env",

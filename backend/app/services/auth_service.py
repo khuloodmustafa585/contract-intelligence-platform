@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta
-import random
+import secrets
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from app.core.logging import security_logger
 
 
 def generate_verification_code() -> str:
-    return str(random.randint(100000, 999999))
+    return f"{secrets.randbelow(900000) + 100000:06d}"
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
@@ -21,7 +21,8 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
 
 
 def register_user(db: Session, user_data: UserCreate) -> User:
-    existing_user = get_user_by_email(db, user_data.email)
+    email = user_data.email.lower()
+    existing_user = get_user_by_email(db, email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -33,7 +34,7 @@ def register_user(db: Session, user_data: UserCreate) -> User:
 
     new_user = User(
         full_name=user_data.full_name,
-        email=user_data.email.lower(),
+        email=email,
         hashed_password=hashed_password,
         verification_code=code,
         code_expires_at=datetime.utcnow() + timedelta(minutes=10),
@@ -47,7 +48,7 @@ def register_user(db: Session, user_data: UserCreate) -> User:
     try:
         send_verification_email(new_user.email, code)
     except Exception as e:
-        print(f"Email sending failed: {e}")
+        security_logger.warning("Verification email failed for email=%s: %s", email, e)
 
     return new_user
 
@@ -79,6 +80,7 @@ def login_user(db: Session, email: str, password: str) -> dict:
 
 def verify_user_email(db: Session, email: str, code: str) -> User:
     user = get_user_by_email(db, email.lower())
+    normalized_code = code.strip()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -86,7 +88,7 @@ def verify_user_email(db: Session, email: str, code: str) -> User:
     if user.is_verified:
         raise HTTPException(status_code=400, detail="User already verified")
 
-    if user.verification_code != code:
+    if user.verification_code != normalized_code:
         raise HTTPException(status_code=400, detail="Invalid code")
 
     if not user.code_expires_at or user.code_expires_at < datetime.utcnow():
@@ -121,6 +123,6 @@ def resend_verification_email(db: Session, email: str) -> dict:
     try:
         send_verification_email(user.email, code)
     except Exception as e:
-        print(f"Email sending failed: {e}")
+        security_logger.warning("Verification email failed for email=%s: %s", user.email, e)
 
     return {"msg": "Verification email resent successfully"}

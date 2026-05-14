@@ -40,9 +40,9 @@ class Alert(Base):
 
     status = Column(String(50), nullable=False, default=ALERT_STATUS_UNREAD, index=True)
 
-    send_email = Column(Boolean, nullable=False, default=False)
+    send_email = Column(Boolean, nullable=False, default=False, server_default="false")
     recipient_email = Column(String(255), nullable=True)
-    email_sent = Column(Boolean, nullable=False, default=False)
+    email_sent = Column(Boolean, nullable=False, default=False, server_default="false")
     email_sent_at = Column(DateTime, nullable=True)
     email_error = Column(Text, nullable=True)
 

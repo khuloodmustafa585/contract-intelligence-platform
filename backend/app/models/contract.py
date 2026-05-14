@@ -39,7 +39,7 @@ class Contract(Base):
     file_path = Column(String(500), nullable=True, unique=True)
     file_type = Column(String(50), nullable=True)
 
-    is_indexed = Column(Boolean, nullable=False, default=False)
+    is_indexed = Column(Boolean, nullable=False, default=False, server_default="false")
     embedding_status = Column(
         String(50),
         nullable=False,
@@ -48,7 +48,7 @@ class Contract(Base):
     
     extracted_metadata_json = Column(Text, nullable=True)
 
-    ocr_used = Column(Boolean, nullable=False, default=False)
+    ocr_used = Column(Boolean, nullable=False, default=False, server_default="false")
     parse_method= Column(String(20), nullable=True)
 
     owner = relationship("User", back_populates="contracts")

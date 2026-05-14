@@ -10,7 +10,20 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     
-    is_verified = Column(Boolean, default=False, nullable=False)
+    is_verified = Column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False
+    )
+
+    email_notifications_enabled = Column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False
+    )
+
     verification_code = Column(String(6), nullable=True)
     code_expires_at = Column(DateTime, nullable=True)
 
@@ -24,5 +37,3 @@ class User(Base):
         back_populates="owner",
         cascade="all, delete-orphan"
     )
-    email_notifications_enabled = Column(Boolean, nullable=False, default=True)
-    

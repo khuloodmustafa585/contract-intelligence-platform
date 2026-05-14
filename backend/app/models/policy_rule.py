@@ -36,7 +36,7 @@ class PolicyRule(Base):
 
     recommendation = Column(Text, nullable=True)
 
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
