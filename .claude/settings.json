@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\LENOVO\\\\contract-intelligence-platform\" -Directory)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(grep -i verif)"
+    ]
+  }
+}

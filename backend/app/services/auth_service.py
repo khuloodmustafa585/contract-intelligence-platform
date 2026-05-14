@@ -79,6 +79,9 @@ def login_user(db: Session, email: str, password: str) -> dict:
 
 
 def verify_user_email(db: Session, email: str, code: str) -> User:
+    print("SEARCHING:", repr(email.lower()))
+    print("ALL USERS:", db.query(User).all())
+
     user = get_user_by_email(db, email.lower())
     normalized_code = code.strip()
 
@@ -89,9 +92,13 @@ def verify_user_email(db: Session, email: str, code: str) -> User:
         raise HTTPException(status_code=400, detail="User already verified")
 
     if user.verification_code != normalized_code:
-        raise HTTPException(status_code=400, detail="Invalid code")
+        print("DB CODE:", repr(user.verification_code))
+        print("INPUT CODE:", repr(normalized_code))
 
+        raise HTTPException(status_code=400, detail="Invalid code")
     if not user.code_expires_at or user.code_expires_at < datetime.utcnow():
+        print("EXPIRES:", user.code_expires_at)
+        print("NOW:", datetime.utcnow())
         raise HTTPException(status_code=400, detail="Code expired")
 
     user.is_verified = True
