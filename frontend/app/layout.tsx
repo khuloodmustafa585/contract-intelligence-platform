@@ -1,37 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Contract Platform",
-  description: "AI Contract Intelligence Platform",
+  title: "Contract Lens — AI Contract Intelligence",
+  description: "Enterprise AI contract intelligence platform",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en" dir="ltr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <Navbar />
+    <html lang="en" className={`${inter.variable} h-full`}>
+      <body className="min-h-full bg-[#080d1a] text-slate-100 antialiased">
         {children}
       </body>
-    </html> 
+    </html>
   );
-} 
+}

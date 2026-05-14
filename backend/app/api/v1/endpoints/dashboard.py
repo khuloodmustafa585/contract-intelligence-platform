@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 
 from app.schemas.dashboard import DashboardResponse
-from app.services.analytics_service import get_dashboard_metrics
+from app.services.analytics_service import get_dashboard_metrics, get_analytics_charts
 
 
 router = APIRouter(
@@ -23,9 +23,16 @@ def get_dashboard(
 ):
     try:
         return get_dashboard_metrics(db, current_user.id)
-
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/charts")
+def get_charts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return get_analytics_charts(db, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

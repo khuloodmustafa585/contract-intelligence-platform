@@ -1,307 +1,249 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { BookOpen, ChevronRight, FileText, Search, X } from "lucide-react";
+import { api, Clause, Contract } from "@/services/api";
+import AppShell from "@/components/layout/AppShell";
+
+type EnrichedClause = Clause & { contractTitle: string };
+
+const CATEGORIES = ["All", "Termination", "Liability", "Confidentiality", "Payment", "Renewal", "Indemnity", "General"];
+
+function guessCategory(heading: string | null | undefined, text: string): string {
+  const combined = ((heading ?? "") + " " + text).toLowerCase();
+  if (/terminat/.test(combined)) return "Termination";
+  if (/liabilit|indemnif/.test(combined)) return "Liability";
+  if (/confidential|non-disclosure|nda/.test(combined)) return "Confidentiality";
+  if (/payment|invoice|fee|price/.test(combined)) return "Payment";
+  if (/renew|successive|auto.?renew/.test(combined)) return "Renewal";
+  if (/indemnif/.test(combined)) return "Indemnity";
+  return "General";
+}
+
 export default function ClauseLibraryPage() {
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [clauses, setClauses] = useState<EnrichedClause[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [selected, setSelected] = useState<EnrichedClause | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const all = await api.contracts();
+      const completed = all.filter((c) => c.status === "completed");
+      setContracts(completed);
+
+      const results: EnrichedClause[] = [];
+      await Promise.all(
+        completed.slice(0, 8).map(async (contract) => {
+          try {
+            const cls = await api.clauses(contract.id);
+            cls.forEach((c) => results.push({ ...c, contractTitle: contract.title }));
+          } catch {}
+        })
+      );
+      setClauses(results);
+    }
+    load()
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const enriched = clauses.map((c) => ({
+    ...c,
+    guessedCategory: guessCategory(c.heading, c.text),
+  }));
+
+  const filtered = enriched.filter((c) => {
+    const matchSearch =
+      !search ||
+      c.text.toLowerCase().includes(search.toLowerCase()) ||
+      (c.heading ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchCat = category === "All" || c.guessedCategory === category;
+    return matchSearch && matchCat;
+  });
+
+  const categoryCounts: Record<string, number> = { All: enriched.length };
+  enriched.forEach((c) => {
+    categoryCounts[c.guessedCategory] = (categoryCounts[c.guessedCategory] ?? 0) + 1;
+  });
+
   return (
-    <main className="min-h-screen bg-[#0b1326] text-[#dae2fd] flex">
-      {/* Left Category Panel */}
-      <aside className="w-72 border-r border-white/10 bg-[#131b2e]/40 p-6 space-y-8">
-        <div>
-          <h3 className="text-xs uppercase tracking-[0.2em] text-indigo-300 mb-4">
-            Categories
-          </h3>
-
-          <div className="space-y-2">
-            {[
-              ["Termination", "12"],
-              ["Liability", "08"],
-              ["Confidentiality", "15"],
-              ["Indemnity", "05"],
-              ["Force Majeure", "03"],
-              ["Governing Law", "09"],
-            ].map(([name, count], index) => (
+    <AppShell>
+      <div className="flex h-[calc(100vh-8rem)] gap-5">
+        {/* Left: categories */}
+        <aside className="w-52 flex-shrink-0 space-y-1 overflow-y-auto">
+          <div className="mb-3">
+            <div className="mb-1 flex items-center gap-2">
+              <BookOpen size={14} className="text-blue-400" />
+              <span className="text-xs font-medium uppercase tracking-widest text-blue-400/70">
+                Categories
+              </span>
+            </div>
+          </div>
+          {CATEGORIES.map((cat) => {
+            const count = categoryCounts[cat] ?? 0;
+            return (
               <button
-                key={name}
-                className={`w-full flex justify-between items-center px-4 py-3 rounded-xl transition-all ${
-                  index === 0
-                    ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
-                    : "hover:bg-white/5 text-[#c4c5d9]"
-                }`}
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={`
+                  flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm transition
+                  ${category === cat
+                    ? "nav-active"
+                    : "text-slate-400 hover:bg-[rgba(99,131,200,0.06)] hover:text-slate-200"
+                  }
+                `}
               >
-                <span>{name}</span>
-
-                <span className="text-xs px-2 py-1 rounded bg-white/5">
-                  {count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Risk Filters */}
-        <div>
-          <h3 className="text-xs uppercase tracking-[0.2em] text-indigo-300 mb-4">
-            Risk Filters
-          </h3>
-
-          <div className="space-y-4">
-            {[
-              ["High Risk", "border-red-400"],
-              ["Moderate Risk", "border-cyan-400"],
-              ["Standard / Safe", "border-indigo-300"],
-            ].map(([label, border]) => (
-              <label
-                key={label}
-                className="flex items-center gap-3 cursor-pointer"
-              >
-                <div
-                  className={`w-4 h-4 rounded border ${border}`}
-                ></div>
-
-                <span className="text-[#c4c5d9]">{label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Repository */}
-      <section className="flex-1 overflow-y-auto px-10 py-10">
-        <div className="max-w-5xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="text-5xl font-bold tracking-tight">
-                Clause Intelligence
-              </h1>
-
-              <p className="text-[#c4c5d9] mt-3 text-lg">
-                Search across 1,240 vetted legal clauses optimized by AI.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button className="p-3 rounded-xl border border-white/10 hover:bg-white/5">
-                <span className="material-symbols-outlined">
-                  filter_list
-                </span>
-              </button>
-
-              <button className="p-3 rounded-xl border border-white/10 hover:bg-white/5">
-                <span className="material-symbols-outlined">
-                  sort
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Clause Cards */}
-          <div className="space-y-5">
-            {[
-              {
-                category: "TERMINATION",
-                risk: "HIGH RISK",
-                riskStyle: "bg-red-500/10 text-red-400",
-                title: "Mutual Convenience Clause v2",
-                description:
-                  "Either party may terminate this Agreement at any time, with or without cause, upon providing thirty (30) days prior written notice.",
-                insight:
-                  "Suggests 60-day notice for vendor protection.",
-              },
-              {
-                category: "LIABILITY",
-                risk: "MODERATE",
-                riskStyle: "bg-cyan-500/10 text-cyan-400",
-                title: "Aggregate Liability Cap (1x Annual)",
-                description:
-                  "The total aggregate liability of either party shall not exceed the amount paid or payable under this agreement.",
-                insight:
-                  "Industry standard for SaaS agreements.",
-              },
-              {
-                category: "CONFIDENTIALITY",
-                risk: "STANDARD",
-                riskStyle: "bg-indigo-500/10 text-indigo-300",
-                title: "Definition of Confidential Information",
-                description:
-                  "Confidential Information means all non-public information disclosed by a party whether orally or in writing.",
-                insight:
-                  "Includes standard exclusions for public domain data.",
-              },
-            ].map((clause, index) => (
-              <div
-                key={index}
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all"
-              >
-                <div className="flex justify-between items-start mb-5">
-                  <div className="flex gap-3">
-                    <span className="px-3 py-1 rounded-lg bg-[#222a3d] text-xs tracking-widest">
-                      {clause.category}
-                    </span>
-
-                    <span
-                      className={`px-3 py-1 rounded-lg text-xs tracking-widest ${clause.riskStyle}`}
-                    >
-                      {clause.risk}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-[#8e90a2]">
-                    <span className="material-symbols-outlined text-base">
-                      database
-                    </span>
-
-                    128 Sources
-                  </div>
-                </div>
-
-                <h3 className="text-2xl font-semibold mb-3">
-                  {clause.title}
-                </h3>
-
-                <p className="text-[#c4c5d9] leading-relaxed">
-                  {clause.description}
-                </p>
-
-                <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-indigo-300 text-sm">
-                    <span className="material-symbols-outlined text-base">
-                      auto_awesome
-                    </span>
-
-                    {clause.insight}
-                  </div>
-
-                  <span className="material-symbols-outlined text-[#8e90a2]">
-                    chevron_right
+                <span>{cat}</span>
+                {count > 0 && (
+                  <span className="rounded-full bg-[rgba(99,131,200,0.1)] px-1.5 py-0.5 text-[10px] text-slate-500">
+                    {count}
                   </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Preview Panel */}
-      <aside className="w-[430px] border-l border-white/10 bg-[#131b2e]/30 backdrop-blur-xl p-8 overflow-y-auto">
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-semibold">
-              Clause Preview
-            </h2>
-
-            <div className="flex gap-2">
-              <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
-                <span className="material-symbols-outlined">
-                  content_copy
-                </span>
+                )}
               </button>
+            );
+          })}
 
-              <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
-                <span className="material-symbols-outlined">
-                  close
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Clause Body */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-
-              <span className="text-xs uppercase tracking-[0.2em] text-cyan-300">
-                Analyzing Variations
-              </span>
-            </div>
-
-            <p className="leading-relaxed text-[#dae2fd]">
-              The total aggregate liability of either party for all claims
-              arising out of or related to this agreement shall not exceed
-              the amount paid or payable during the twelve month period
-              preceding the claim.
+          {/* Contracts section */}
+          <div className="mt-5 pt-4 border-t border-[rgba(99,131,200,0.1)]">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-slate-600">
+              Sources ({contracts.length})
             </p>
+            {contracts.slice(0, 6).map((c) => (
+              <Link
+                key={c.id}
+                href={`/contracts/${c.id}`}
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:text-blue-400"
+              >
+                <FileText size={11} className="flex-shrink-0" />
+                <span className="truncate">{c.title}</span>
+              </Link>
+            ))}
           </div>
+        </aside>
 
-          {/* AI Recommendation */}
-          <div>
-            <h3 className="text-xs uppercase tracking-[0.2em] text-indigo-300 mb-4">
-              AI Recommendation
-            </h3>
-
-            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5">
-              <p className="italic text-[#dae2fd] leading-relaxed">
-                We recommend introducing a minimum liability floor of
-                $50,000 for enterprise agreements to maintain balanced
-                negotiation leverage.
-              </p>
-
-              <button className="mt-5 flex items-center gap-2 text-indigo-300 hover:underline">
-                Apply Suggestion
-
-                <span className="material-symbols-outlined text-base">
-                  bolt
-                </span>
-              </button>
+        {/* Center: clause list */}
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Header + search */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-white">Clause Library</h1>
+              <p className="text-xs text-slate-500">{filtered.length} clauses</p>
+            </div>
+            <div className="relative w-56">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+              <input
+                className="w-full rounded-lg border border-[rgba(99,131,200,0.15)] bg-[#0d1528] py-2 pl-8 pr-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-blue-500/50"
+                placeholder="Search clauses…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <X size={12} className="text-slate-600 hover:text-slate-400" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-              <span className="block text-xs uppercase tracking-widest text-[#8e90a2] mb-2">
-                Market Frequency
-              </span>
-
-              <h3 className="text-3xl font-bold">82%</h3>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-              <span className="block text-xs uppercase tracking-widest text-[#8e90a2] mb-2">
-                Favorability
-              </span>
-
-              <h3 className="text-3xl font-bold text-cyan-300">
-                Neutral
-              </h3>
-            </div>
-          </div>
-
-          {/* History */}
-          <div>
-            <h3 className="text-xs uppercase tracking-[0.2em] text-indigo-300 mb-4">
-              Historical Context
-            </h3>
-
+          {/* Content */}
+          {loading ? (
             <div className="space-y-3">
-              {[
-                ["Used in Project Zenith", "Oct 2023 • No Litigation"],
-                ["Modified in Global Ops MSA", "Jan 2024 • Negotiated"],
-              ].map(([title, subtitle]) => (
-                <div
-                  key={title}
-                  className="flex gap-3 bg-white/5 rounded-xl p-4"
+              {[...Array(5)].map((_, i) => <div key={i} className="h-24 skeleton rounded-2xl" />)}
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-500/20 bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-red-300">{error}</div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-center">
+              <BookOpen size={36} className="mb-3 text-slate-700" />
+              <p className="text-sm text-slate-500">
+                {contracts.length === 0
+                  ? "No completed contracts yet. Upload and analyze a contract first."
+                  : "No clauses match your search."}
+              </p>
+              {contracts.length === 0 && (
+                <Link href="/upload" className="mt-3 text-sm text-blue-400 hover:underline">
+                  Upload contract →
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              {filtered.map((clause) => (
+                <button
+                  key={`${clause.contract_id}-${clause.id}`}
+                  onClick={() => setSelected(selected?.id === clause.id ? null : clause)}
+                  className={`
+                    w-full rounded-2xl border p-4 text-left transition-all
+                    ${selected?.id === clause.id
+                      ? "border-blue-500/30 bg-[rgba(59,130,246,0.08)] shadow-sm"
+                      : "border-[rgba(99,131,200,0.1)] bg-[#0d1528] hover:border-[rgba(99,131,200,0.2)]"
+                    }
+                  `}
                 >
-                  <span className="material-symbols-outlined text-[#8e90a2]">
-                    history
-                  </span>
-
-                  <div>
-                    <p>{title}</p>
-
-                    <span className="text-sm text-[#8e90a2]">
-                      {subtitle}
-                    </span>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded-md border border-[rgba(99,131,200,0.15)] bg-[rgba(99,131,200,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
+                        {clause.guessedCategory}
+                      </span>
+                      <span className="text-[10px] text-slate-600 truncate max-w-[200px]">{clause.contractTitle}</span>
+                    </div>
+                    <ChevronRight size={14} className="flex-shrink-0 text-slate-700" />
                   </div>
-                </div>
+                  {clause.heading && (
+                    <p className="mb-1.5 text-sm font-semibold text-slate-200">{clause.heading}</p>
+                  )}
+                  <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">{clause.text}</p>
+                </button>
               ))}
             </div>
-          </div>
-
-          {/* CTA */}
-          <button className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 transition-all font-semibold shadow-lg shadow-indigo-500/30">
-            Add to Contract View
-          </button>
+          )}
         </div>
-      </aside>
-    </main>
+
+        {/* Right: clause preview panel */}
+        {selected && (
+          <aside className="w-80 flex-shrink-0 overflow-y-auto rounded-2xl border border-[rgba(99,131,200,0.15)] bg-[#0d1528] p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen size={14} className="text-blue-400" />
+                <span className="text-xs font-medium text-slate-400">Preview</span>
+              </div>
+              <button onClick={() => setSelected(null)} className="text-slate-600 hover:text-slate-400">
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              <span className="rounded-md border border-[rgba(99,131,200,0.15)] bg-[rgba(99,131,200,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
+                {(selected as EnrichedClause & { guessedCategory: string }).guessedCategory}
+              </span>
+            </div>
+
+            {selected.heading && (
+              <h2 className="mb-3 text-base font-bold text-white">{selected.heading}</h2>
+            )}
+
+            <p className="text-sm leading-relaxed text-slate-300">{selected.text}</p>
+
+            <div className="mt-4 border-t border-[rgba(99,131,200,0.1)] pt-4">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-600 mb-2">Source</p>
+              <Link
+                href={`/contracts/${selected.contract_id}`}
+                className="flex items-center gap-2 text-xs text-blue-400 hover:underline"
+              >
+                <FileText size={11} />
+                {(selected as EnrichedClause).contractTitle}
+                <ChevronRight size={11} />
+              </Link>
+              <p className="mt-1 text-[10px] text-slate-600">Clause #{selected.order_index + 1}</p>
+            </div>
+          </aside>
+        )}
+      </div>
+    </AppShell>
   );
 }

@@ -114,3 +114,60 @@ def get_dashboard_metrics(db: Session, user_id: int) -> dict:
         "recent_uploads": recent_uploads,
         "unread_alerts": unread_alerts or 0,
     }
+
+
+def get_analytics_charts(db: Session, user_id: int) -> dict:
+    from app.models.clause import Clause
+
+    risk_by_severity = (
+        db.query(Risk.severity, func.count(Risk.id))
+        .join(Contract, Contract.id == Risk.contract_id)
+        .filter(Contract.owner_id == user_id)
+        .group_by(Risk.severity)
+        .all()
+    )
+
+    risk_by_type = (
+        db.query(Risk.risk_type, func.count(Risk.id))
+        .join(Contract, Contract.id == Risk.contract_id)
+        .filter(Contract.owner_id == user_id)
+        .group_by(Risk.risk_type)
+        .all()
+    )
+
+    contract_by_status = (
+        db.query(Contract.status, func.count(Contract.id))
+        .filter(Contract.owner_id == user_id)
+        .group_by(Contract.status)
+        .all()
+    )
+
+    obligation_by_status = (
+        db.query(Obligation.status, func.count(Obligation.id))
+        .join(Contract, Contract.id == Obligation.contract_id)
+        .filter(Contract.owner_id == user_id)
+        .group_by(Obligation.status)
+        .all()
+    )
+
+    # Upload activity: contracts per day for last 14 days
+    from datetime import datetime, timedelta
+    cutoff = datetime.utcnow() - timedelta(days=14)
+    upload_activity_raw = (
+        db.query(
+            func.date(Contract.created_at).label("day"),
+            func.count(Contract.id).label("count"),
+        )
+        .filter(Contract.owner_id == user_id, Contract.created_at >= cutoff)
+        .group_by(func.date(Contract.created_at))
+        .order_by(func.date(Contract.created_at))
+        .all()
+    )
+
+    return {
+        "risk_by_severity": [{"label": row[0], "value": row[1]} for row in risk_by_severity],
+        "risk_by_type": [{"label": row[0], "value": row[1]} for row in risk_by_type],
+        "contract_by_status": [{"label": row[0], "value": row[1]} for row in contract_by_status],
+        "obligation_by_status": [{"label": row[0], "value": row[1]} for row in obligation_by_status],
+        "upload_activity": [{"day": str(row[0]), "count": row[1]} for row in upload_activity_raw],
+    }

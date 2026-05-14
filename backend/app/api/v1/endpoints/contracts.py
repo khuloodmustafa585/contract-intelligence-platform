@@ -148,3 +148,61 @@ def ask_contract_ai(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     return answer_contract_question(db, contract, payload.question)
+
+
+@router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_contract(
+    contract_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import os
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    if contract.file_path and os.path.exists(contract.file_path):
+        try:
+            os.remove(contract.file_path)
+        except OSError:
+            pass
+    db.delete(contract)
+    db.commit()
+
+
+@router.post("/{contract_id}/retry")
+def retry_contract_processing(
+    contract_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.core.constants import CONTRACT_STATUS_FAILED, CONTRACT_STATUS_PROCESSING
+    from app.services.upload_service import process_contract
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    if contract.status != CONTRACT_STATUS_FAILED:
+        raise HTTPException(status_code=400, detail="Only failed contracts can be retried")
+    contract.status = CONTRACT_STATUS_PROCESSING
+    contract.processing_error = None
+    db.commit()
+    background_tasks.add_task(process_contract, contract_id)
+    return {"message": "Retry started", "contract_id": contract_id}
+
+
+@router.get("/{contract_id}/status")
+def get_contract_status(
+    contract_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    return {
+        "id": contract.id,
+        "status": contract.status,
+        "embedding_status": contract.embedding_status,
+        "is_indexed": contract.is_indexed,
+        "processing_error": contract.processing_error,
+    }

@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn } from "lucide-react";
+import Link from "next/link";
+import { Eye, EyeOff, Loader2, LogIn, Zap } from "lucide-react";
 import { loginUser } from "@/services/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: { preventDefault(): void }) {
     event.preventDefault();
     setLoading(true);
     setError("");
@@ -27,19 +29,100 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-24 text-slate-100">
-      <form onSubmit={submit} className="mx-auto max-w-md rounded-lg border border-slate-800 bg-slate-900 p-8">
-        <h1 className="text-2xl font-semibold">Sign in</h1>
-        <p className="mt-2 text-sm text-slate-400">Access your contract intelligence workspace.</p>
-        {error && <div className="mt-5 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</div>}
-        <label className="mt-6 block text-sm text-slate-300">Email</label>
-        <input className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-sky-500" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-        <label className="mt-4 block text-sm text-slate-300">Password</label>
-        <input className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 outline-none focus:border-sky-500" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-        <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2 font-medium text-slate-950 disabled:opacity-60">
-          <LogIn size={18} /> {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-[#080d1a] px-4">
+      {/* Background glow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/5 blur-3xl" />
+        <div className="absolute left-1/4 top-2/3 h-96 w-96 rounded-full bg-indigo-600/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        {/* Logo */}
+        <div className="mb-8 flex items-center justify-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30">
+            <Zap size={20} className="text-white" />
+          </div>
+          <div>
+            <p className="text-lg font-bold text-white leading-none">Contract Lens</p>
+            <p className="text-[10px] uppercase tracking-widest text-blue-400/70">Intelligence Suite</p>
+          </div>
+        </div>
+
+        {/* Card */}
+        <form
+          onSubmit={submit}
+          className="rounded-2xl border border-[rgba(99,131,200,0.15)] bg-[#0d1528] p-8 shadow-2xl shadow-black/40"
+        >
+          <h1 className="text-xl font-bold text-white">Welcome back</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Sign in to your contract intelligence workspace.
+          </p>
+
+          {error && (
+            <div className="mt-5 rounded-xl border border-red-500/20 bg-[rgba(239,68,68,0.08)] px-4 py-3 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-400">Email</label>
+              <input
+                className="input-base w-full"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="you@company.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-400">Password</label>
+              </div>
+              <div className="relative">
+                <input
+                  className="input-base w-full pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2"
+          >
+            {loading ? (
+              <><Loader2 size={16} className="animate-spin" /> Signing in…</>
+            ) : (
+              <><LogIn size={16} /> Sign in</>
+            )}
+          </button>
+
+          <p className="mt-5 text-center text-sm text-slate-600">
+            No account?{" "}
+            <Link href="/signup" className="text-blue-400 hover:underline">
+              Create one
+            </Link>
+          </p>
+        </form>
+      </div>
+    </div>
   );
 }
