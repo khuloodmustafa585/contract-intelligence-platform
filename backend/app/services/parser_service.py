@@ -1,4 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 from app.utils.text_cleaner import clean_text
 

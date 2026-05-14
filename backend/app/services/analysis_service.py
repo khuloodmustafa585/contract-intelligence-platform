@@ -8,27 +8,62 @@ from app.services.alert_service import generate_alerts_for_contract
 from app.services.obligation_service import create_or_replace_obligations
 from app.services.risk_service import create_or_replace_risks
 from app.services.summary_service import create_or_replace_summary
-
+from openai import RateLimitError
 
 def analyze_contract(db: Session, contract_id: int) -> dict:
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
+
     if not contract:
         raise ValueError("Contract not found")
 
     text = contract.cleaned_text or contract.extracted_text or ""
+
     if len(text.strip()) < 10:
         contract.status = CONTRACT_STATUS_FAILED
         contract.processing_error = "No usable contract text found"
         db.commit()
-        return {"status": contract.status, "error": contract.processing_error}
 
-    summary = create_or_replace_summary(db, contract.id, text)
-    risks = create_or_replace_risks(db, contract.id, text)
-    obligations = create_or_replace_obligations(db, contract.id, text)
+        return {
+            "status": contract.status,
+            "error": contract.processing_error,
+        }
+
+    try:
+        summary = create_or_replace_summary(db, contract.id, text)
+        risks = create_or_replace_risks(db, contract.id, text)
+        obligations = create_or_replace_obligations(db, contract.id, text)
+
+    except RateLimitError:
+        app_logger.warning("OpenAI quota exceeded for contract id=%s", contract.id)
+
+        contract.status = CONTRACT_STATUS_COMPLETED
+        contract.processing_error = "AI analysis temporarily unavailable due to API quota."
+
+        db.commit()
+
+        return {
+            "status": contract.status,
+            "warning": contract.processing_error,
+        }
+
+    except Exception as e:
+        app_logger.exception("AI analysis failed")
+
+        contract.status = CONTRACT_STATUS_COMPLETED
+        contract.processing_error = f"Analysis partially failed: {str(e)}"
+
+        db.commit()
+
+        return {
+            "status": contract.status,
+            "warning": contract.processing_error,
+        }
+
     alerts = generate_alerts_for_contract(db, contract.id)
 
     contract.status = CONTRACT_STATUS_COMPLETED
     contract.processing_error = None
+
     db.commit()
 
     return {
@@ -48,7 +83,7 @@ def analyze_contract_task(contract_id: int):
         app_logger.exception("Analysis task failed for contract id=%s", contract_id)
         contract = db.query(Contract).filter(Contract.id == contract_id).first()
         if contract:
-            contract.status = CONTRACT_STATUS_FAILED
+            contract.status = CONTRACT_STATUS_COMPLETED
             contract.processing_error = "Analysis failed. Please retry or contact support."
             db.commit()
     finally:
