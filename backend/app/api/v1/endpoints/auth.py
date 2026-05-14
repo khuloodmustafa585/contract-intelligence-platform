@@ -15,6 +15,7 @@ from app.services.auth_service import (
     verify_user_email,
     resend_verification_email,
 )
+from app.core.rate_limit import rate_limit
 
 router = APIRouter()
 
@@ -28,6 +29,7 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
+    _: None = Depends(rate_limit("login", 5, 60)),
 ):
     return login_user(db, form_data.username, form_data.password)
 

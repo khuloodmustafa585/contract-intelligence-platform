@@ -18,10 +18,4 @@ def search_in_contract(contract_id: int, query: str, db: Session):
     if not contract:
         return []
 
-    results = search_similar_clauses(query)
-
-    filtered_results = [
-        r for r in results if r.get("contract_id") == contract_id
-    ]
-
-    return filtered_results
+    return search_similar_clauses(query, contract_id=contract_id)

@@ -15,15 +15,32 @@ class Clause(Base):
         index=True,
     )
 
-    category = Column(String(100), nullable=True)
+    category = Column(String(100), nullable=True, index=True)
     heading = Column(String(255), nullable=True)
 
     text = Column(Text, nullable=False)
-    order_index = Column(Integer, nullable=False, default=0)
+
+    order_index = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        index=True,
+    )
 
     page_number = Column(Integer, nullable=True)
     source_snippet = Column(Text, nullable=True)
 
-    contract = relationship("Contract", back_populates="clauses")
-    obligations = relationship("Obligation", back_populates="clause")
-    risks = relationship("Risk", back_populates="clause")
+    contract = relationship(
+        "Contract",
+        back_populates="clauses"
+    )
+
+    obligations = relationship(
+        "Obligation",
+        back_populates="clause"
+    )
+
+    risks = relationship(
+        "Risk",
+        back_populates="clause"
+    )

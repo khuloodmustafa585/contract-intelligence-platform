@@ -1,8 +1,9 @@
 from PyPDF2 import PdfReader
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile, status
 from app.core.constants import UPLOAD_DIR, SUPPORTED_FILE_TYPES, MAX_FILE_SIZE_MB
 import os
 import docx
+import uuid
 
 def read_pdf(file_path: str) -> str:
     try:
@@ -25,9 +26,9 @@ def read_docx(file_path: str) -> str:
         print(f"Error reading DOCX: {e}")
         return ""
     
-def save_file(file: UploadFile) -> str:
+def save_file(file: UploadFile, filename: str | None = None) -> str:
     try:
-        filename = file.filename or ""
+        filename = filename or file.filename or ""
         if not filename.lower().endswith(SUPPORTED_FILE_TYPES):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

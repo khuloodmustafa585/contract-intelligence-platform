@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     upload,
     alerts,
     dashboard,
+    insights,
 )
 
 api_router = APIRouter()
@@ -30,5 +31,7 @@ api_router.include_router(upload.router, prefix="/upload", tags=["Upload"])
 api_router.include_router(alerts.router)
 
 api_router.include_router(dashboard.router)
+
+api_router.include_router(insights.router)
 
 print("ROUTER LOADED")

@@ -9,6 +9,7 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.models.user import User
 from app.schemas.user import UserCreate
 from app.services.email_service import send_verification_email
+from app.core.logging import security_logger
 
 
 def generate_verification_code() -> str:
@@ -55,12 +56,14 @@ def login_user(db: Session, email: str, password: str) -> dict:
     user = get_user_by_email(db, email.lower())
 
     if not user or not verify_password(password, user.hashed_password):
+        security_logger.warning("Failed login for email=%s", email.lower())
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     if not user.is_verified:
+        security_logger.warning("Unverified login attempt for email=%s", email.lower())
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email first",

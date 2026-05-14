@@ -115,3 +115,70 @@ def generate_high_risk_alerts(db: Session):
             db.add(alert)
 
     db.commit()
+
+
+def generate_alerts_for_contract(db: Session, contract_id: int) -> list[Alert]:
+    today = date.today()
+    limit_date = today + timedelta(days=30)
+    created: list[Alert] = []
+
+    contract = db.query(Contract).filter(Contract.id == contract_id).first()
+    if not contract:
+        return created
+
+    if contract.expiration_date and today <= contract.expiration_date <= limit_date:
+        existing = db.query(Alert).filter(
+            Alert.contract_id == contract_id,
+            Alert.alert_type == ALERT_TYPE_EXPIRING_SOON,
+        ).first()
+        if not existing:
+            created.append(Alert(
+                contract_id=contract_id,
+                alert_type=ALERT_TYPE_EXPIRING_SOON,
+                title="Contract expiring soon",
+                message=f"Contract '{contract.title}' expires on {contract.expiration_date.isoformat()}.",
+                trigger_date=contract.expiration_date,
+                status=ALERT_STATUS_UNREAD,
+            ))
+
+    obligations = db.query(Obligation).filter(Obligation.contract_id == contract_id).all()
+    for obligation in obligations:
+        if not obligation.due_date:
+            continue
+        if obligation.due_date < today:
+            alert_type, title = ALERT_TYPE_OVERDUE, "Obligation overdue"
+        elif obligation.due_date <= limit_date:
+            alert_type, title = ALERT_TYPE_DUE_SOON, "Obligation due soon"
+        else:
+            continue
+        existing = db.query(Alert).filter(Alert.obligation_id == obligation.id, Alert.alert_type == alert_type).first()
+        if not existing:
+            created.append(Alert(
+                contract_id=contract_id,
+                obligation_id=obligation.id,
+                alert_type=alert_type,
+                title=title,
+                message=f"Obligation '{obligation.title}' needs attention.",
+                trigger_date=obligation.due_date,
+                status=ALERT_STATUS_UNREAD,
+            ))
+
+    risks = db.query(Risk).filter(Risk.contract_id == contract_id, Risk.severity == "high").all()
+    for risk in risks:
+        existing = db.query(Alert).filter(Alert.risk_id == risk.id, Alert.alert_type == ALERT_TYPE_HIGH_RISK).first()
+        if not existing:
+            created.append(Alert(
+                contract_id=contract_id,
+                risk_id=risk.id,
+                alert_type=ALERT_TYPE_HIGH_RISK,
+                title="High risk detected",
+                message=f"High risk found: {risk.title}",
+                status=ALERT_STATUS_UNREAD,
+            ))
+
+    for alert in created:
+        db.add(alert)
+    db.commit()
+    for alert in created:
+        db.refresh(alert)
+    return created

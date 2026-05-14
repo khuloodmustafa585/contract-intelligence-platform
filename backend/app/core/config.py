@@ -9,6 +9,16 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_TIMEOUT_SECONDS: int = 30
+    AI_MAX_INPUT_CHARS: int = 18000
+    AI_MAX_QUESTION_CHARS: int = 1000
+    AI_MAX_OUTPUT_TOKENS: int = 1200
+    UPLOAD_DIR: str = "uploads"
+    MAX_FILE_SIZE_MB: int = 10
+    QDRANT_URL: Optional[str] = None
+    QDRANT_API_KEY: Optional[str] = None
+    QDRANT_COLLECTION: str = "contracts"
     
     model_config = SettingsConfigDict(
         env_file=".env",

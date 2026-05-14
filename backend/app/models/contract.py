@@ -26,8 +26,8 @@ class Contract(Base):
 
     processing_error = Column(Text, nullable=True)
 
-    effective_date = Column(Date, nullable=True)
-    expiration_date = Column(Date, nullable=True)
+    effective_date = Column(Date, nullable=True, index=True)
+    expiration_date = Column(Date, nullable=True, index = True)
     notice_period_days = Column(Integer, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
