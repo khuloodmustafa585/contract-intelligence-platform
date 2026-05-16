@@ -55,15 +55,15 @@ export default function DashboardPanel({
     <div
       className={`overflow-hidden flex flex-col ${className}`}
       style={{
-        background:   "#0f172a",
-        border:       "1px solid rgba(255,255,255,0.06)",
-        boxShadow:    "0 1px 4px rgba(0,0,0,0.5)",
-        borderRadius: "12px",
+        background:   "#0d1a2e",
+        border:       "1px solid rgba(255,255,255,0.05)",
+        boxShadow:    "0 1px 3px rgba(0,0,0,0.35)",
+        borderRadius: "16px",
       }}
     >
       {/* Header */}
       <div
-        className="flex items-center gap-2.5 px-5 py-3.5 shrink-0"
+        className="flex items-center gap-2.5 px-6 py-5 shrink-0"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
       >
         <div
@@ -108,7 +108,7 @@ export default function DashboardPanel({
       </div>
 
       {/* Body */}
-      <div className={`flex-1 ${noPadding ? "" : "p-5"}`}>
+      <div className={`flex-1 ${noPadding ? "" : "p-6"}`}>
         {children}
       </div>
     </div>

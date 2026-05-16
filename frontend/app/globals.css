@@ -45,11 +45,11 @@ html {
 
 body {
   min-height: 100%;
-  background: #0b1120;
+  background: #070e1c;
   color: #f3f4f6;
   font-family: var(--font-sans, system-ui, sans-serif);
   overflow-x: hidden;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────── */

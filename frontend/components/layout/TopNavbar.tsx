@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Bell, LogOut, User } from "lucide-react";
+import { Search, Bell, LogOut, Upload, ChevronRight } from "lucide-react";
 import { api } from "@/services/api";
 
 const PAGE_LABELS: Record<string, string> = {
@@ -28,7 +28,8 @@ export default function TopNavbar() {
   const [searchFocus, setSearchFocus] = useState(false);
 
   useEffect(() => {
-    api.alerts()
+    api
+      .alerts()
       .then((items) => setAlerts(items.filter((a) => a.status === "unread").length))
       .catch(() => undefined);
   }, []);
@@ -43,32 +44,53 @@ export default function TopNavbar() {
 
   return (
     <header
-      className="fixed top-0 right-0 z-40 flex h-12 items-center gap-3 px-6"
       style={{
+        position: "fixed",
+        top: 0,
+        right: 0,
         left: "240px",
-        background: "#0b1120",
+        zIndex: 40,
+        height: "56px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "0 24px",
+        background: "rgba(5, 12, 25, 0.88)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Page title */}
-      <span className="mr-auto text-sm font-medium" style={{ color: "#f3f4f6" }}>
-        {pageLabel}
-      </span>
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
+        <span style={{ fontSize: "0.72rem", color: "#1e293b" }}>Contract Lens</span>
+        <ChevronRight size={11} style={{ color: "#1e293b" }} />
+        <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "#94a3b8" }}>{pageLabel}</span>
+      </div>
 
       {/* Search */}
       <div
-        className="relative hidden md:flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all duration-150"
         style={{
-          width: searchFocus ? "240px" : "200px",
-          background: "#0f172a",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "0 12px",
+          height: "34px",
+          width: searchFocus ? "260px" : "210px",
+          background: "rgba(15, 28, 52, 0.8)",
           border: `1px solid ${searchFocus ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.07)"}`,
-          boxShadow: searchFocus ? "0 0 0 3px rgba(59,130,246,0.06)" : "none",
+          borderRadius: "10px",
+          boxShadow: searchFocus ? "0 0 0 3px rgba(59,130,246,0.07)" : "none",
           transition: "width 0.2s ease, border-color 0.15s, box-shadow 0.15s",
         }}
       >
         <Search
           size={12}
-          style={{ color: searchFocus ? "#3b82f6" : "#374151", flexShrink: 0, transition: "color 0.15s" }}
+          style={{
+            color: searchFocus ? "#3b82f6" : "#334155",
+            flexShrink: 0,
+            transition: "color 0.15s",
+          }}
         />
         <input
           type="text"
@@ -77,70 +99,152 @@ export default function TopNavbar() {
           onFocus={() => setSearchFocus(true)}
           onBlur={() => setSearchFocus(false)}
           placeholder="Search contracts..."
-          className="flex-1 bg-transparent text-sm outline-none"
-          style={{ color: "#f3f4f6" }}
+          style={{
+            flex: 1,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "#f1f5f9",
+            fontSize: "0.78rem",
+          }}
         />
+        <kbd
+          style={{
+            fontSize: "0.58rem",
+            color: "#1e293b",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: "4px",
+            padding: "1px 5px",
+            fontFamily: "monospace",
+            flexShrink: 0,
+          }}
+        >
+          /
+        </kbd>
       </div>
 
-      {/* Alerts */}
+      {/* Notification bell */}
       <Link
         href="/alerts"
-        className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
-        style={{ color: "#4b5563" }}
+        style={{
+          position: "relative",
+          width: "34px",
+          height: "34px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "10px",
+          color: "#475569",
+          transition: "all 0.15s",
+        }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-          (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "rgba(255,255,255,0.06)";
+          el.style.color = "#94a3b8";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "transparent";
-          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "transparent";
+          el.style.color = "#475569";
         }}
       >
-        <Bell size={14} />
+        <Bell size={15} />
         {alerts > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[0.55rem] font-bold text-white"
-            style={{ background: "#ef4444" }}
-          >
-            {alerts > 9 ? "9+" : alerts}
-          </span>
+            style={{
+              position: "absolute",
+              top: "7px",
+              right: "7px",
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: "#ef4444",
+              border: "1.5px solid #050c19",
+            }}
+          />
         )}
       </Link>
 
-      {/* Avatar */}
+      {/* User avatar */}
       <Link
         href="/profile"
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
-        style={{ color: "#4b5563" }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
-          (e.currentTarget as HTMLElement).style.color = "#94a3b8";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "transparent";
-          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+        style={{
+          width: "32px",
+          height: "32px",
+          borderRadius: "9px",
+          background: "linear-gradient(135deg, #3b82f6, #7c3aed)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "0.58rem",
+          fontWeight: 700,
+          color: "#ffffff",
+          flexShrink: 0,
+          textDecoration: "none",
+          boxShadow: "0 2px 10px rgba(59,130,246,0.3)",
+          letterSpacing: "0.04em",
         }}
       >
-        <User size={14} />
+        LT
       </Link>
 
       {/* Logout */}
       <button
         onClick={handleLogout}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150"
-        style={{ color: "#4b5563" }}
         title="Sign out"
+        style={{
+          width: "34px",
+          height: "34px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "10px",
+          color: "#475569",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          transition: "all 0.15s",
+        }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)";
-          (e.currentTarget as HTMLElement).style.color = "#f87171";
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "rgba(239,68,68,0.08)";
+          el.style.color = "#f87171";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = "transparent";
-          (e.currentTarget as HTMLElement).style.color = "#4b5563";
+          const el = e.currentTarget as HTMLElement;
+          el.style.background = "transparent";
+          el.style.color = "#475569";
         }}
       >
         <LogOut size={14} />
       </button>
+
+      {/* Upload CTA */}
+      <Link
+        href="/upload"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "0 16px",
+          height: "34px",
+          borderRadius: "10px",
+          background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+          color: "#ffffff",
+          fontSize: "0.8rem",
+          fontWeight: 500,
+          textDecoration: "none",
+          boxShadow: "0 4px 14px rgba(59,130,246,0.35)",
+          transition: "opacity 0.15s",
+          flexShrink: 0,
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.85")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
+      >
+        <Upload size={13} />
+        Upload
+      </Link>
     </header>
   );
 }

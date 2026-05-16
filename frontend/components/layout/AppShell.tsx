@@ -9,13 +9,10 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen" style={{ background: "#0b1120" }}>
+    <div style={{ minHeight: "100vh", background: "#050c19" }}>
       <Sidebar />
       <TopNavbar />
-      <main
-        className="min-h-screen pt-12"
-        style={{ paddingLeft: "240px" }}
-      >
+      <main style={{ minHeight: "100vh", paddingTop: "56px", paddingLeft: "240px" }}>
         {children}
       </main>
     </div>

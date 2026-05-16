@@ -26,7 +26,7 @@ const NAV_MAIN = [
 ];
 
 const NAV_TOOLS = [
-  { href: "/upload",         label: "Upload",         icon: Upload   },
+  { href: "/upload",         label: "Upload Center",  icon: Upload   },
   { href: "/clause-library", label: "Clause Library", icon: BookOpen },
   { href: "/alerts",         label: "Alerts",         icon: Bell     },
 ];
@@ -35,58 +35,76 @@ const NAV_SYSTEM = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-function NavGroup({
-  label,
-  items,
-  pathname,
-}: {
+type NavItem = {
+  href: string;
   label: string;
-  items: { href: string; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties; strokeWidth?: number }> }[];
-  pathname: string;
-}) {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties; strokeWidth?: number }>;
+};
+
+function NavGroup({ label, items, pathname }: { label: string; items: NavItem[]; pathname: string }) {
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
 
   return (
     <div>
       <p
-        className="mb-1.5 px-3 text-xs font-medium uppercase tracking-widest"
-        style={{ color: "#1f2937", fontSize: "0.6rem", letterSpacing: "0.12em" }}
+        style={{
+          fontSize: "0.59rem",
+          fontWeight: 600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "#1e293b",
+          padding: "0 10px",
+          marginBottom: "5px",
+        }}
       >
         {label}
       </p>
-      <div className="space-y-px">
+      <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
         {items.map(({ href, label: itemLabel, icon: Icon }) => {
           const active = isActive(href);
           return (
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150"
               style={{
-                background: active ? "rgba(59,130,246,0.1)" : "transparent",
-                color: active ? "#93c5fd" : "#4b5563",
-                borderLeft: active ? "2px solid #3b82f6" : "2px solid transparent",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "9px 10px",
+                borderRadius: "10px",
+                fontSize: "0.82rem",
+                fontWeight: active ? 500 : 400,
+                color: active ? "#93c5fd" : "#475569",
+                background: active
+                  ? "linear-gradient(90deg, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.04) 100%)"
+                  : "transparent",
+                borderLeft: `2px solid ${active ? "#3b82f6" : "transparent"}`,
+                boxShadow: active ? "inset 0 0 0 1px rgba(59,130,246,0.08)" : "none",
+                transition: "all 0.15s ease",
+                textDecoration: "none",
               }}
               onMouseEnter={(e) => {
                 if (!active) {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
-                  (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.background = "rgba(255,255,255,0.04)";
+                  el.style.color = "#94a3b8";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!active) {
-                  (e.currentTarget as HTMLElement).style.background = "transparent";
-                  (e.currentTarget as HTMLElement).style.color = "#4b5563";
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.background = "transparent";
+                  el.style.color = "#475569";
                 }
               }}
             >
               <Icon
                 size={14}
-                strokeWidth={active ? 2 : 1.75}
+                strokeWidth={active ? 2.2 : 1.75}
                 style={{ color: active ? "#60a5fa" : "currentColor", flexShrink: 0 }}
               />
-              <span className="font-medium">{itemLabel}</span>
+              {itemLabel}
             </Link>
           );
         })}
@@ -100,66 +118,124 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-50 flex h-screen flex-col"
       style={{
+        position: "fixed",
+        left: 0,
+        top: 0,
+        zIndex: 50,
         width: "240px",
-        background: "#080f1e",
-        borderRight: "1px solid rgba(255,255,255,0.05)",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: "#060d1b",
+        borderRight: "1px solid rgba(255,255,255,0.055)",
       }}
     >
       {/* Brand */}
       <div
-        className="flex items-center gap-3 px-5 py-4"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "18px 20px",
+          borderBottom: "1px solid rgba(255,255,255,0.055)",
+        }}
       >
         <div
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
-          style={{ background: "#3b82f6" }}
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "10px",
+            background: "linear-gradient(135deg, #3b82f6 0%, #7c3aed 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            boxShadow: "0 4px 14px rgba(59,130,246,0.35)",
+          }}
         >
-          <Scale size={13} className="text-white" strokeWidth={2} />
+          <Scale size={15} color="#ffffff" strokeWidth={2} />
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight" style={{ color: "#f3f4f6" }}>
+        <div>
+          <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f1f5f9", lineHeight: 1.2 }}>
             Contract Lens
           </p>
-          <p className="text-xs leading-tight" style={{ color: "#374151" }}>
+          <p style={{ fontSize: "0.67rem", color: "#334155", lineHeight: 1.2, marginTop: "2px" }}>
             Legal Intelligence
           </p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
+      <nav
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "20px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "28px",
+        }}
+      >
         <NavGroup label="Main" items={NAV_MAIN} pathname={pathname} />
         <NavGroup label="Tools" items={NAV_TOOLS} pathname={pathname} />
         <NavGroup label="System" items={NAV_SYSTEM} pathname={pathname} />
       </nav>
 
-      {/* User */}
-      <div
-        className="px-4 pb-4 pt-3"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
-      >
+      {/* User profile */}
+      <div style={{ padding: "12px", borderTop: "1px solid rgba(255,255,255,0.055)" }}>
         <Link
           href="/profile"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors duration-150"
-          style={{ background: "rgba(255,255,255,0.03)" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 12px",
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.05)",
+            textDecoration: "none",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)")
+          }
         >
           <div
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold"
-            style={{ background: "#3b82f6", color: "#ffffff" }}
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "8px",
+              background: "linear-gradient(135deg, #3b82f6, #7c3aed)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.58rem",
+              fontWeight: 700,
+              color: "#ffffff",
+              flexShrink: 0,
+              letterSpacing: "0.03em",
+            }}
           >
             LT
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium" style={{ color: "#d1d5db" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                color: "#d1d5db",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               Legal Team
             </p>
-            <p className="text-xs" style={{ color: "#374151" }}>
-              Enterprise
-            </p>
+            <p style={{ fontSize: "0.67rem", color: "#334155" }}>Enterprise</p>
           </div>
         </Link>
       </div>

@@ -33,4 +33,3 @@ class Settings(BaseSettings):
     )
 
 settings = Settings()
-print("DATABASE URL:", settings.DATABASE_URL)
