@@ -105,32 +105,32 @@ export default function UploadPage() {
 
   return (
     <AppShell>
-      <div className="px-8 py-8 max-w-6xl mx-auto">
-
+      <div className="px-8 pt-12 pb-8 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-10">
           <div className="flex items-center gap-2 mb-2">
             <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #22d3ee)" }} />
             <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>
-              Document Ingestion
+              Contract Upload
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>
             Upload Center
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+                    <div className="h-2" />
+          <p className="mt-2 text-sm" style={{ color: "#64748b" }}>
             Upload PDF, DOCX, or image contracts for AI-powered analysis.
           </p>
         </div>
+          <div className="h-2" />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-
+        <div className="grid gap-6 items-start lg:grid-cols-[1fr_340px]">
           {/* Upload Zone */}
-          <div className="space-y-5">
+          <div className="space-y-10 py-6">
 
             {/* Dropzone */}
             <div
-              className="relative rounded-2xl transition-all duration-300 cursor-pointer"
+              className="relative my-10 rounded-2xl transition-all duration-300 hover:scale-[1.005] cursor-pointer"
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
@@ -152,7 +152,12 @@ export default function UploadPage() {
                   : uploadState === "error"
                   ? "2px dashed rgba(239,68,68,0.4)"
                   : "2px dashed rgba(99,102,241,0.18)",
-                minHeight: "280px",
+                minHeight: "140px",
+                paddingBottom: "50px",
+                paddingTop: "50px",
+                boxShadow: dragging
+                  ? "0 0 40px rgba(99,102,241,0.18)"
+                  : "0 0 0 rgba(0,0,0,0)",
               }}
             >
               <input
@@ -163,7 +168,7 @@ export default function UploadPage() {
                 onChange={(e) => handleFile(e.target.files?.[0])}
               />
 
-              <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8 px-8 text-center">
 
                 {/* Idle */}
                 {uploadState === "idle" && (
@@ -304,11 +309,7 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {/* AI Insight */}
-            <AIInsightPanel title="AI Processing Note">
-              After upload, documents are parsed, OCR-processed if needed, embedded into the vector store, and analyzed for risks, clauses, and obligations. Processing continues in the background — you can safely navigate away.
-            </AIInsightPanel>
-
+          <div className="h-6" />
             {/* Recent Queue */}
             <GlassCard>
               <div
@@ -360,121 +361,74 @@ export default function UploadPage() {
             </GlassCard>
           </div>
 
-          {/* Sidebar — OCR Timeline */}
-          <div className="space-y-5">
-            <GlassCard>
-              <div
-                className="px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(99,102,241,0.10)" }}
-              >
-                <p className="text-sm font-semibold" style={{ color: "#dae2fd" }}>
-                  Processing Pipeline
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-                  OCR-to-intelligence workflow
-                </p>
-              </div>
-              <div className="px-5 py-5">
-                <div className="relative">
-                  {/* vertical line */}
-                  <div
-                    className="absolute left-3.5 top-4 bottom-4 w-px"
-                    style={{ background: "rgba(99,102,241,0.12)" }}
-                  />
+{/* Sidebar — Upload Status */}
+<div className="space-y-5">
+  <GlassCard>
+    <div
+      className="px-5 py-4"
+      style={{ borderBottom: "1px solid rgba(99,102,241,0.10)" }}
+    >
+      <p
+        className="text-sm font-semibold"
+        style={{ color: "#dae2fd" }}
+      >
+        Upload Status
+      </p>
 
-                  <div className="space-y-5">
-                    {TIMELINE_STEPS.map((step, idx) => {
-                      const done    = activeStep > idx;
-                      const current = activeStep === idx;
-                      const Icon = step.icon;
-                      return (
-                        <div key={step.key} className="flex items-start gap-4 relative">
-                          {/* Node */}
-                          <div
-                            className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-300"
-                            style={{
-                              background: done
-                                ? "rgba(16,185,129,0.15)"
-                                : current
-                                ? "rgba(99,102,241,0.18)"
-                                : "rgba(30,45,71,0.8)",
-                              border: done
-                                ? "1px solid rgba(16,185,129,0.35)"
-                                : current
-                                ? "1px solid rgba(99,102,241,0.45)"
-                                : "1px solid rgba(99,102,241,0.12)",
-                              boxShadow: current ? "0 0 12px rgba(99,102,241,0.3)" : undefined,
-                            }}
-                          >
-                            <Icon
-                              size={13}
-                              style={{
-                                color: done ? "#10b981" : current ? "#818cf8" : "#3a4560",
-                              }}
-                              className={current ? "animate-spin" : ""}
-                            />
-                          </div>
+      <p
+        className="text-xs mt-0.5"
+        style={{ color: "#64748b" }}
+      >
+        Your contract is being processed
+      </p>
+    </div>
 
-                          <div>
-                            <p
-                              className="text-xs font-semibold"
-                              style={{
-                                color: done ? "#34d399" : current ? "#dae2fd" : "#3a4560",
-                              }}
-                            >
-                              {step.label}
-                            </p>
-                            {current && (
-                              <p className="text-xs mt-0.5" style={{ color: "#6366f1" }}>
-                                In progress...
-                              </p>
-                            )}
-                            {done && (
-                              <p className="text-xs mt-0.5" style={{ color: "#34d399" }}>
-                                Complete
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
+    <div className="px-5 py-6">
+      <div className="flex items-center gap-4">
+        {/* Status Icon */}
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-full"
+          style={{
+            background: "rgba(99,102,241,0.18)",
+            border: "1px solid rgba(99,102,241,0.35)",
+            boxShadow: "0 0 18px rgba(99,102,241,0.22)",
+          }}
+        >
+          <Loader2
+            size={18}
+            className={uploadState === "uploading" ? "animate-spin" : ""}
+            style={{ color: "#818cf8" }}
+          />
+        </div>
 
-            {/* Format Guide */}
-            <GlassCard>
-              <div className="px-5 py-4">
-                <p className="text-xs font-semibold mb-3 uppercase tracking-widest" style={{ color: "#3a4560", fontFamily: "var(--font-mono,monospace)" }}>
-                  Accepted Formats
-                </p>
-                <div className="space-y-2">
-                  {[
-                    { ext: "PDF", desc: "Native text extraction", color: "#f87171" },
-                    { ext: "DOCX", desc: "Word document parsing", color: "#818cf8" },
-                    { ext: "JPG/PNG", desc: "OCR image processing", color: "#22d3ee" },
-                  ].map(({ ext, desc, color }) => (
-                    <div key={ext} className="flex items-center gap-3">
-                      <span
-                        className="rounded-md px-2 py-0.5 text-xs font-bold"
-                        style={{
-                          background: `${color}18`,
-                          color,
-                          fontFamily: "var(--font-mono,monospace)",
-                        }}
-                      >
-                        {ext}
-                      </span>
-                      <span className="text-xs" style={{ color: "#64748b" }}>{desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </GlassCard>
-          </div>
+        {/* Status Text */}
+        <div>
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "#dae2fd" }}
+          >
+            {uploadState === "uploading" ? "Processing" : "Awaiting Upload"}
+          </p>
+
+          <p
+            className="text-xs mt-1"
+            style={{ color: "#64748b" }}
+          >
+            {
+            uploadState === "uploading"
+              ? "AI analysis in progress..."
+              : "Upload a contract to begin analysis"
+            }
+          </p>
         </div>
       </div>
-    </AppShell>
+    </div>
+  </GlassCard>
+
+
+    </div>
+    </div>
+        </div>
+  </AppShell>
   );
 }
