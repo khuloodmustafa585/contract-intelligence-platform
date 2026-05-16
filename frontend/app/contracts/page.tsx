@@ -84,25 +84,28 @@ export default function ContractsPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #22d3ee)" }} />
-              <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>Contract Registry</span>
+              <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>Contract Management</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Contracts</h1>
+                      <div className="h-1" />
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Contracts Library</h1>
+                      <div className="h-1" />
+
             <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
               {loading ? "Loading..." : `${filtered.length} of ${contracts.length} contracts`}
             </p>
           </div>
           <Link
             href="/upload"
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all hover:opacity-90"
+            className="flex items-center gap-2 rounded-xl px-6 py-5 text-sm font-semibold transition-all hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              background: "linear-gradient(135deg, #7e80ef, #7a75da)",
               color: "white",
-              boxShadow: "0 0 24px rgba(99,102,241,0.35)",
+              boxShadow: "2px 9px 39px rgba(99,102,241,0.35)",
             }}
           >
-            <Plus size={15} /> New Contract
+               New Contract <Plus size={20} />
           </Link>
         </div>
 
@@ -115,6 +118,7 @@ export default function ContractsPage() {
             {error}
           </div>
         )}
+          <div className="h-4" />
 
         {/* Filters row */}
         <div className="mb-4 flex flex-wrap gap-3">
@@ -133,28 +137,38 @@ export default function ContractsPage() {
               style={{ color: "#dae2fd" }}
             />
           </div>
+          <div className="h-6" />
 
           {/* Status filter */}
           <div className="flex items-center gap-1">
             <Filter size={13} style={{ color: "#64748b" }} />
-            <div className="flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid rgba(99,102,241,0.12)" }}>
+            <div className="flex items-center gap-2 flex-wrap">
               {STATUS_OPTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => { setStatus(s); setPage(1); }}
-                  className="px-3 py-2 text-xs font-medium capitalize transition-all"
-                  style={{
-                    background: statusFilter === s ? "rgba(99,102,241,0.18)" : "rgba(15,24,41,0.8)",
-                    color: statusFilter === s ? "#818cf8" : "#64748b",
-                    borderRight: "1px solid rgba(99,102,241,0.10)",
-                  }}
-                >
-                  {s}
+                  className="rounded-full px-4 py-2.5 text-xs font-medium capitalize transition-all border"                   
+                    style={{
+                      background:
+                        statusFilter === s
+                          ? "rgba(99,102,241,0.16)"
+                          : "rgba(255,255,255,0.03)",
+                      color:
+                        statusFilter === s
+                          ? "#a5b4fc"
+                          : "#64748b",
+                      border:
+                        statusFilter === s
+                          ? "1px solid rgba(99,102,241,0.28)"
+                          : "1px solid rgba(255,255,255,0.06)",
+                    }}>
+               {s}
                 </button>
               ))}
             </div>
           </div>
         </div>
+          <div className="h-6" />
 
         {/* Table */}
         {loading ? (
@@ -175,9 +189,9 @@ export default function ContractsPage() {
               className="grid text-xs uppercase tracking-widest"
               style={{
                 gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
-                padding: "10px 24px",
+                padding: "14px 24px",
                 borderBottom: "1px solid rgba(99,102,241,0.10)",
-                color: "#3a4560",
+                color: "#64748b",
                 fontFamily: "var(--font-mono, monospace)",
               }}
             >
@@ -200,7 +214,7 @@ export default function ContractsPage() {
                 <Link
                   key={contract.id}
                   href={`/contracts/${contract.id}`}
-                  className="group grid items-center px-6 py-3.5 transition-all hover:bg-[rgba(99,102,241,0.04)]"
+                  className="group grid items-center px-6 py-5 transition-all hover:bg-[rgba(99,102,241,0.06)] hover:shadow-[0_0_20px_rgba(99,102,241,0.06)]"
                   style={{
                     gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
                     borderBottom: i < pageRows.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none",
@@ -209,14 +223,14 @@ export default function ContractsPage() {
                   {/* Name */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all group-hover:bg-[rgba(99,102,241,0.16)]"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all group-hover:bg-[rgba(99,102,241,0.16)]"
                       style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.14)" }}
                     >
                       <FileText size={14} style={{ color: "#6366f1" }} />
                     </div>
                     <div className="min-w-0">
                       <p
-                        className="text-sm font-medium truncate transition-colors group-hover:text-[#818cf8]"
+                        className="text-[0.95rem] font-semibold truncate transition-colors group-hover:text-[#818cf8]"
                         style={{ color: "#dae2fd" }}
                       >
                         {contract.title}
@@ -224,7 +238,7 @@ export default function ContractsPage() {
                       {contract.file_type && (
                         <p className="text-xs font-mono-label mt-0.5" style={{ color: "#3a4560", fontSize: "0.6rem" }}>
                           {contract.file_type.toUpperCase()}
-                          {contract.ocr_used ? " · OCR" : ""}
+                          {contract.ocr_used ? " Â· OCR" : ""}
                         </p>
                       )}
                     </div>
@@ -247,7 +261,7 @@ export default function ContractsPage() {
                       ? new Date(contract.created_at).toLocaleDateString("en-US", {
                           month: "short", day: "numeric", year: "numeric",
                         })
-                      : "—"}
+                      : "â€”"}
                   </div>
 
                   {/* Arrow */}
@@ -269,7 +283,7 @@ export default function ContractsPage() {
                 style={{ borderTop: "1px solid rgba(99,102,241,0.10)" }}
               >
                 <span className="text-xs" style={{ color: "#64748b" }}>
-                  Page {page} of {totalPages} — {filtered.length} results
+                  Page {page} of {totalPages} â€” {filtered.length} results
                 </span>
                 <div className="flex items-center gap-1">
                   <button

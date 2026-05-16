@@ -12,16 +12,29 @@ import {
   AlertCircle,
   BookOpen,
   Lightbulb,
+  Quote,
+  ShieldAlert,
+  CheckCircle,
+  FileSearch,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
 import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import { api, Contract } from "@/services/api";
 
+type StructuredAnswer = {
+  clause_summary: string;
+  quoted_clause: string | null;
+  legal_risk: string | null;
+  recommendation: string | null;
+  confidence: string;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
-  content: string;
+  content?: string;
+  structured?: StructuredAnswer;
   sources?: unknown[];
   timestamp: Date;
 };
@@ -33,6 +46,149 @@ const SUGGESTED_QUESTIONS = [
   "What are the payment terms and penalties for late payment?",
   "Identify all confidentiality obligations for both parties.",
 ];
+
+const _CONFIDENCE_CFG = {
+  high:     { label: "High Confidence",     dot: "#34d399", color: "#34d399", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.22)" },
+  moderate: { label: "Moderate Confidence", dot: "#fbbf24", color: "#fbbf24", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.22)" },
+  low:      { label: "Low Confidence",      dot: "#f87171", color: "#f87171", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.20)"  },
+} as const;
+
+function ConfidenceBadge({ level }: { level: string }) {
+  const cfg = _CONFIDENCE_CFG[level as keyof typeof _CONFIDENCE_CFG]
+    ?? { label: level, dot: "#64748b", color: "#64748b", bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.20)" };
+  return (
+    <div className="flex items-center gap-1.5 mb-3">
+      <div
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5"
+        style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+      >
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: cfg.dot }} />
+        <span style={{ color: cfg.color, fontSize: "0.6rem", fontFamily: "var(--font-mono, monospace)", fontWeight: 600, letterSpacing: "0.05em" }}>
+          {cfg.label.toUpperCase()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function StructuredResponse({ data }: { data: StructuredAnswer }) {
+  const sections = [
+    {
+      key: "quoted_clause",
+      label: "Quoted Clause",
+      value: data.quoted_clause,
+      icon: Quote,
+      accentColor: "#6366f1",
+      bg: "rgba(99,102,241,0.06)",
+      border: "rgba(99,102,241,0.18)",
+      textColor: "#c7d2fe",
+      italic: true,
+    },
+    {
+      key: "clause_summary",
+      label: "AI Interpretation",
+      value: data.clause_summary,
+      icon: FileSearch,
+      accentColor: "#22d3ee",
+      bg: "rgba(34,211,238,0.04)",
+      border: "rgba(34,211,238,0.14)",
+      textColor: "#dae2fd",
+      italic: false,
+    },
+    {
+      key: "legal_risk",
+      label: "Risk Impact",
+      value: data.legal_risk,
+      icon: ShieldAlert,
+      accentColor: "#f87171",
+      bg: "rgba(239,68,68,0.05)",
+      border: "rgba(239,68,68,0.16)",
+      textColor: "#fca5a5",
+      italic: false,
+    },
+    {
+      key: "recommendation",
+      label: "Recommended Action",
+      value: data.recommendation,
+      icon: CheckCircle,
+      accentColor: "#34d399",
+      bg: "rgba(16,185,129,0.05)",
+      border: "rgba(16,185,129,0.15)",
+      textColor: "#6ee7b7",
+      italic: false,
+    },
+  ] as const;
+
+  return (
+    <div className="space-y-2.5">
+      <ConfidenceBadge level={data.confidence} />
+      {sections.map(({ key, label, value, icon: Icon, accentColor, bg, border, textColor, italic }) => {
+        if (!value) return null;
+        return (
+          <div
+            key={key}
+            className="rounded-xl p-3.5"
+            style={{ background: bg, border: `1px solid ${border}` }}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon size={11} style={{ color: accentColor }} />
+              <p
+                className="uppercase tracking-widest"
+                style={{ color: accentColor, fontSize: "0.58rem", fontFamily: "var(--font-mono, monospace)", fontWeight: 600 }}
+              >
+                {label}
+              </p>
+            </div>
+            {key === "quoted_clause" ? (
+              <blockquote
+                className="text-sm leading-relaxed pl-3"
+                style={{
+                  color: textColor,
+                  borderLeft: `2px solid ${accentColor}`,
+                  fontStyle: "italic",
+                  opacity: 0.9,
+                }}
+              >
+                &ldquo;{value}&rdquo;
+              </blockquote>
+            ) : (
+              <p className="text-sm leading-relaxed" style={{ color: textColor, fontStyle: italic ? "italic" : "normal" }}>
+                {value}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResponseSkeleton() {
+  const shimmerCards = [
+    { accentColor: "rgba(99,102,241,0.18)",   bg: "rgba(99,102,241,0.06)",  border: "rgba(99,102,241,0.14)",  labelW: "w-24", lines: ["w-4/5", "w-3/5"] },
+    { accentColor: "rgba(34,211,238,0.18)",   bg: "rgba(34,211,238,0.04)",  border: "rgba(34,211,238,0.12)",  labelW: "w-28", lines: ["w-full", "w-4/5", "w-1/2"] },
+    { accentColor: "rgba(239,68,68,0.20)",    bg: "rgba(239,68,68,0.05)",   border: "rgba(239,68,68,0.12)",   labelW: "w-20", lines: ["w-3/4", "w-2/3"] },
+    { accentColor: "rgba(16,185,129,0.18)",   bg: "rgba(16,185,129,0.05)",  border: "rgba(16,185,129,0.12)",  labelW: "w-32", lines: ["w-4/5", "w-3/5"] },
+  ];
+  return (
+    <div className="space-y-2.5 w-full max-w-[82%]">
+      {shimmerCards.map((card, i) => (
+        <div
+          key={i}
+          className="rounded-xl p-3.5 animate-pulse"
+          style={{ background: card.bg, border: `1px solid ${card.border}` }}
+        >
+          <div className={`h-1.5 rounded-full mb-2.5 ${card.labelW}`} style={{ background: card.accentColor }} />
+          <div className="space-y-1.5">
+            {card.lines.map((w, j) => (
+              <div key={j} className={`h-2 rounded-full ${w}`} style={{ background: card.accentColor, opacity: 0.5 }} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function AskAIPage() {
   const [contracts, setContracts]   = useState<Contract[]>([]);
@@ -78,7 +234,13 @@ export default function AskAIPage() {
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: result.answer,
+        structured: {
+          clause_summary: result.clause_summary,
+          quoted_clause: result.quoted_clause,
+          legal_risk: result.legal_risk,
+          recommendation: result.recommendation,
+          confidence: result.confidence ?? "low",
+        },
         sources: result.sources,
         timestamp: new Date(),
       };
@@ -188,8 +350,8 @@ export default function AskAIPage() {
 
           {/* AI note */}
           <div className="px-5 py-4" style={{ borderTop: "1px solid rgba(99,102,241,0.08)" }}>
-            <AIInsightPanel title="Grounded Answers" compact>
-              Responses are sourced from indexed contract clauses with vector retrieval — not general knowledge.
+            <AIInsightPanel title="Grounded Analysis" compact>
+              Responses quote exact contract language retrieved via vector search — no hallucination.
             </AIInsightPanel>
           </div>
         </aside>
@@ -256,13 +418,13 @@ export default function AskAIPage() {
                   Contract Intelligence AI
                 </h3>
                 <p className="text-sm max-w-sm" style={{ color: "#64748b" }}>
-                  Ask natural language questions about your contracts. I'll answer using the actual clause text.
+                  Ask natural language questions about your contracts. Every answer is grounded in exact clause text — with legal interpretation and risk guidance.
                 </p>
 
                 <div className="mt-8 grid grid-cols-2 gap-3 max-w-lg w-full">
                   {[
-                    { icon: BookOpen, label: "Clause Analysis",   desc: "Explain specific contract clauses" },
-                    { icon: Lightbulb, label: "Risk Identification", desc: "Find hidden risk exposure" },
+                    { icon: BookOpen, label: "Clause Analysis",      desc: "Exact quotes + legal interpretation" },
+                    { icon: Lightbulb, label: "Risk Identification", desc: "Concrete risk and business impact" },
                   ].map(({ icon: Icon, label, desc }) => (
                     <div
                       key={label}
@@ -293,7 +455,7 @@ export default function AskAIPage() {
               >
                 {/* Avatar */}
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl mt-0.5"
                   style={{
                     background: msg.role === "user"
                       ? "rgba(99,102,241,0.18)"
@@ -311,23 +473,27 @@ export default function AskAIPage() {
                 </div>
 
                 {/* Bubble */}
-                <div className={`max-w-[78%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
-                  <div
-                    className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
-                    style={{
-                      background: msg.role === "user"
-                        ? "rgba(99,102,241,0.14)"
-                        : "rgba(19,27,46,0.8)",
-                      border: msg.role === "user"
-                        ? "1px solid rgba(99,102,241,0.22)"
-                        : "1px solid rgba(99,102,241,0.10)",
-                      color: "#dae2fd",
-                      borderBottomRightRadius: msg.role === "user" ? "4px" : undefined,
-                      borderBottomLeftRadius: msg.role === "assistant" ? "4px" : undefined,
-                    }}
-                  >
-                    {msg.content}
-                  </div>
+                <div className={`max-w-[82%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                  {msg.role === "assistant" && msg.structured ? (
+                    <StructuredResponse data={msg.structured} />
+                  ) : (
+                    <div
+                      className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
+                      style={{
+                        background: msg.role === "user"
+                          ? "rgba(99,102,241,0.14)"
+                          : "rgba(19,27,46,0.8)",
+                        border: msg.role === "user"
+                          ? "1px solid rgba(99,102,241,0.22)"
+                          : "1px solid rgba(99,102,241,0.10)",
+                        color: "#dae2fd",
+                        borderBottomRightRadius: msg.role === "user" ? "4px" : undefined,
+                        borderBottomLeftRadius: msg.role === "assistant" ? "4px" : undefined,
+                      }}
+                    >
+                      {msg.content}
+                    </div>
+                  )}
                   <span className="text-[0.65rem] px-1" style={{ color: "#3a4560" }}>
                     {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
@@ -335,38 +501,19 @@ export default function AskAIPage() {
               </div>
             ))}
 
-            {/* Typing indicator */}
+            {/* Skeleton loading — mirrors the 4-card structured response layout */}
             {loading && (
               <div className="flex gap-3 animate-fade-in">
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl mt-0.5"
                   style={{
                     background: "rgba(34,211,238,0.12)",
                     border: "1px solid rgba(34,211,238,0.20)",
                   }}
                 >
-                  <Sparkles size={15} style={{ color: "#22d3ee" }} />
+                  <Sparkles size={15} className="animate-pulse" style={{ color: "#22d3ee" }} />
                 </div>
-                <div
-                  className="flex items-center gap-1.5 rounded-2xl px-4 py-3"
-                  style={{
-                    background: "rgba(19,27,46,0.8)",
-                    border: "1px solid rgba(99,102,241,0.10)",
-                    borderBottomLeftRadius: "4px",
-                  }}
-                >
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{
-                        background: "#6366f1",
-                        display: "inline-block",
-                        animation: `dot-bounce 1.4s ease-in-out ${i * 0.16}s infinite`,
-                      }}
-                    />
-                  ))}
-                </div>
+                <ResponseSkeleton />
               </div>
             )}
             <div ref={bottomRef} />
@@ -425,7 +572,7 @@ export default function AskAIPage() {
             </form>
 
             <p className="mt-2 text-center text-xs" style={{ color: "#3a4560" }}>
-              Answers are grounded in your indexed contract clauses
+              Answers quote exact contract language — grounded in indexed clauses, never hallucinated
             </p>
           </div>
         </div>

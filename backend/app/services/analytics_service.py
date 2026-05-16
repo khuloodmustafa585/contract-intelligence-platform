@@ -27,7 +27,7 @@ def get_dashboard_metrics(db: Session, user_id: int) -> dict:
     )
 
     high_risk_contracts = (
-        db.query(func.count(func.distinct(Risk.contract_id)))
+        db.query(func.count(Risk.id))
         .join(Contract, Contract.id == Risk.contract_id)
         .filter(
             Contract.owner_id == user_id,

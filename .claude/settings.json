@@ -11,7 +11,10 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('exports', {}\\).get\\('.', {}\\), indent=2\\)\\)\")",
       "Bash(node -e \"const fm = require\\('framer-motion'\\); console.log\\(Object.keys\\(fm\\).slice\\(0,10\\)\\)\")",
       "Bash(node -e \"const fm = require\\('framer-motion'\\); console.log\\('motion:', typeof fm.motion, 'AnimatePresence:', typeof fm.AnimatePresence\\)\")",
-      "Bash(node -e \"const fm = require\\('framer-motion'\\); console.log\\('HTMLMotionProps exported:', 'HTMLMotionProps' in fm\\)\")"
+      "Bash(node -e \"const fm = require\\('framer-motion'\\); console.log\\('HTMLMotionProps exported:', 'HTMLMotionProps' in fm\\)\")",
+      "PowerShell(head -30)",
+      "Bash(Get-Content \"c:\\\\Users\\\\LENOVO\\\\contract-intelligence-platform\\\\frontend\\\\app\\\\layout.tsx\")",
+      "Bash(Select-Object -First 40)"
     ],
     "additionalDirectories": [
       "c:\\Users\\LENOVO\\.claude\\projects\\c--Users-LENOVO-contract-intelligence-platform\\memory"

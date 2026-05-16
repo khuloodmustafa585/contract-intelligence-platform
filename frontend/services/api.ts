@@ -1,5 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
-
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1";
 export type Contract = {
   id: number;
   title: string;
@@ -86,7 +85,14 @@ export const api = {
   alerts: () => request<Alert[]>("/alerts/"),
   markAlertRead: (id: number) => request(`/alerts/${id}/read`, { method: "PATCH" }),
   analyze: (id: number) => request(`/contracts/${id}/analyze`, { method: "POST" }),
-  ask: (id: number | string, question: string) => request<{ answer: string; sources: unknown[] }>(`/contracts/${id}/ask`, { method: "POST", body: JSON.stringify({ question }) }),
+  ask: (id: number | string, question: string) => request<{
+    clause_summary: string;
+    quoted_clause: string | null;
+    legal_risk: string | null;
+    recommendation: string | null;
+    confidence: string;
+    sources: unknown[];
+  }>(`/contracts/${id}/ask`, { method: "POST", body: JSON.stringify({ question }) }),
   upload: (file: File, onProgress?: (progress: number) => void) =>
     new Promise<{ id: number; title: string; status: string; message: string }>((resolve, reject) => {
       const form = new FormData();
@@ -104,6 +110,12 @@ export const api = {
         else reject(new Error(payload.detail || "Upload failed"));
       };
       xhr.onerror = () => reject(new Error("Upload failed"));
+      
+      console.log("TOKEN:", token);
+      console.log("API_BASE:", API_BASE);
+      console.log("UPLOAD URL:", `${API_BASE}/upload/`);
+      console.log("FILE:", file);
+      
       xhr.send(form);
     }),
 };

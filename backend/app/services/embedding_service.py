@@ -1,5 +1,6 @@
 import hashlib
 import math
+import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 from sqlalchemy.orm import Session
@@ -16,6 +17,14 @@ COLLECTION_NAME = settings.QDRANT_COLLECTION
 _model = None
 _qdrant = None
 _memory_points: list[dict] = []
+# Persistent executor — avoids thread-pool creation overhead on every embedding call
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="embed")
+
+# Chunk constants for upsert — smaller chunks give sharper embeddings
+_CHUNK_SIZE = 400      # chars per chunk
+_CHUNK_OVERLAP = 60    # overlap between consecutive chunks
+# Chunk point IDs: clause.id * _CHUNK_ID_STRIDE + chunk_index (supports 4095 chunks/clause)
+_CHUNK_ID_STRIDE = 4096
 
 
 def _load_model():
@@ -24,10 +33,9 @@ def _load_model():
         return _model
     try:
         from sentence_transformers import SentenceTransformer
-
         _model = SentenceTransformer("all-MiniLM-L6-v2")
     except Exception as exc:
-        app_logger.warning("SentenceTransformer unavailable, using deterministic fallback embeddings: %s", exc)
+        app_logger.warning("SentenceTransformer unavailable, using deterministic fallback: %s", exc)
         _model = False
     return _model
 
@@ -65,23 +73,51 @@ def _fallback_embedding(text: str) -> list[float]:
     return [v / norm for v in vector]
 
 
-def generate_embedding(text: str, timeout_seconds: int = 20) -> list[float]:
+def generate_embedding(text: str, timeout_seconds: int = 10) -> list[float]:
     model = _load_model()
     if not model:
         return _fallback_embedding(text)
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(lambda: model.encode(text or "").tolist())
-        try:
-            return future.result(timeout=timeout_seconds)
-        except FutureTimeout:
-            app_logger.warning("Embedding generation timed out, using fallback embedding")
-            return _fallback_embedding(text)
+    t0 = time.monotonic()
+    future = _executor.submit(model.encode, text or "")
+    try:
+        result = future.result(timeout=timeout_seconds)
+        app_logger.debug("embedding generated in %.3fs", time.monotonic() - t0)
+        return result.tolist()
+    except FutureTimeout:
+        app_logger.warning("embedding timed out after %ds, using fallback", timeout_seconds)
+        return _fallback_embedding(text)
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
     denom = (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))) or 1.0
     return sum(x * y for x, y in zip(a, b)) / denom
+
+
+def _split_into_chunks(text: str) -> list[str]:
+    """Split long clause text into overlapping chunks for sharper embeddings."""
+    if not text:
+        return []
+    if len(text) <= _CHUNK_SIZE:
+        return [text]
+
+    chunks: list[str] = []
+    start = 0
+    while start < len(text):
+        end = min(start + _CHUNK_SIZE, len(text))
+        chunk = text[start:end]
+        # Prefer breaking at a sentence boundary in the last 80 chars
+        if end < len(text):
+            for sep in (". ", ".\n", "; ", "\n"):
+                pos = chunk.rfind(sep, len(chunk) - 80)
+                if pos > len(chunk) // 2:
+                    end = start + pos + len(sep)
+                    chunk = text[start:end]
+                    break
+        if chunk.strip():
+            chunks.append(chunk.strip())
+        start = end - _CHUNK_OVERLAP
+    return chunks
 
 
 def generate_embeddings_for_contract(contract_id: int, db: Session):
@@ -97,20 +133,43 @@ def upsert_embeddings(contract_id: int, db: Session):
 
     clauses = db.query(Clause).filter(Clause.contract_id == contract_id).all()
     try:
-        points = []
+        points: list[dict] = []
         for clause in clauses:
-            embedding = generate_embedding(clause.text)
-            payload = {
-                "contract_id": contract_id,
-                "clause_id": clause.id,
-                "text": clause.text,
-                "heading": clause.heading,
-            }
-            points.append({"id": clause.id, "vector": embedding, "payload": payload})
+            chunks = _split_into_chunks(clause.text or "")
+            if not chunks:
+                continue
+            for chunk_idx, chunk_text in enumerate(chunks):
+                # Prepend the heading to the text that gets embedded.
+                # This pulls the legal concept name ("8. Termination", "PAYMENT TERMS")
+                # into the vector so that queries like "termination conditions" land
+                # near the right clause even when the body text is written passively.
+                # The raw chunk_text (without prefix) is stored in the payload for display.
+                embed_text = f"{clause.heading}: {chunk_text}" if clause.heading else chunk_text
+                embedding = generate_embedding(embed_text)
+                point_id = clause.id * _CHUNK_ID_STRIDE + chunk_idx
+                payload = {
+                    "contract_id": contract_id,
+                    "clause_id": clause.id,
+                    "chunk_index": chunk_idx,
+                    "text": chunk_text,
+                    "heading": clause.heading,
+                }
+                points.append({"id": point_id, "vector": embedding, "payload": payload})
 
         qdrant = _load_qdrant()
         if qdrant:
-            from qdrant_client.models import PointStruct
+            from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
+
+            # Delete stale points before re-indexing so old non-chunked entries don't linger
+            try:
+                qdrant.delete(
+                    collection_name=COLLECTION_NAME,
+                    points_selector=Filter(
+                        must=[FieldCondition(key="contract_id", match=MatchValue(value=contract_id))]
+                    ),
+                )
+            except Exception as exc:
+                app_logger.warning("failed to clean up old embeddings for contract %d: %s", contract_id, exc)
 
             qdrant.upsert(
                 collection_name=COLLECTION_NAME,
@@ -124,6 +183,11 @@ def upsert_embeddings(contract_id: int, db: Session):
             contract.is_indexed = True
             contract.embedding_status = EMBEDDING_STATUS_COMPLETED
             db.commit()
+
+        app_logger.info(
+            "indexed contract %d: %d clauses → %d chunks",
+            contract_id, len(clauses), len(points),
+        )
     except Exception:
         if contract:
             contract.embedding_status = EMBEDDING_STATUS_FAILED
@@ -136,30 +200,39 @@ def search_similar_clauses(query: str, limit: int = 5, contract_id: int | None =
     qdrant = _load_qdrant()
 
     if qdrant:
-        search_filter = None
-        if contract_id is not None:
-            from qdrant_client.models import FieldCondition, Filter, MatchValue
+        try:
+            query_filter = None
+            if contract_id is not None:
+                from qdrant_client.models import FieldCondition, Filter, MatchValue
+                query_filter = Filter(
+                    must=[FieldCondition(key="contract_id", match=MatchValue(value=contract_id))]
+                )
 
-            search_filter = Filter(must=[FieldCondition(key="contract_id", match=MatchValue(value=contract_id))])
+            results = qdrant.query_points(
+                collection_name=COLLECTION_NAME,
+                query=query_vector,
+                query_filter=query_filter,
+                limit=limit,
+            )
+            points = results.points if hasattr(results, "points") else []
+            return [
+                {
+                    "clause_id": point.payload.get("clause_id") or point.id,
+                    "score": point.score,
+                    "snippet": (point.payload.get("text") or "")[:300],
+                    "text": point.payload.get("text"),
+                    "contract_id": point.payload.get("contract_id"),
+                    "heading": point.payload.get("heading"),
+                }
+                for point in points
+            ]
+        except Exception as exc:
+            app_logger.error("Qdrant vector search failed: %s", exc)
 
-        results = qdrant.search(
-            collection_name=COLLECTION_NAME,
-            query_vector=query_vector,
-            query_filter=search_filter,
-            limit=limit,
-        )
-        return [
-            {
-                "clause_id": result.payload.get("clause_id") or result.id,
-                "score": result.score,
-                "snippet": (result.payload.get("text") or "")[:300],
-                "text": result.payload.get("text"),
-                "contract_id": result.payload.get("contract_id"),
-            }
-            for result in results
-        ]
-
-    candidates = [p for p in _memory_points if contract_id is None or p["payload"]["contract_id"] == contract_id]
+    candidates = [
+        p for p in _memory_points
+        if contract_id is None or p["payload"]["contract_id"] == contract_id
+    ]
     ranked = sorted(candidates, key=lambda p: _cosine(query_vector, p["vector"]), reverse=True)[:limit]
     return [
         {
@@ -168,6 +241,7 @@ def search_similar_clauses(query: str, limit: int = 5, contract_id: int | None =
             "snippet": p["payload"]["text"][:300],
             "text": p["payload"]["text"],
             "contract_id": p["payload"]["contract_id"],
+            "heading": p["payload"].get("heading"),
         }
         for p in ranked
     ]
