@@ -1,6 +1,7 @@
 from email.message import EmailMessage
 import smtplib
-
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
 from app.core.logging import app_logger
 
@@ -34,3 +35,38 @@ def send_verification_email(to_email: str, code: str) -> None:
         if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
             smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         smtp.send_message(message)
+
+
+def send_email(to_email: str, subject: str, body: str):
+    if not settings.SMTP_HOST:
+        app_logger.info("Email skipped because SMTP is not configured")
+        return
+
+    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
+
+    if not from_email:
+        raise RuntimeError("SMTP_FROM_EMAIL or SMTP_USERNAME must be configured")
+
+    msg = MIMEMultipart()
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
+
+    msg.attach(MIMEText(body, "plain"))
+
+    with smtplib.SMTP(
+        settings.SMTP_HOST,
+        settings.SMTP_PORT,
+        timeout=15
+    ) as server:
+
+        if settings.SMTP_USE_TLS:
+            server.starttls()
+
+        if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
+            server.login(
+                settings.SMTP_USERNAME,
+                settings.SMTP_PASSWORD
+            )
+
+        server.send_message(msg)
