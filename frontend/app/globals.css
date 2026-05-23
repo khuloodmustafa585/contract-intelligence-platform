@@ -133,3 +133,21 @@ body {
   font-size: 0.68rem;
   text-transform: uppercase;
 }
+
+/* ─── Dark autofill override ──────────────────────────────────── */
+/* Prevents browsers from flashing a white background on autofill  */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(4, 7, 17, 0.98) inset !important;
+  -webkit-text-fill-color: #dae2fd !important;
+  caret-color: #6366f1 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Firefox autofill */
+input:autofill {
+  background: rgba(4, 7, 17, 0.98) !important;
+  color: #dae2fd !important;
+}

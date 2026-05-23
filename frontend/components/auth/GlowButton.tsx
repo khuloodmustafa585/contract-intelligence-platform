@@ -41,7 +41,7 @@ export default function GlowButton({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={[
-        "relative flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 text-sm font-semibold select-none",
+        "relative flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3.5 text-sm font-semibold select-none",
         fullWidth ? "w-full" : "",
         isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         className,
@@ -52,7 +52,6 @@ export default function GlowButton({
               background: "linear-gradient(135deg, #5046e5 0%, #4338ca 55%, #3730a3 100%)",
               color: "#dde5ff",
               border: "1px solid rgba(129,140,248,0.22)",
-              letterSpacing: "0.05em",
               boxShadow: hovered && !isDisabled
                 ? "0 0 52px rgba(99,102,241,0.6), 0 0 100px rgba(99,102,241,0.18), 0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12)"
                 : "0 0 28px rgba(99,102,241,0.32), 0 4px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)",
@@ -63,7 +62,6 @@ export default function GlowButton({
               background: "rgba(7, 12, 26, 0.8)",
               color: hovered && !isDisabled ? "#5a6480" : "#2e3d5a",
               border: `1px solid ${hovered && !isDisabled ? "rgba(99,102,241,0.22)" : "rgba(99,102,241,0.1)"}`,
-              letterSpacing: "0.05em",
               transition: "border-color 0.2s, color 0.2s",
               ...style,
             }

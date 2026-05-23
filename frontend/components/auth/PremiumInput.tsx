@@ -21,71 +21,111 @@ export default function PremiumInput({
   const [focused, setFocused] = useState(false);
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Label */}
       <label
-        className="mb-1.5 block font-mono-label"
         style={{
-          color: focused ? "#5046e5" : error ? "#7f1d1d" : "#1e2d47",
-          fontSize: "0.62rem",
+          marginBottom: "8px",
+          fontSize: "0.75rem",
+          fontWeight: 500,
+          color: focused ? "#818cf8" : error ? "#f87171" : "#4f6080",
           transition: "color 0.2s",
+          display: "block",
         }}
       >
         {label}
       </label>
 
-      <div className="relative">
+      {/* Flex input wrapper — this is the visible "input box" */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          borderRadius: "12px",
+          background: focused ? "rgba(5, 9, 20, 0.98)" : "rgba(4, 7, 17, 0.95)",
+          border: `1px solid ${
+            focused
+              ? "rgba(99,102,241,0.45)"
+              : error
+              ? "rgba(239,68,68,0.3)"
+              : "rgba(99,102,241,0.14)"
+          }`,
+          boxShadow: focused
+            ? "0 0 0 3px rgba(99,102,241,0.09), inset 0 1px 0 rgba(255,255,255,0.03)"
+            : "inset 0 1px 0 rgba(255,255,255,0.02)",
+          transition: "border-color 0.2s, box-shadow 0.2s, background 0.15s",
+          minHeight: "52px",
+        }}
+      >
+        {/* Left icon */}
         {icon && (
-          <div
-            className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2"
+          <span
             style={{
-              color: focused ? "#5046e5" : "#1e2d47",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingLeft: "16px",
+              paddingRight: "10px",
+              flexShrink: 0,
+              color: focused ? "#818cf8" : "#3a5070",
               transition: "color 0.2s",
             }}
           >
             {icon}
-          </div>
+          </span>
         )}
 
+        {/* Native input — transparent, grows to fill */}
         <input
           {...rest}
           onFocus={(e) => { setFocused(true); onFocus?.(e); }}
-          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
-          className={[
-            "w-full rounded-xl py-3 text-sm outline-none placeholder:text-[#141e30]",
-            icon ? "pl-10" : "pl-4",
-            rightSlot ? "pr-11" : "pr-4",
-          ].join(" ")}
+          onBlur={(e)  => { setFocused(false); onBlur?.(e); }}
           style={{
-            background: focused ? "rgba(5, 9, 20, 0.98)" : "rgba(4, 7, 17, 0.96)",
-            border: `1px solid ${
-              focused
-                ? "rgba(99,102,241,0.42)"
-                : error
-                ? "rgba(239,68,68,0.28)"
-                : "rgba(99,102,241,0.1)"
-            }`,
-            boxShadow: focused
-              ? "0 0 0 3px rgba(99,102,241,0.07), inset 0 1px 0 rgba(255,255,255,0.02)"
-              : "inset 0 1px 0 rgba(255,255,255,0.015)",
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            fontSize: "0.875rem",
             color: "#dae2fd",
             caretColor: "#6366f1",
-            transition: "border-color 0.2s, box-shadow 0.2s, background 0.15s",
+            lineHeight: "1.5",
+            paddingTop: "14px",
+            paddingBottom: "14px",
+            paddingLeft: icon ? "0" : "16px",
+            paddingRight: rightSlot ? "0" : "16px",
           }}
+          /* Tailwind can't reach ::placeholder via inline style, so keep one class */
+          className="placeholder:text-[#364d66]"
         />
 
+        {/* Right slot (eye toggle etc.) */}
         {rightSlot && (
-          <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2">
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingLeft: "10px",
+              paddingRight: "16px",
+              flexShrink: 0,
+            }}
+          >
             {rightSlot}
-          </div>
+          </span>
         )}
       </div>
 
+      {/* Inline error */}
       {error && (
         <p
-          className="mt-1 font-mono-label"
-          style={{ color: "#ef4444", fontSize: "0.58rem" }}
+          style={{
+            marginTop: "6px",
+            fontSize: "0.75rem",
+            color: "#f87171",
+          }}
         >
-          ⚠ {error}
+          {error}
         </p>
       )}
     </div>
