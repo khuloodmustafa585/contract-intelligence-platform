@@ -15,6 +15,7 @@ import {
   Settings,
   Scale,
 } from "lucide-react";
+import { useUser, getInitials } from "@/contexts/UserContext";
 
 const NAV_MAIN = [
   { href: "/dashboard",   label: "Dashboard",     icon: LayoutDashboard },
@@ -53,7 +54,7 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
           fontWeight: 600,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: "#1e293b",
+          color: "var(--th-text-5)",
           padding: "0 10px",
           marginBottom: "5px",
         }}
@@ -75,7 +76,7 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
                 borderRadius: "10px",
                 fontSize: "0.82rem",
                 fontWeight: active ? 500 : 400,
-                color: active ? "#93c5fd" : "#475569",
+                color: active ? "#93c5fd" : "var(--th-text-3)",
                 background: active
                   ? "linear-gradient(90deg, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.04) 100%)"
                   : "transparent",
@@ -87,15 +88,15 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
               onMouseEnter={(e) => {
                 if (!active) {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = "rgba(255,255,255,0.04)";
-                  el.style.color = "#94a3b8";
+                  el.style.background = "var(--th-subtle-bg)";
+                  el.style.color = "var(--th-text-2)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!active) {
                   const el = e.currentTarget as HTMLElement;
                   el.style.background = "transparent";
-                  el.style.color = "#475569";
+                  el.style.color = "var(--th-text-3)";
                 }
               }}
             >
@@ -115,6 +116,9 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const displayName = user?.full_name ?? "Legal Team";
+  const initials = getInitials(displayName);
 
   return (
     <aside
@@ -127,8 +131,8 @@ export default function Sidebar() {
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        background: "#060d1b",
-        borderRight: "1px solid rgba(255,255,255,0.055)",
+        background: "var(--th-surface)",
+        borderRight: "1px solid var(--th-surface-border)",
       }}
     >
       {/* Brand */}
@@ -138,7 +142,7 @@ export default function Sidebar() {
           alignItems: "center",
           gap: "12px",
           padding: "18px 20px",
-          borderBottom: "1px solid rgba(255,255,255,0.055)",
+          borderBottom: "1px solid var(--th-surface-border)",
         }}
       >
         <div
@@ -157,10 +161,10 @@ export default function Sidebar() {
           <Scale size={15} color="#ffffff" strokeWidth={2} />
         </div>
         <div>
-          <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f1f5f9", lineHeight: 1.2 }}>
+          <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--th-text-1)", lineHeight: 1.2 }}>
             Contract Lens
           </p>
-          <p style={{ fontSize: "0.67rem", color: "#334155", lineHeight: 1.2, marginTop: "2px" }}>
+          <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)", lineHeight: 1.2, marginTop: "2px" }}>
             Legal Intelligence
           </p>
         </div>
@@ -177,13 +181,13 @@ export default function Sidebar() {
           gap: "28px",
         }}
       >
-        <NavGroup label="Main" items={NAV_MAIN} pathname={pathname} />
-        <NavGroup label="Tools" items={NAV_TOOLS} pathname={pathname} />
+        <NavGroup label="Main"   items={NAV_MAIN}   pathname={pathname} />
+        <NavGroup label="Tools"  items={NAV_TOOLS}  pathname={pathname} />
         <NavGroup label="System" items={NAV_SYSTEM} pathname={pathname} />
       </nav>
 
-      {/* User profile */}
-      <div style={{ padding: "12px", borderTop: "1px solid rgba(255,255,255,0.055)" }}>
+      {/* User profile card */}
+      <div style={{ padding: "12px", borderTop: "1px solid var(--th-surface-border)" }}>
         <Link
           href="/profile"
           style={{
@@ -192,16 +196,16 @@ export default function Sidebar() {
             gap: "10px",
             padding: "10px 12px",
             borderRadius: "10px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.05)",
+            background: "var(--th-inner-hover)",
+            border: "1px solid var(--th-tag-border)",
             textDecoration: "none",
             transition: "background 0.15s",
           }}
           onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)")
+            ((e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)")
           }
           onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)")
+            ((e.currentTarget as HTMLElement).style.background = "var(--th-inner-hover)")
           }
         >
           <div
@@ -220,22 +224,22 @@ export default function Sidebar() {
               letterSpacing: "0.03em",
             }}
           >
-            LT
+            {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
                 fontSize: "0.8rem",
                 fontWeight: 500,
-                color: "#d1d5db",
+                color: "var(--th-text-1)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
             >
-              Legal Team
+              {displayName}
             </p>
-            <p style={{ fontSize: "0.67rem", color: "#334155" }}>Enterprise</p>
+            <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)" }}>Enterprise</p>
           </div>
         </Link>
       </div>

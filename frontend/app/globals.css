@@ -1,32 +1,153 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens ───────────────────────────────────────────── */
+/* ─── Design Tokens (Tailwind v4) ─────────────────────────────── */
 @theme {
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains-mono), "Fira Code", ui-monospace, monospace;
 
-  /* Dark navy surfaces */
-  --color-base:     #0b1120;
-  --color-surface:  #0f172a;
-  --color-card:     #0f172a;
-  --color-elevated: #111827;
-  --color-rim:      rgba(255,255,255,0.06);
+  --color-base:      #0b1120;
+  --color-surface:   #0f172a;
+  --color-card:      #0f172a;
+  --color-elevated:  #111827;
+  --color-rim:       rgba(255,255,255,0.06);
 
-  /* Accent — muted blue */
-  --color-accent:   #3b82f6;
+  --color-accent:    #3b82f6;
   --color-accent-bg: rgba(59,130,246,0.1);
 
-  /* Text */
   --color-prose:   #f3f4f6;
   --color-muted:   #94a3b8;
   --color-subtle:  #64748b;
   --color-whisper: #374151;
 
-  /* Semantic */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger:  #ef4444;
   --color-info:    #3b82f6;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME SYSTEM — CSS custom properties
+   All layout/component inline styles reference these vars.
+   Changing data-theme on <html> switches the entire app theme
+   because CSS vars in inline styles resolve dynamically.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Dark (default) ─────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  /* Page & surface backgrounds */
+  --th-body-bg:         #050c19;
+  --th-surface:         #060d1b;
+  --th-surface-border:  rgba(255,255,255,0.055);
+
+  /* Navbar */
+  --th-navbar-bg:       rgba(5, 12, 25, 0.88);
+  --th-navbar-border:   rgba(255,255,255,0.06);
+
+  /* Cards */
+  --th-card-bg:         rgba(10, 20, 38, 0.65);
+  --th-card-border:     rgba(255,255,255,0.06);
+  --th-card-shadow:     0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+
+  /* Structural */
+  --th-divider:         rgba(255,255,255,0.05);
+  --th-subtle-bg:       rgba(255,255,255,0.04);
+  --th-hover-bg:        rgba(255,255,255,0.06);
+  --th-inner-hover:     rgba(255,255,255,0.03);
+
+  /* Tables */
+  --th-row-hover:       rgba(59,130,246,0.035);
+  --th-table-header-bg: rgba(255,255,255,0.018);
+
+  /* Inputs */
+  --th-input-bg:        rgba(15, 28, 52, 0.8);
+  --th-input-border:    rgba(255,255,255,0.07);
+
+  /* Tags / badges */
+  --th-tag-bg:          rgba(255,255,255,0.05);
+  --th-tag-border:      rgba(255,255,255,0.07);
+  --th-tag-color:       #475569;
+
+  /* Dropdowns */
+  --th-dropdown-bg:     #0a1628;
+  --th-dropdown-border: rgba(255,255,255,0.1);
+
+  /* Typography */
+  --th-text-1: #f1f5f9;
+  --th-text-2: #94a3b8;
+  --th-text-3: #475569;
+  --th-text-4: #334155;
+  --th-text-5: #1e293b;
+
+  /* Gradient title */
+  --th-title-from: #f1f5f9;
+  --th-title-to:   #94a3b8;
+
+  /* Misc component tokens */
+  --th-insights-header-bg: linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(59,130,246,0.06) 100%);
+  --th-gauge-track:         rgba(255,255,255,0.05);
+  --th-row-divider:         rgba(255,255,255,0.03);
+  --th-dropdown-shadow:     0 16px 40px rgba(0,0,0,0.65);
+}
+
+/* Light ──────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --th-body-bg:         #f1f5f9;
+  --th-surface:         #ffffff;
+  --th-surface-border:  rgba(0,0,0,0.08);
+
+  --th-navbar-bg:       rgba(248, 250, 252, 0.97);
+  --th-navbar-border:   rgba(0,0,0,0.08);
+
+  --th-card-bg:         rgba(255, 255, 255, 0.92);
+  --th-card-border:     rgba(0,0,0,0.08);
+  --th-card-shadow:     0 2px 16px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.9);
+
+  --th-divider:         rgba(0,0,0,0.06);
+  --th-subtle-bg:       rgba(0,0,0,0.025);
+  --th-hover-bg:        rgba(0,0,0,0.04);
+  --th-inner-hover:     rgba(0,0,0,0.02);
+
+  --th-row-hover:       rgba(59,130,246,0.05);
+  --th-table-header-bg: rgba(0,0,0,0.015);
+
+  --th-input-bg:        rgba(241,245,249,0.95);
+  --th-input-border:    rgba(0,0,0,0.1);
+
+  --th-tag-bg:          rgba(0,0,0,0.04);
+  --th-tag-border:      rgba(0,0,0,0.07);
+  --th-tag-color:       #64748b;
+
+  --th-dropdown-bg:     #ffffff;
+  --th-dropdown-border: rgba(0,0,0,0.1);
+
+  --th-text-1: #0f172a;
+  --th-text-2: #334155;
+  --th-text-3: #64748b;
+  --th-text-4: #94a3b8;
+  --th-text-5: #cbd5e1;
+
+  --th-title-from: #0f172a;
+  --th-title-to:   #334155;
+
+  /* Misc component tokens */
+  --th-insights-header-bg: linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(59,130,246,0.04) 100%);
+  --th-gauge-track:         rgba(0,0,0,0.08);
+  --th-row-divider:         rgba(0,0,0,0.05);
+  --th-dropdown-shadow:     0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* Apply body background reactively */
+[data-theme="light"] body {
+  background: var(--th-body-bg);
+  color: var(--th-text-1);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
 }
 
 /* ─── Base ────────────────────────────────────────────────────── */
@@ -45,8 +166,8 @@ html {
 
 body {
   min-height: 100%;
-  background: #070e1c;
-  color: #f3f4f6;
+  background: var(--th-body-bg, #070e1c);
+  color: var(--th-text-1, #f3f4f6);
   font-family: var(--font-sans, system-ui, sans-serif);
   overflow-x: hidden;
   line-height: 1.65;
@@ -102,7 +223,7 @@ body {
   75%, 100% { transform: scale(1.8); opacity: 0; }
 }
 
-/* ─── Skeleton (dark) ─────────────────────────────────────────── */
+/* ─── Skeleton ────────────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -113,6 +234,17 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.8s infinite;
   border-radius: 6px;
+}
+
+[data-theme="light"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.1)  50%,
+    rgba(0,0,0,0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
 }
 
 /* ─── Utility helpers ─────────────────────────────────────────── */
@@ -135,7 +267,6 @@ body {
 }
 
 /* ─── Dark autofill override ──────────────────────────────────── */
-/* Prevents browsers from flashing a white background on autofill  */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -146,7 +277,6 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Firefox autofill */
 input:autofill {
   background: rgba(4, 7, 17, 0.98) !important;
   color: #dae2fd !important;

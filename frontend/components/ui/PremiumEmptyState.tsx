@@ -24,21 +24,21 @@ export default function PremiumEmptyState({
     >
       <div
         className={`flex ${compact ? "h-9 w-9" : "h-11 w-11"} items-center justify-center rounded-xl mb-4`}
-        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ background: "var(--th-subtle-bg)", border: "1px solid var(--th-tag-border)" }}
       >
-        <Icon size={compact ? 14 : 18} style={{ color: "#374151" }} />
+        <Icon size={compact ? 14 : 18} style={{ color: "var(--th-text-3)" }} />
       </div>
 
       <p
         className={`font-medium ${compact ? "text-xs" : "text-sm"} mb-1.5`}
-        style={{ color: "#6b7280" }}
+        style={{ color: "var(--th-text-2)" }}
       >
         {title}
       </p>
 
       <p
         className="text-xs leading-relaxed max-w-[220px]"
-        style={{ color: "#374151" }}
+        style={{ color: "var(--th-text-3)" }}
       >
         {message}
       </p>
@@ -58,7 +58,7 @@ export default function PremiumEmptyState({
       )}
 
       {statusLabel && (
-        <p className="mt-3 text-xs" style={{ color: "#1f2937" }}>
+        <p className="mt-3 text-xs" style={{ color: "var(--th-text-4)" }}>
           {statusLabel}
         </p>
       )}

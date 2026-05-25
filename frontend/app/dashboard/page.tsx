@@ -27,6 +27,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import StatusBadge from "@/components/ui/StatusBadge";
 import PremiumEmptyState from "@/components/ui/PremiumEmptyState";
 import { api } from "@/services/api";
+import { useUser } from "@/contexts/UserContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 type Metrics = {
@@ -42,9 +44,9 @@ type Metrics = {
 
 /* ─── Shared style constants ─────────────────────────────────────── */
 const CARD: React.CSSProperties = {
-  background:           "rgba(10, 20, 38, 0.65)",
-  border:               "1px solid rgba(255,255,255,0.06)",
-  boxShadow:            "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)",
+  background:           "var(--th-card-bg)",
+  border:               "1px solid var(--th-card-border)",
+  boxShadow:            "var(--th-card-shadow)",
   borderRadius:         "20px",
   backdropFilter:       "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
@@ -52,7 +54,7 @@ const CARD: React.CSSProperties = {
 };
 
 const DIVIDER: React.CSSProperties = {
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  borderBottom: "1px solid var(--th-divider)",
 };
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -140,8 +142,8 @@ function CardHeader({
             width: "28px",
             height: "28px",
             borderRadius: "9px",
-            background: iconBg ?? "rgba(255,255,255,0.06)",
-            border: `1px solid ${iconBg ? iconBg.replace("0.1)", "0.18)") : "rgba(255,255,255,0.08)"}`,
+            background: iconBg ?? "var(--th-subtle-bg)",
+            border: `1px solid ${iconBg ? iconBg.replace("0.1)", "0.18)") : "var(--th-tag-border)"}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -151,7 +153,7 @@ function CardHeader({
           <Icon size={13} style={{ color: iconColor ?? "#64748b" }} />
         </div>
       )}
-      <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+      <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
         {title}
       </span>
       {badge !== undefined && (
@@ -159,9 +161,9 @@ function CardHeader({
           style={{
             fontSize: "0.7rem",
             fontWeight: 500,
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            color: "#475569",
+            background: "var(--th-tag-bg)",
+            border: "1px solid var(--th-tag-border)",
+            color: "var(--th-text-3)",
             borderRadius: "999px",
             padding: "2px 9px",
           }}
@@ -230,9 +232,9 @@ function FilterDropdown({
           borderRadius: "8px",
           fontSize: "0.72rem",
           fontWeight: 500,
-          background: isActive ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.04)",
-          border: isActive ? "1px solid rgba(59,130,246,0.28)" : "1px solid rgba(255,255,255,0.07)",
-          color: isActive ? "#60a5fa" : "#64748b",
+          background: isActive ? "rgba(59,130,246,0.12)" : "var(--th-subtle-bg)",
+          border: isActive ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-input-border)",
+          color: isActive ? "#60a5fa" : "var(--th-text-3)",
           cursor: "pointer",
           whiteSpace: "nowrap",
         }}
@@ -261,10 +263,10 @@ function FilterDropdown({
             top: "calc(100% + 6px)",
             left: 0,
             minWidth: "140px",
-            background: "#0a1628",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--th-dropdown-bg)",
+            border: "1px solid var(--th-dropdown-border)",
             borderRadius: "10px",
-            boxShadow: "0 16px 40px rgba(0,0,0,0.65)",
+            boxShadow: "var(--th-dropdown-shadow)",
             zIndex: 50,
             overflow: "hidden",
           }}
@@ -280,14 +282,14 @@ function FilterDropdown({
                 padding: "8px 12px",
                 fontSize: "0.72rem",
                 background: opt.value === value ? "rgba(59,130,246,0.1)" : "transparent",
-                color: opt.value === value ? "#60a5fa" : "#94a3b8",
+                color: opt.value === value ? "#60a5fa" : "var(--th-text-2)",
                 border: "none",
                 cursor: "pointer",
                 textAlign: "left",
               }}
               onMouseEnter={(e) => {
                 if (opt.value !== value)
-                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
+                  (e.currentTarget as HTMLElement).style.background = "var(--th-subtle-bg)";
               }}
               onMouseLeave={(e) => {
                 if (opt.value !== value)
@@ -334,6 +336,9 @@ function DashboardHeader({
   loading: boolean;
   alertCount: number;
 }) {
+  const { user } = useUser();
+  const { theme } = useTheme();
+  const displayName = user?.full_name ?? "Legal Team";
   const now = new Date();
   const hour = now.getHours();
   const greeting =
@@ -362,13 +367,17 @@ function DashboardHeader({
             style={{
               fontSize: "1.75rem",
               fontWeight: 700,
-              background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
+              ...(theme === "dark"
+                ? {
+                    background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }
+                : { color: "var(--th-text-1)" }),
             }}
           >
-            {greeting}, Legal Team
+            {greeting}, {displayName}
           </h1>
           {loading && (
             <div
@@ -378,19 +387,19 @@ function DashboardHeader({
                 gap: "5px",
                 padding: "3px 10px",
                 borderRadius: "999px",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                background: "var(--th-subtle-bg)",
+                border: "1px solid var(--th-tag-border)",
               }}
             >
               <div
                 className="animate-pulse"
                 style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#3b82f6" }}
               />
-              <span style={{ fontSize: "0.68rem", color: "#475569" }}>Syncing</span>
+              <span style={{ fontSize: "0.68rem", color: "var(--th-text-3)" }}>Syncing</span>
             </div>
           )}
         </div>
-        <p style={{ fontSize: "0.78rem", color: "#334155" }}>{dateStr}</p>
+        <p style={{ fontSize: "0.78rem", color: "var(--th-text-4)" }}>{dateStr}</p>
       </div>
       {alertCount > 0 && (
         <Link
@@ -524,7 +533,7 @@ function ContractsSection({
           >
             <FileText size={13} style={{ color: "#60a5fa" }} />
           </div>
-          <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+          <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
             Recent Contracts
           </span>
           {!loading && (
@@ -532,9 +541,9 @@ function ContractsSection({
               style={{
                 fontSize: "0.7rem",
                 fontWeight: 500,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                color: "#475569",
+                background: "var(--th-tag-bg)",
+                border: "1px solid var(--th-tag-border)",
+                color: "var(--th-text-3)",
                 borderRadius: "999px",
                 padding: "2px 9px",
               }}
@@ -551,8 +560,8 @@ function ContractsSection({
               alignItems: "center",
               gap: "7px",
               padding: "5px 10px",
-              background: "rgba(255,255,255,0.04)",
-              border: search ? "1px solid rgba(59,130,246,0.28)" : "1px solid rgba(255,255,255,0.07)",
+              background: "var(--th-subtle-bg)",
+              border: search ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-input-border)",
               borderRadius: "8px",
             }}
           >
@@ -566,7 +575,7 @@ function ContractsSection({
                 background: "transparent",
                 border: "none",
                 outline: "none",
-                color: "#e2e8f0",
+                color: "var(--th-text-1)",
                 fontSize: "0.72rem",
                 width: "100px",
               }}
@@ -628,8 +637,8 @@ function ContractsSection({
           display: "flex",
           alignItems: "center",
           padding: "0 24px",
-          borderBottom: "1px solid rgba(255,255,255,0.045)",
-          background: "rgba(255,255,255,0.01)",
+          borderBottom: "1px solid var(--th-divider)",
+          background: "var(--th-subtle-bg)",
         }}
       >
         {CONTRACT_TABS.map((tab) => {
@@ -649,7 +658,7 @@ function ContractsSection({
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
-                color: isActive ? "#93c5fd" : "#475569",
+                color: isActive ? "#93c5fd" : "var(--th-text-3)",
                 borderBottom: isActive ? "2px solid #3b82f6" : "2px solid transparent",
                 transition: "color 0.15s",
               }}
@@ -661,8 +670,8 @@ function ContractsSection({
                     fontSize: "0.6rem",
                     padding: "1px 5px",
                     borderRadius: "999px",
-                    background: isActive ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.05)",
-                    color: isActive ? "#60a5fa" : "#334155",
+                    background: isActive ? "rgba(59,130,246,0.2)" : "var(--th-tag-bg)",
+                    color: isActive ? "#60a5fa" : "var(--th-text-4)",
                   }}
                 >
                   {count}
@@ -679,8 +688,8 @@ function ContractsSection({
           display: "grid",
           gridTemplateColumns: COLS,
           padding: "10px 24px",
-          borderBottom: "1px solid rgba(255,255,255,0.035)",
-          background: "rgba(255,255,255,0.018)",
+          borderBottom: "1px solid var(--th-divider)",
+          background: "var(--th-table-header-bg)",
         }}
       >
         {["Contract Name", "Type", "Status", "Risk", "Last Updated"].map((h) => (
@@ -689,7 +698,7 @@ function ContractsSection({
             style={{
               fontSize: "0.58rem",
               fontWeight: 600,
-              color: "#334155",
+              color: "var(--th-text-4)",
               textTransform: "uppercase",
               letterSpacing: "0.1em",
             }}
@@ -710,7 +719,7 @@ function ContractsSection({
                 gridTemplateColumns: COLS,
                 alignItems: "center",
                 padding: "13px 24px",
-                borderBottom: "1px solid rgba(255,255,255,0.03)",
+                borderBottom: "1px solid var(--th-divider)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -746,12 +755,12 @@ function ContractsSection({
                 gridTemplateColumns: COLS,
                 alignItems: "center",
                 padding: "13px 24px",
-                borderBottom: i < filtered.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                borderBottom: i < filtered.length - 1 ? "1px solid var(--th-row-divider)" : "none",
                 textDecoration: "none",
                 transition: "background 0.12s ease",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = "rgba(59,130,246,0.035)")
+                ((e.currentTarget as HTMLElement).style.background = "var(--th-row-hover)")
               }
               onMouseLeave={(e) =>
                 ((e.currentTarget as HTMLElement).style.background = "transparent")
@@ -776,7 +785,7 @@ function ContractsSection({
                   style={{
                     fontSize: "0.82rem",
                     fontWeight: 500,
-                    color: "#e2e8f0",
+                    color: "var(--th-text-1)",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -790,9 +799,9 @@ function ContractsSection({
                 style={{
                   fontSize: "0.7rem",
                   fontWeight: 500,
-                  color: "#475569",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  color: "var(--th-text-3)",
+                  background: "var(--th-subtle-bg)",
+                  border: "1px solid var(--th-tag-border)",
                   borderRadius: "6px",
                   padding: "3px 8px",
                   display: "inline-block",
@@ -806,9 +815,9 @@ function ContractsSection({
                 <StatusBadge status={contract.status} />
               </div>
 
-              <span style={{ color: "#1e293b", fontSize: "0.8rem" }}>—</span>
+              <span style={{ color: "var(--th-text-5)", fontSize: "0.8rem" }}>—</span>
 
-              <span style={{ fontSize: "0.72rem", color: "#475569" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--th-text-3)" }}>
                 {contract.created_at
                   ? new Date(contract.created_at).toLocaleDateString("en-US", {
                       month: "short",
@@ -856,7 +865,7 @@ function AIInsightsCard() {
   const rowBg = (type: string): string => {
     if (type === "risk") return "rgba(239,68,68,0.03)";
     if (type === "renewal") return "rgba(245,158,11,0.025)";
-    return "rgba(255,255,255,0.02)";
+    return "var(--th-subtle-bg)";
   };
 
   return (
@@ -865,8 +874,8 @@ function AIInsightsCard() {
       <div
         style={{
           padding: "18px 24px 14px",
-          background: "linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(59,130,246,0.06) 100%)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          background: "var(--th-insights-header-bg)",
+          borderBottom: "1px solid var(--th-divider)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
@@ -885,7 +894,7 @@ function AIInsightsCard() {
           >
             <Sparkles size={13} style={{ color: "#a78bfa" }} />
           </div>
-          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
             AI Insights
           </span>
           <div
@@ -906,7 +915,7 @@ function AIInsightsCard() {
             <span style={{ fontSize: "0.58rem", color: "#a78bfa", fontWeight: 500 }}>Live</span>
           </div>
         </div>
-        <p style={{ fontSize: "0.7rem", color: "#475569" }}>AI-generated contract intelligence</p>
+        <p style={{ fontSize: "0.7rem", color: "var(--th-text-3)" }}>AI-generated contract intelligence</p>
       </div>
 
       {/* Insight items */}
@@ -919,7 +928,7 @@ function AIInsightsCard() {
                 padding: "10px 14px",
                 borderRadius: "11px",
                 background: rowBg(insight.type),
-                border: "1px solid rgba(255,255,255,0.05)",
+                border: "1px solid var(--th-tag-border)",
               }}
             >
               <span
@@ -937,7 +946,7 @@ function AIInsightsCard() {
               >
                 {insight.badge}
               </span>
-              <p style={{ fontSize: "0.73rem", color: "#64748b", lineHeight: 1.6 }}>
+              <p style={{ fontSize: "0.73rem", color: "var(--th-text-3)", lineHeight: 1.6 }}>
                 {insight.text}
               </p>
             </div>
@@ -1024,7 +1033,7 @@ function RiskDistributionCard({
                       boxShadow: `0 0 7px ${glow}`,
                     }}
                   />
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{label} Risk</span>
+                  <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>{label} Risk</span>
                 </div>
                 {loading ? (
                   <div className="skeleton h-3.5 w-8 rounded" />
@@ -1033,7 +1042,7 @@ function RiskDistributionCard({
                     style={{
                       fontSize: "0.82rem",
                       fontWeight: 600,
-                      color: value > 0 ? color : "#1e293b",
+                      color: value > 0 ? color : "var(--th-text-5)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -1058,7 +1067,7 @@ function RiskDistributionCard({
             </div>
           );
         })}
-        <p style={{ fontSize: "0.68rem", color: "#1e293b", marginTop: "2px" }}>
+        <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "2px" }}>
           {!loading &&
             (high === 0
               ? "No high-risk contracts detected"
@@ -1090,7 +1099,7 @@ function ActivityTimelineCard({
     processing: { label: "Processing contract", icon: Activity,     bg: "rgba(59,130,246,0.1)",  color: "#60a5fa" },
     uploaded:   { label: "Contract uploaded",   icon: Upload,       bg: "rgba(99,102,241,0.1)",  color: "#818cf8" },
     failed:     { label: "Processing failed",   icon: AlertCircle,  bg: "rgba(239,68,68,0.1)",   color: "#f87171" },
-    pending:    { label: "Pending review",      icon: Circle,       bg: "rgba(100,116,139,0.08)", color: "#64748b" },
+    pending:    { label: "Pending review",      icon: Circle,       bg: "rgba(100,116,139,0.08)", color: "var(--th-text-3)" },
     indexed:    { label: "Contract indexed",    icon: CheckCircle2, bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
   };
 
@@ -1148,12 +1157,12 @@ function ActivityTimelineCard({
                   padding: "10px 8px",
                   borderRadius: "10px",
                   borderBottom:
-                    i < uploads.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                    i < uploads.length - 1 ? "1px solid var(--th-row-divider)" : "none",
                   textDecoration: "none",
                   transition: "background 0.12s ease",
                 }}
                 onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "rgba(59,130,246,0.03)")
+                  ((e.currentTarget as HTMLElement).style.background = "var(--th-row-hover)")
                 }
                 onMouseLeave={(e) =>
                   ((e.currentTarget as HTMLElement).style.background = "transparent")
@@ -1178,7 +1187,7 @@ function ActivityTimelineCard({
                     style={{
                       fontSize: "0.8rem",
                       fontWeight: 500,
-                      color: "#e2e8f0",
+                      color: "var(--th-text-1)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -1186,11 +1195,11 @@ function ActivityTimelineCard({
                   >
                     {u.title}
                   </p>
-                  <p style={{ fontSize: "0.68rem", color: "#475569", marginTop: "1px" }}>
+                  <p style={{ fontSize: "0.68rem", color: "var(--th-text-3)", marginTop: "1px" }}>
                     {ev.label}
                   </p>
                 </div>
-                <span style={{ fontSize: "0.68rem", color: "#334155", flexShrink: 0 }}>
+                <span style={{ fontSize: "0.68rem", color: "var(--th-text-4)", flexShrink: 0 }}>
                   {u.created_at
                     ? new Date(u.created_at).toLocaleDateString("en-US", {
                         month: "short",
@@ -1243,7 +1252,7 @@ function UpcomingObligationsCard({
                   size={12}
                   style={{ color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "#1e293b" }}
                 />
-                <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{label}</span>
+                <span style={{ fontSize: "0.8rem", color: "var(--th-text-2)" }}>{label}</span>
               </div>
               {loading ? (
                 <div className="skeleton h-3.5 w-6 rounded" />
@@ -1252,7 +1261,7 @@ function UpcomingObligationsCard({
                   style={{
                     fontSize: "0.88rem",
                     fontWeight: 600,
-                    color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "#1e293b",
+                    color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "var(--th-text-5)",
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
@@ -1266,10 +1275,10 @@ function UpcomingObligationsCard({
           style={{
             marginTop: "16px",
             paddingTop: "14px",
-            borderTop: "1px solid rgba(255,255,255,0.04)",
+            borderTop: "1px solid var(--th-divider)",
           }}
         >
-          <p style={{ fontSize: "0.68rem", color: "#1e293b" }}>
+          <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)" }}>
             {!loading &&
               (metrics?.overdue_obligations ?? 0) === 0 &&
               (metrics?.overdue_contracts ?? 0) === 0
@@ -1352,8 +1361,8 @@ function ComplianceScoreCard({
                   cy="48"
                   r="34"
                   fill="none"
-                  stroke="rgba(255,255,255,0.05)"
                   strokeWidth="8"
+                  style={{ stroke: "var(--th-gauge-track)" }}
                 />
                 <circle
                   cx="48"
@@ -1385,13 +1394,13 @@ function ComplianceScoreCard({
                   style={{
                     fontSize: "1.4rem",
                     fontWeight: 700,
-                    color: "#f8fafc",
+                    color: "var(--th-text-1)",
                     lineHeight: 1,
                   }}
                 >
                   {score}
                 </span>
-                <span style={{ fontSize: "0.56rem", color: "#475569", marginTop: "2px" }}>/100</span>
+                <span style={{ fontSize: "0.56rem", color: "var(--th-text-3)", marginTop: "2px" }}>/100</span>
               </div>
             </div>
 
@@ -1400,7 +1409,7 @@ function ComplianceScoreCard({
               <p style={{ fontSize: "0.88rem", fontWeight: 600, color: scoreColor, marginBottom: "4px" }}>
                 {scoreLabel}
               </p>
-              <p style={{ fontSize: "0.7rem", color: "#334155", marginBottom: "14px" }}>
+              <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginBottom: "14px" }}>
                 Based on portfolio risk profile
               </p>
               {/* Mini breakdown bars */}
@@ -1410,10 +1419,10 @@ function ComplianceScoreCard({
               ].map(({ label, pct, color }) => (
                 <div key={label} style={{ marginBottom: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "0.65rem", color: "#475569" }}>{label}</span>
+                    <span style={{ fontSize: "0.65rem", color: "var(--th-text-3)" }}>{label}</span>
                     <span style={{ fontSize: "0.65rem", color, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
                   </div>
-                  <div style={{ height: "3px", borderRadius: "999px", background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                  <div style={{ height: "3px", borderRadius: "999px", background: "var(--th-tag-bg)", overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})`, borderRadius: "999px", transition: "width 0.8s ease" }} />
                   </div>
                 </div>
@@ -1448,7 +1457,7 @@ function StatusChartCard({
     { label: "Analyzed",   value: counts.analyzed   || 0, color: "#10b981" },
     { label: "Uploaded",   value: counts.uploaded   || 0, color: "#3b82f6" },
     { label: "Processing", value: counts.processing || 0, color: "#f59e0b" },
-    { label: "Pending",    value: counts.pending    || 0, color: "#64748b" },
+    { label: "Pending",    value: counts.pending    || 0, color: "var(--th-text-3)" },
     { label: "Failed",     value: counts.failed     || 0, color: "#ef4444" },
   ].filter((b) => b.value > 0);
 
@@ -1474,7 +1483,7 @@ function StatusChartCard({
             ))}
           </div>
         ) : bars.length === 0 ? (
-          <p style={{ fontSize: "0.78rem", color: "#334155", textAlign: "center", padding: "20px 0" }}>
+          <p style={{ fontSize: "0.78rem", color: "var(--th-text-4)", textAlign: "center", padding: "20px 0" }}>
             Upload contracts to see status breakdown
           </p>
         ) : (
@@ -1493,25 +1502,25 @@ function StatusChartCard({
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
                       <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{label}</span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>{label}</span>
                     </div>
                     <span
                       style={{
                         fontSize: "0.78rem",
                         fontWeight: 500,
-                        color: "#f1f5f9",
+                        color: "var(--th-text-1)",
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {value}{" "}
-                      <span style={{ color: "#334155", fontWeight: 400 }}>({pct}%)</span>
+                      <span style={{ color: "var(--th-text-4)", fontWeight: 400 }}>({pct}%)</span>
                     </span>
                   </div>
                   <div
                     style={{
                       height: "5px",
                       borderRadius: "999px",
-                      background: "rgba(255,255,255,0.04)",
+                      background: "var(--th-subtle-bg)",
                       overflow: "hidden",
                     }}
                   >
@@ -1688,7 +1697,7 @@ export default function DashboardPage() {
             alignItems: "center",
             justifyContent: "space-between",
             paddingTop: "24px",
-            borderTop: "1px solid rgba(255,255,255,0.04)",
+            borderTop: "1px solid var(--th-divider)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
@@ -1697,7 +1706,7 @@ export default function DashboardPage() {
                 key={b}
                 style={{
                   fontSize: "0.6rem",
-                  color: "#334155",
+                  color: "var(--th-text-4)",
                   letterSpacing: "0.07em",
                   fontWeight: 500,
                   textTransform: "uppercase",
@@ -1707,7 +1716,7 @@ export default function DashboardPage() {
               </span>
             ))}
           </div>
-          <span style={{ fontSize: "0.68rem", color: "#1e293b" }}>
+          <span style={{ fontSize: "0.68rem", color: "var(--th-text-5)" }}>
             Contract Lens · {new Date().getFullYear()}
           </span>
         </div>

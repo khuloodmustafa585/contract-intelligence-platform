@@ -55,16 +55,18 @@ export default function DashboardPanel({
     <div
       className={`overflow-hidden flex flex-col ${className}`}
       style={{
-        background:   "#0d1a2e",
-        border:       "1px solid rgba(255,255,255,0.05)",
-        boxShadow:    "0 1px 3px rgba(0,0,0,0.35)",
+        background:   "var(--th-card-bg)",
+        border:       "1px solid var(--th-card-border)",
+        boxShadow:    "var(--th-card-shadow)",
         borderRadius: "16px",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       {/* Header */}
       <div
         className="flex items-center gap-2.5 px-6 py-5 shrink-0"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+        style={{ borderBottom: "1px solid var(--th-divider)" }}
       >
         <div
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
@@ -73,14 +75,14 @@ export default function DashboardPanel({
           <Icon size={12} style={{ color: a.iconColor }} />
         </div>
 
-        <span className="flex-1 text-sm font-medium" style={{ color: "#f3f4f6" }}>
+        <span className="flex-1 text-sm font-medium" style={{ color: "var(--th-text-1)" }}>
           {title}
         </span>
 
         {badge && (
           <span
             className="rounded-full px-2 py-0.5 text-xs"
-            style={{ background: "rgba(255,255,255,0.06)", color: "#64748b" }}
+            style={{ background: "var(--th-tag-bg)", color: "var(--th-text-3)" }}
           >
             {badge}
           </span>
