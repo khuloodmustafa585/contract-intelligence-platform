@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 from app.core.constants import CONTRACT_STATUS_COMPLETED, CONTRACT_STATUS_FAILED
 from app.core.database import SessionLocal
 from app.core.logging import app_logger
+from app.models.clause import Clause
 from app.models.contract import Contract
 from app.services.alert_service import generate_alerts_for_contract
+from app.services.clause_service import create_clauses
 from app.services.obligation_service import create_or_replace_obligations
 from app.services.risk_service import create_or_replace_risks
 from app.services.summary_service import create_or_replace_summary
@@ -27,6 +29,13 @@ def analyze_contract(db: Session, contract_id: int) -> dict:
             "status": contract.status,
             "error": contract.processing_error,
         }
+
+    # Re-extract clauses when none exist (e.g., user triggers re-analysis after
+    # an upload that failed mid-pipeline, or manually requests a fresh extraction).
+    existing_clause_count = db.query(Clause).filter(Clause.contract_id == contract_id).count()
+    if existing_clause_count == 0:
+        app_logger.info("No clauses found for contract id=%s — extracting now", contract_id)
+        create_clauses(contract_id, text, db)
 
     try:
         summary = create_or_replace_summary(db, contract.id, text)

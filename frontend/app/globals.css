@@ -258,6 +258,10 @@ body {
 .delay-200 { animation-delay: 0.20s; }
 .delay-300 { animation-delay: 0.30s; }
 
+/* ─── Scrollbar helpers ───────────────────────────────────────── */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* ─── Mono helper ─────────────────────────────────────────────── */
 .font-mono-label {
   font-family: var(--font-mono, monospace);

@@ -102,7 +102,7 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 /* ─── Contract Picker ────────────────────────────────────────────── */
 // The outer trigger is a <div role="combobox">, NOT a <button>.
 // This eliminates the <button>-inside-<button> HTML violation that caused
-// the React hydration errors. The clear (X) button inside is now valid.
+// React hydration errors. The clear (X) button inside is now valid HTML.
 function ContractPicker({
   contracts,
   contractsLoading,
@@ -146,29 +146,71 @@ function ContractPicker({
     return contracts.filter((c) => c.title.toLowerCase().includes(q));
   }, [contracts, search]);
 
-  const canOpen    = !contractsLoading && contracts.length > 0;
+  const canOpen      = !contractsLoading && contracts.length > 0;
   const handleToggle = () => canOpen && setOpen((o) => !o);
 
   return (
-    <div style={{ ...CARD, padding: "24px 28px" }}>
-      {/* Section label */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-        <FileText size={12} style={{ color: "#3b82f6" }} />
-        <span
-          style={{
-            fontSize: "0.65rem",
-            fontWeight: 600,
-            color: "var(--th-text-3)",
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-          }}
-        >
-          Select Contract
-        </span>
+    <div style={{ ...CARD, padding: "28px 32px" }}>
+
+      {/* Header row: label + contract count badge */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div
+            style={{
+              width:          "26px",
+              height:         "26px",
+              borderRadius:   "8px",
+              background:     "rgba(59,130,246,0.1)",
+              border:         "1px solid rgba(59,130,246,0.18)",
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+            }}
+          >
+            <FileText size={12} style={{ color: "#60a5fa" }} />
+          </div>
+          <div>
+            <p
+              style={{
+                fontSize:      "0.82rem",
+                fontWeight:    700,
+                color:         "var(--th-text-1)",
+                letterSpacing: "-0.01em",
+                margin:        0,
+              }}
+            >
+              Select Contract
+            </p>
+            <p style={{ fontSize: "0.65rem", color: "var(--th-text-4)", margin: 0 }}>
+              {contractsLoading
+                ? "Loading…"
+                : contracts.length === 0
+                ? "No contracts uploaded yet"
+                : `${contracts.length} contract${contracts.length !== 1 ? "s" : ""} available`}
+            </p>
+          </div>
+        </div>
+        {selected && (
+          <span
+            style={{
+              fontSize:     "0.62rem",
+              fontWeight:   600,
+              padding:      "3px 10px",
+              borderRadius: "999px",
+              background:   "rgba(59,130,246,0.08)",
+              border:       "1px solid rgba(59,130,246,0.16)",
+              color:        "#60a5fa",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            Active
+          </span>
+        )}
       </div>
 
       <div ref={ref} style={{ position: "relative" }}>
-        {/* Trigger — <div role="combobox"> so the inner clear <button> is valid HTML */}
+        {/* Trigger — <div role="combobox"> so nested <button> is valid HTML */}
         <div
           role="combobox"
           aria-expanded={open}
@@ -185,186 +227,210 @@ function ContractPicker({
           style={{
             display:       "flex",
             alignItems:    "center",
-            gap:           "14px",
+            gap:           "16px",
             width:         "100%",
-            padding:       "14px 18px",
-            borderRadius:  "14px",
-            background:    "var(--th-input-bg)",
+            padding:       "18px 22px",
+            borderRadius:  "16px",
+            background:    selected
+              ? "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(59,130,246,0.02) 100%)"
+              : "var(--th-input-bg)",
             border:        open
-              ? "1px solid rgba(59,130,246,0.45)"
+              ? "1px solid rgba(59,130,246,0.5)"
+              : selected
+              ? "1px solid rgba(59,130,246,0.22)"
               : "1px solid var(--th-input-border)",
-            boxShadow:     open ? "0 0 0 3px rgba(59,130,246,0.07)" : "none",
+            boxShadow:     open
+              ? "0 0 0 3px rgba(59,130,246,0.08), 0 4px 16px rgba(59,130,246,0.06)"
+              : selected
+              ? "0 2px 12px rgba(59,130,246,0.05)"
+              : "none",
             cursor:        canOpen ? "pointer" : "not-allowed",
-            transition:    "all 0.15s",
+            transition:    "all 0.18s",
             outline:       "none",
             userSelect:    "none",
           }}
         >
-          {/* Icon */}
+          {/* Contract icon */}
           <div
             style={{
-              width:           "36px",
-              height:          "36px",
-              borderRadius:    "10px",
-              background:      selected ? "rgba(59,130,246,0.1)"  : "var(--th-subtle-bg)",
-              border:          selected ? "1px solid rgba(59,130,246,0.18)" : "1px solid var(--th-tag-border)",
+              width:           "46px",
+              height:          "46px",
+              borderRadius:    "13px",
+              background:      selected ? "rgba(59,130,246,0.12)" : "var(--th-subtle-bg)",
+              border:          selected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
               display:         "flex",
               alignItems:      "center",
               justifyContent:  "center",
               flexShrink:      0,
+              boxShadow:       selected ? "0 2px 8px rgba(59,130,246,0.12)" : "none",
             }}
           >
-            <FileText size={15} style={{ color: selected ? "#60a5fa" : "var(--th-text-4)" }} />
+            <FileText size={19} style={{ color: selected ? "#60a5fa" : "var(--th-text-4)" }} />
           </div>
 
-          {/* Text */}
+          {/* Label / selected title */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {selected ? (
               <>
                 <p
                   style={{
-                    fontSize:      "0.92rem",
+                    fontSize:      "1.0rem",
                     fontWeight:    600,
                     color:         "var(--th-text-1)",
                     overflow:      "hidden",
                     textOverflow:  "ellipsis",
                     whiteSpace:    "nowrap",
                     margin:        0,
+                    letterSpacing: "-0.01em",
                   }}
                 >
                   {selected.title}
                 </p>
-                <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginTop: "2px", textTransform: "capitalize" }}>
+                <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)", marginTop: "3px" }}>
                   {contractLoading
                     ? "Loading clauses…"
-                    : `${clauseCount} clause${clauseCount !== 1 ? "s" : ""} · ${riskCount} risk${riskCount !== 1 ? "s" : ""} identified`}
+                    : clauseCount > 0
+                    ? `${clauseCount} clause${clauseCount !== 1 ? "s" : ""} · ${riskCount} risk${riskCount !== 1 ? "s" : ""} identified`
+                    : "Click to switch contract"}
                 </p>
               </>
             ) : (
-              <span style={{ fontSize: "0.92rem", color: canOpen ? "var(--th-text-3)" : "var(--th-text-4)" }}>
-                {contractsLoading
-                  ? "Loading contracts…"
-                  : contracts.length === 0
-                  ? "No contracts yet — upload one first"
-                  : "Choose a contract to explore its clauses…"}
-              </span>
+              <div>
+                <p style={{ fontSize: "0.92rem", fontWeight: 500, color: canOpen ? "var(--th-text-3)" : "var(--th-text-4)", margin: 0 }}>
+                  {contractsLoading
+                    ? "Loading contracts…"
+                    : contracts.length === 0
+                    ? "No contracts yet — upload one first"
+                    : "Choose a contract to explore its clauses…"}
+                </p>
+                {contracts.length > 0 && !contractsLoading && (
+                  <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "3px" }}>
+                    Click to browse {contracts.length} contract{contracts.length !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Right side: clear button + chevron */}
+          {/* Right controls: clear + chevron */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
             {selected && !contractLoading && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClear();
-                  setOpen(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); onClear(); setOpen(false); }}
                 aria-label="Clear selection"
                 style={{
-                  width:          "26px",
-                  height:         "26px",
-                  borderRadius:   "7px",
+                  width:          "30px",
+                  height:         "30px",
+                  borderRadius:   "9px",
                   display:        "flex",
                   alignItems:     "center",
                   justifyContent: "center",
                   background:     "transparent",
-                  border:         "none",
+                  border:         "1px solid transparent",
                   cursor:         "pointer",
                   color:          "var(--th-text-4)",
                   transition:     "all 0.15s",
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = "rgba(239,68,68,0.07)";
-                  el.style.color      = "#f87171";
+                  el.style.background   = "rgba(239,68,68,0.08)";
+                  el.style.color        = "#f87171";
+                  el.style.borderColor  = "rgba(239,68,68,0.18)";
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = "transparent";
-                  el.style.color      = "var(--th-text-4)";
+                  el.style.background   = "transparent";
+                  el.style.color        = "var(--th-text-4)";
+                  el.style.borderColor  = "transparent";
                 }}
               >
                 <X size={13} />
               </button>
             )}
-            <ChevronDown
-              size={16}
+            <div
               style={{
-                color:     "var(--th-text-3)",
-                transform: open ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 0.2s",
+                width:          "30px",
+                height:         "30px",
+                borderRadius:   "9px",
+                background:     open ? "rgba(59,130,246,0.08)" : "var(--th-subtle-bg)",
+                border:         open ? "1px solid rgba(59,130,246,0.2)" : "1px solid var(--th-tag-border)",
+                display:        "flex",
+                alignItems:     "center",
+                justifyContent: "center",
+                transition:     "all 0.18s",
               }}
-            />
+            >
+              <ChevronDown
+                size={14}
+                style={{
+                  color:      open ? "#60a5fa" : "var(--th-text-3)",
+                  transform:  open ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s",
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Dropdown list */}
+        {/* Dropdown */}
         <AnimatePresence>
           {open && (
             <motion.div
               role="listbox"
-              initial={{ opacity: 0, y: -8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0,  scale: 1    }}
-              exit={{    opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: -10, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0,   scale: 1     }}
+              exit={{    opacity: 0, y: -10, scale: 0.985 }}
+              transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
               style={{
                 position:     "absolute",
-                top:          "calc(100% + 10px)",
+                top:          "calc(100% + 12px)",
                 left:         0,
                 right:        0,
                 background:   "var(--th-dropdown-bg)",
                 border:       "1px solid var(--th-dropdown-border)",
-                borderRadius: "16px",
+                borderRadius: "18px",
                 boxShadow:    "var(--th-dropdown-shadow)",
                 zIndex:       200,
                 overflow:     "hidden",
               }}
             >
-              {/* Search bar inside dropdown */}
-              <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--th-divider)" }}>
+              {/* Search */}
+              <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--th-divider)" }}>
                 <div
                   style={{
-                    display:       "flex",
-                    alignItems:    "center",
-                    gap:           "8px",
-                    padding:       "8px 12px",
-                    borderRadius:  "10px",
-                    background:    "var(--th-subtle-bg)",
-                    border:        "1px solid var(--th-input-border)",
+                    display:      "flex",
+                    alignItems:   "center",
+                    gap:          "10px",
+                    padding:      "10px 14px",
+                    borderRadius: "12px",
+                    background:   "var(--th-subtle-bg)",
+                    border:       "1px solid var(--th-input-border)",
                   }}
                 >
-                  <Search size={12} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
+                  <Search size={13} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
                   <input
                     ref={inputRef}
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search contracts…"
-                    style={{
-                      flex:       1,
-                      background: "transparent",
-                      border:     "none",
-                      outline:    "none",
-                      fontSize:   "0.82rem",
-                      color:      "var(--th-text-1)",
-                    }}
+                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: "0.85rem", color: "var(--th-text-1)" }}
                   />
                   {search && (
                     <button
                       onClick={() => setSearch("")}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--th-text-4)", display: "flex" }}
                     >
-                      <X size={11} />
+                      <X size={12} />
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Contract list */}
-              <div style={{ overflowY: "auto", maxHeight: "380px" }}>
+              {/* List */}
+              <div style={{ overflowY: "auto", maxHeight: "420px" }}>
                 {filtered.length === 0 ? (
-                  <div style={{ padding: "28px 20px", textAlign: "center", color: "var(--th-text-4)", fontSize: "0.82rem" }}>
+                  <div style={{ padding: "32px 24px", textAlign: "center", color: "var(--th-text-4)", fontSize: "0.84rem" }}>
                     No contracts match &ldquo;{search}&rdquo;
                   </div>
                 ) : (
@@ -379,9 +445,9 @@ function ContractPicker({
                         style={{
                           display:      "flex",
                           alignItems:   "center",
-                          gap:          "14px",
+                          gap:          "16px",
                           width:        "100%",
-                          padding:      "13px 16px",
+                          padding:      "16px 20px",
                           background:   isSelected ? "rgba(59,130,246,0.07)" : "transparent",
                           border:       "none",
                           borderBottom: "1px solid var(--th-row-divider)",
@@ -398,23 +464,23 @@ function ContractPicker({
                       >
                         <div
                           style={{
-                            width:          "34px",
-                            height:         "34px",
-                            borderRadius:   "9px",
-                            background:     isSelected ? "rgba(59,130,246,0.1)"        : "var(--th-subtle-bg)",
-                            border:         isSelected ? "1px solid rgba(59,130,246,0.2)" : "1px solid var(--th-tag-border)",
+                            width:          "40px",
+                            height:         "40px",
+                            borderRadius:   "11px",
+                            background:     isSelected ? "rgba(59,130,246,0.1)"           : "var(--th-subtle-bg)",
+                            border:         isSelected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
                             display:        "flex",
                             alignItems:     "center",
                             justifyContent: "center",
                             flexShrink:     0,
                           }}
                         >
-                          <FileText size={14} style={{ color: isSelected ? "#60a5fa" : "var(--th-text-3)" }} />
+                          <FileText size={16} style={{ color: isSelected ? "#60a5fa" : "var(--th-text-3)" }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p
                             style={{
-                              fontSize:     "0.85rem",
+                              fontSize:     "0.88rem",
                               fontWeight:   500,
                               color:        isSelected ? "#93c5fd" : "var(--th-text-1)",
                               overflow:     "hidden",
@@ -425,11 +491,32 @@ function ContractPicker({
                           >
                             {c.title}
                           </p>
-                          <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginTop: "2px", textTransform: "capitalize" }}>
+                          <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginTop: "3px", textTransform: "capitalize" }}>
                             {c.status}
+                            {c.created_at && (
+                              <span style={{ marginLeft: "8px", opacity: 0.7 }}>
+                                · {new Date(c.created_at).toLocaleDateString()}
+                              </span>
+                            )}
                           </p>
                         </div>
-                        {isSelected && <Check size={14} style={{ color: "#60a5fa", flexShrink: 0 }} />}
+                        {isSelected && (
+                          <div
+                            style={{
+                              width:          "22px",
+                              height:         "22px",
+                              borderRadius:   "6px",
+                              background:     "rgba(59,130,246,0.12)",
+                              border:         "1px solid rgba(59,130,246,0.22)",
+                              display:        "flex",
+                              alignItems:     "center",
+                              justifyContent: "center",
+                              flexShrink:     0,
+                            }}
+                          >
+                            <Check size={12} style={{ color: "#60a5fa" }} />
+                          </div>
+                        )}
                       </button>
                     );
                   })
@@ -440,39 +527,39 @@ function ContractPicker({
         </AnimatePresence>
       </div>
 
-      {/* Stats row — visible after a contract with clauses is loaded */}
+      {/* Stats row — appears once a contract with clauses is loaded */}
       <AnimatePresence>
         {selected && !contractLoading && clauseCount > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{    opacity: 0, height: 0    }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
           >
             <div
               style={{
                 display:    "flex",
                 alignItems: "center",
                 gap:        "8px",
-                marginTop:  "14px",
-                paddingTop: "14px",
+                marginTop:  "18px",
+                paddingTop: "18px",
                 borderTop:  "1px solid var(--th-divider)",
                 flexWrap:   "wrap",
               }}
             >
               {[
-                { label: `${clauseCount} clauses`, color: "#3b82f6", bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.16)"  },
-                { label: `${riskCount} risks`,     color: "#fbbf24", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.16)"  },
+                { label: `${clauseCount} clauses`,   color: "#3b82f6", bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.16)"  },
+                { label: `${riskCount} risks`,        color: "#fbbf24", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.16)"  },
                 ...(highRiskCount > 0
-                  ? [{ label: `${highRiskCount} high risk`, color: "#f87171", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.16)"  }]
-                  : [{ label: "No high risk",               color: "#34d399", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.16)" }]),
+                  ? [{ label: `${highRiskCount} high risk`, color: "#f87171", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.16)"  }]
+                  : [{ label: "No high risk",               color: "#34d399", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.16)" }]),
               ].map(({ label, color, bg, border }) => (
                 <span
                   key={label}
                   style={{
                     fontSize:     "0.68rem",
                     fontWeight:   500,
-                    padding:      "4px 12px",
+                    padding:      "5px 13px",
                     borderRadius: "999px",
                     background:   bg,
                     border:       `1px solid ${border}`,
@@ -508,7 +595,7 @@ function FilterBar({
   onCategoryChange,
   activeRisk,
   onRiskChange,
-  totalShowing,
+  totalCount,
 }: {
   search:           string;
   onSearchChange:   (s: string) => void;
@@ -518,24 +605,27 @@ function FilterBar({
   onCategoryChange: (c: string) => void;
   activeRisk:       string;
   onRiskChange:     (r: string) => void;
-  totalShowing:     number;
+  totalCount:       number;
 }) {
   return (
-    <div style={{ ...CARD, padding: "14px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+    <div style={{ ...CARD, padding: "14px 18px" }}>
+
+      {/* Row 1 — Search + Risk filter */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 
         {/* Search */}
         <div
           style={{
-            display:       "flex",
-            alignItems:    "center",
-            gap:           "8px",
-            padding:       "7px 12px",
-            borderRadius:  "10px",
-            background:    "var(--th-input-bg)",
-            border:        search ? "1px solid rgba(59,130,246,0.35)" : "1px solid var(--th-input-border)",
-            minWidth:      "180px",
-            transition:    "border-color 0.15s",
+            display:      "flex",
+            alignItems:   "center",
+            gap:          "8px",
+            padding:      "8px 13px",
+            borderRadius: "10px",
+            background:   "var(--th-input-bg)",
+            border:       search ? "1px solid rgba(59,130,246,0.35)" : "1px solid var(--th-input-border)",
+            flex:         1,
+            minWidth:     0,
+            transition:   "border-color 0.15s",
           }}
         >
           <Search size={12} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
@@ -544,61 +634,28 @@ function FilterBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search clauses…"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: "0.78rem", color: "var(--th-text-1)", minWidth: 0 }}
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: "0.8rem", color: "var(--th-text-1)", minWidth: 0 }}
           />
           {search && (
             <button
               onClick={() => onSearchChange("")}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--th-text-4)", display: "flex" }}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--th-text-4)", display: "flex", flexShrink: 0 }}
             >
               <X size={11} />
             </button>
           )}
         </div>
 
-        {/* Divider */}
+        {/* Vertical divider */}
         <div style={{ width: "1px", height: "22px", background: "var(--th-divider)", flexShrink: 0 }} />
 
-        {/* Category chips — populated once clauses have displayCategory */}
-        <div style={{ display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap", flex: 1 }}>
-          {(["all"] as string[]).concat(categories).map((cat) => {
-            const isActive = activeCategory === cat;
-            const count    = cat === "all" ? totalShowing : (categoryCounts[cat] ?? 0);
-            return (
-              <button
-                key={cat}
-                onClick={() => onCategoryChange(cat)}
-                style={{
-                  display:      "flex",
-                  alignItems:   "center",
-                  gap:          "4px",
-                  padding:      "5px 11px",
-                  borderRadius: "999px",
-                  fontSize:     "0.72rem",
-                  fontWeight:   isActive ? 600 : 400,
-                  background:   isActive ? "rgba(59,130,246,0.1)" : "var(--th-tag-bg)",
-                  border:       isActive ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-tag-border)",
-                  color:        isActive ? "#60a5fa" : "var(--th-text-3)",
-                  cursor:       "pointer",
-                  transition:   "all 0.15s",
-                  whiteSpace:   "nowrap",
-                  flexShrink:   0,
-                }}
-              >
-                {cat === "all" ? "All" : cat}
-                <span style={{ fontSize: "0.6rem", opacity: isActive ? 0.85 : 0.6, marginLeft: "1px" }}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Risk filter label */}
+        <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "var(--th-text-4)", textTransform: "uppercase", letterSpacing: "0.1em", flexShrink: 0 }}>
+          Risk
+        </span>
 
-        {/* Divider */}
-        <div style={{ width: "1px", height: "22px", background: "var(--th-divider)", flexShrink: 0 }} />
-
-        {/* Risk filter chips */}
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+        {/* Risk chips */}
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, flexWrap: "nowrap" }}>
           {RISK_FILTER_OPTIONS.map(({ value, label, dot, activeBg, activeBorder, activeColor }) => {
             const isActive = activeRisk === value;
             return (
@@ -613,9 +670,9 @@ function FilterBar({
                   borderRadius: "999px",
                   fontSize:     "0.72rem",
                   fontWeight:   isActive ? 600 : 400,
-                  background:   isActive ? activeBg : "var(--th-tag-bg)",
+                  background:   isActive ? activeBg     : "var(--th-tag-bg)",
                   border:       isActive ? `1px solid ${activeBorder}` : "1px solid var(--th-tag-border)",
-                  color:        isActive ? activeColor : "var(--th-text-3)",
+                  color:        isActive ? activeColor  : "var(--th-text-3)",
                   cursor:       "pointer",
                   transition:   "all 0.15s",
                   whiteSpace:   "nowrap",
@@ -627,8 +684,64 @@ function FilterBar({
             );
           })}
         </div>
-
       </div>
+
+      {/* Row 2 — Category chips (horizontally scrollable) */}
+      {categories.length > 0 && (
+        <div
+          className="no-scrollbar"
+          style={{
+            display:       "flex",
+            alignItems:    "center",
+            gap:           "5px",
+            marginTop:     "10px",
+            paddingTop:    "10px",
+            borderTop:     "1px solid var(--th-divider)",
+            overflowX:     "auto",
+          }}
+        >
+          {(["all"] as string[]).concat(categories).map((cat) => {
+            const isActive = activeCategory === cat;
+            const count    = cat === "all" ? totalCount : (categoryCounts[cat] ?? 0);
+            return (
+              <button
+                key={cat}
+                onClick={() => onCategoryChange(cat)}
+                style={{
+                  display:      "flex",
+                  alignItems:   "center",
+                  gap:          "5px",
+                  padding:      "5px 12px",
+                  borderRadius: "999px",
+                  fontSize:     "0.72rem",
+                  fontWeight:   isActive ? 600 : 400,
+                  background:   isActive ? "rgba(59,130,246,0.1)" : "var(--th-tag-bg)",
+                  border:       isActive ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-tag-border)",
+                  color:        isActive ? "#60a5fa" : "var(--th-text-3)",
+                  cursor:       "pointer",
+                  transition:   "all 0.15s",
+                  whiteSpace:   "nowrap",
+                  flexShrink:   0,
+                }}
+              >
+                {cat === "all" ? "All Categories" : cat}
+                <span
+                  style={{
+                    fontSize:     "0.6rem",
+                    fontWeight:   isActive ? 600 : 400,
+                    padding:      "1px 5px",
+                    borderRadius: "999px",
+                    background:   isActive ? "rgba(59,130,246,0.15)" : "var(--th-subtle-bg)",
+                    color:        isActive ? "#60a5fa" : "var(--th-text-4)",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1272,49 +1385,62 @@ function NoClausesState({
   onAnalyze: () => void;
   analyzing: boolean;
 }) {
-  const needsAnalysis = !["completed", "analyzed"].includes(contract.status);
+  // "completed" or "analyzed" = analysis ran; clauses weren't created or were lost.
+  // Any other status = hasn't been fully processed yet.
+  const alreadyAnalyzed = ["completed", "analyzed"].includes(contract.status);
 
   return (
     <div
       style={{
         ...CARD,
-        padding:       "52px 32px",
+        padding:       "56px 40px",
         textAlign:     "center",
         display:       "flex",
         flexDirection: "column",
         alignItems:    "center",
       }}
     >
+      {/* Icon */}
       <div
         style={{
-          width:          "44px",
-          height:         "44px",
-          borderRadius:   "13px",
+          width:          "48px",
+          height:         "48px",
+          borderRadius:   "14px",
           background:     analyzing ? "rgba(59,130,246,0.08)" : "var(--th-subtle-bg)",
-          border:         analyzing ? "1px solid rgba(59,130,246,0.18)" : "1px solid var(--th-tag-border)",
+          border:         analyzing ? "1px solid rgba(59,130,246,0.2)" : "1px solid var(--th-tag-border)",
           display:        "flex",
           alignItems:     "center",
           justifyContent: "center",
-          marginBottom:   "16px",
+          marginBottom:   "18px",
+          boxShadow:      analyzing ? "0 0 20px rgba(59,130,246,0.08)" : "none",
         }}
       >
-        <Layers size={18} style={{ color: analyzing ? "#60a5fa" : "var(--th-text-3)" }} />
+        <Layers size={20} style={{ color: analyzing ? "#60a5fa" : "var(--th-text-3)" }} />
       </div>
 
-      <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--th-text-1)", marginBottom: "8px" }}>
-        {analyzing ? "Analysis in progress…" : "No clauses extracted yet"}
+      <p style={{ fontSize: "1.0rem", fontWeight: 600, color: "var(--th-text-1)", marginBottom: "8px" }}>
+        {analyzing ? "Extracting clauses…" : "No clauses found"}
       </p>
 
       {analyzing ? (
-        <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", maxWidth: "380px", lineHeight: 1.65, margin: 0 }}>
-          AI is extracting and categorizing clauses. This takes 30–90 seconds.
-          The page will automatically refresh when ready.
+        <p style={{ fontSize: "0.8rem", color: "var(--th-text-3)", maxWidth: "400px", lineHeight: 1.7, margin: 0 }}>
+          AI is extracting and categorizing clauses from{" "}
+          <strong style={{ color: "var(--th-text-2)" }}>{contract.title}</strong>.
+          This takes 30–90 seconds. The page will update when ready.
         </p>
-      ) : needsAnalysis ? (
+      ) : (
         <>
-          <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", maxWidth: "400px", lineHeight: 1.65, marginBottom: "22px" }}>
-            <strong style={{ color: "var(--th-text-2)" }}>{contract.title}</strong> hasn&apos;t been
-            analyzed yet. Run AI analysis to extract clauses, identify risks, and populate the clause library.
+          <p style={{ fontSize: "0.8rem", color: "var(--th-text-3)", maxWidth: "440px", lineHeight: 1.7, marginBottom: "24px" }}>
+            {alreadyAnalyzed
+              ? <>
+                  <strong style={{ color: "var(--th-text-2)" }}>{contract.title}</strong> has been analyzed
+                  but clauses need to be re-extracted. Run analysis to rebuild the clause library from the stored contract text.
+                </>
+              : <>
+                  <strong style={{ color: "var(--th-text-2)" }}>{contract.title}</strong> hasn&apos;t been
+                  fully processed yet. Run AI analysis to extract clauses, identify risks, and populate the clause library.
+                </>
+            }
           </p>
           <button
             onClick={onAnalyze}
@@ -1322,28 +1448,35 @@ function NoClausesState({
               display:      "flex",
               alignItems:   "center",
               gap:          "8px",
-              padding:      "10px 22px",
-              borderRadius: "11px",
-              fontSize:     "0.82rem",
+              padding:      "11px 24px",
+              borderRadius: "12px",
+              fontSize:     "0.84rem",
               fontWeight:   600,
               background:   "rgba(59,130,246,0.12)",
               border:       "1px solid rgba(59,130,246,0.28)",
               color:        "#60a5fa",
               cursor:       "pointer",
-              transition:   "opacity 0.15s",
+              transition:   "all 0.15s",
+              boxShadow:    "0 2px 12px rgba(59,130,246,0.08)",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.75")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = "rgba(59,130,246,0.18)";
+              el.style.borderColor = "rgba(59,130,246,0.4)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background = "rgba(59,130,246,0.12)";
+              el.style.borderColor = "rgba(59,130,246,0.28)";
+            }}
           >
             <Play size={13} />
-            Run AI Analysis
+            {alreadyAnalyzed ? "Re-extract Clauses" : "Run AI Analysis"}
           </button>
+          <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "12px" }}>
+            Extracts clauses · identifies risks · generates insights
+          </p>
         </>
-      ) : (
-        <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", maxWidth: "380px", lineHeight: 1.65, margin: 0 }}>
-          <strong style={{ color: "var(--th-text-2)" }}>{contract.title}</strong> was analyzed but
-          no clauses were extracted. The document may not contain parsable structured text.
-        </p>
       )}
     </div>
   );
@@ -1589,23 +1722,41 @@ export default function ClauseLibraryPage() {
         style={{
           maxWidth:      "1280px",
           margin:        "0 auto",
-          padding:       "48px 52px",
+          padding:       "44px 48px",
           position:      "relative",
           zIndex:        1,
           display:       "flex",
           flexDirection: "column",
-          gap:           "20px",
+          gap:           "18px",
         }}
       >
         {/* Page header */}
         <FadeUp>
-          <div>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--th-text-1)", marginBottom: "6px" }}>
-              Clause Library
-            </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--th-text-3)" }}>
-              Select a contract to explore and analyze its extracted clauses
-            </p>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "16px" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                <div
+                  style={{
+                    width:          "32px",
+                    height:         "32px",
+                    borderRadius:   "9px",
+                    background:     "rgba(59,130,246,0.1)",
+                    border:         "1px solid rgba(59,130,246,0.18)",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <BookOpen size={14} style={{ color: "#60a5fa" }} />
+                </div>
+                <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "var(--th-text-1)", letterSpacing: "-0.02em", margin: 0 }}>
+                  Clause Library
+                </h1>
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "var(--th-text-3)", paddingLeft: "42px" }}>
+                Select a contract to explore, filter, and analyze its extracted clauses
+              </p>
+            </div>
           </div>
         </FadeUp>
 
@@ -1673,7 +1824,7 @@ export default function ClauseLibraryPage() {
                   onCategoryChange={setCategoryFilter}
                   activeRisk={riskFilter}
                   onRiskChange={setRiskFilter}
-                  totalShowing={filteredClauses.length}
+                  totalCount={enrichedClauses.length}
                 />
               </FadeUp>
             )}
@@ -1709,11 +1860,15 @@ export default function ClauseLibraryPage() {
 
             {/* Results count footer */}
             {enrichedClauses.length > 0 && filteredClauses.length > 0 && (
-              <p style={{ fontSize: "0.72rem", color: "var(--th-text-5)", textAlign: "center", paddingTop: "4px" }}>
-                {hasActiveFilters
-                  ? `Showing ${filteredClauses.length} of ${enrichedClauses.length} clauses`
-                  : `${enrichedClauses.length} clause${enrichedClauses.length !== 1 ? "s" : ""} extracted from this contract`}
-              </p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", paddingTop: "4px" }}>
+                <div style={{ height: "1px", flex: 1, background: "var(--th-divider)" }} />
+                <p style={{ fontSize: "0.71rem", color: "var(--th-text-5)", whiteSpace: "nowrap" }}>
+                  {hasActiveFilters
+                    ? `${filteredClauses.length} of ${enrichedClauses.length} clauses`
+                    : `${enrichedClauses.length} clause${enrichedClauses.length !== 1 ? "s" : ""} in this contract`}
+                </p>
+                <div style={{ height: "1px", flex: 1, background: "var(--th-divider)" }} />
+              </div>
             )}
           </>
         )}
