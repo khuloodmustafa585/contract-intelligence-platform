@@ -4,6 +4,32 @@ from sqlalchemy.orm import Session
 from app.models.clause import Clause
 from app.utils.chunking import split_into_clauses
 
+# Keyword → category mapping used to infer a display category from heading/text.
+_CATEGORY_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"terminat|expir|cancell",                    re.I), "Termination"),
+    (re.compile(r"confidential|non[- ]?disclosure|proprietary", re.I), "Confidentiality"),
+    (re.compile(r"\bindemnif|\bliabilit",                     re.I), "Liability"),
+    (re.compile(r"\bpayment|\binvoice|\bfee\b|compensat|pric", re.I), "Payment"),
+    (re.compile(r"governing law|jurisdiction|arbitrat|dispute resol", re.I), "Governing Law"),
+    (re.compile(r"intellectual property|\bpatent\b|\bcopyright\b|trademark", re.I), "IP"),
+    (re.compile(r"force majeure",                             re.I), "Force Majeure"),
+    (re.compile(r"\bassign\b|\bsubcontract",                  re.I), "Assignment"),
+    (re.compile(r"\bdefini",                                  re.I), "Definitions"),
+    (re.compile(r"represent|warrant|covenant",                re.I), "Warranties"),
+    (re.compile(r"\bnotice\b|\bnotif",                        re.I), "Notices"),
+    (re.compile(r"limitation of liability|limitation on damages", re.I), "Limitation"),
+]
+
+
+def _categorize(heading: str | None, text: str) -> str:
+    """Infer a display category from clause heading and first 200 chars of text."""
+    source = (heading or "") + " " + text[:200]
+    for pattern, category in _CATEGORY_PATTERNS:
+        if pattern.search(source):
+            return category
+    return "General"
+
+
 # Matches a line that is a clause heading — either a numbered section that
 # includes a concept title, or a standalone ALL-CAPS title.
 _HEADING_LINE_RE = re.compile(
@@ -51,11 +77,13 @@ def create_clauses(contract_id: int, text: str, db: Session) -> None:
     clauses = split_into_clauses(text)
     for index, clause_text in enumerate(clauses):
         heading, body = extract_heading(clause_text)
+        body_text = body if body else clause_text
         clause = Clause(
             contract_id=contract_id,
             heading=heading,
-            text=body if body else clause_text,
+            text=body_text,
             order_index=index,
+            category=_categorize(heading, body_text),
         )
         db.add(clause)
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,10 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       dir="ltr"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full`}
-      
+      suppressHydrationWarning
     >
       <body className="min-h-full antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

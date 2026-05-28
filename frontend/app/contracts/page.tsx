@@ -12,6 +12,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
@@ -28,14 +29,14 @@ type SortField = "title" | "status" | "created_at";
 type SortDir   = "asc" | "desc";
 
 export default function ContractsPage() {
-  const [contracts, setContracts]   = useState<Contract[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
-  const [search, setSearch]         = useState("");
-  const [statusFilter, setStatus]   = useState("All");
-  const [page, setPage]             = useState(1);
-  const [sortField, setSortField]   = useState<SortField>("created_at");
-  const [sortDir, setSortDir]       = useState<SortDir>("desc");
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
+  const [search, setSearch]       = useState("");
+  const [statusFilter, setStatus] = useState("All");
+  const [page, setPage]           = useState(1);
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDir, setSortDir]     = useState<SortDir>("desc");
 
   useEffect(() => {
     api.contracts()
@@ -59,9 +60,9 @@ export default function ContractsPage() {
     }
     rows = [...rows].sort((a, b) => {
       let cmp = 0;
-      if (sortField === "title")      cmp = a.title.localeCompare(b.title);
+      if (sortField === "title")       cmp = a.title.localeCompare(b.title);
       else if (sortField === "status") cmp = a.status.localeCompare(b.status);
-      else cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+      else                             cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
@@ -79,106 +80,262 @@ export default function ContractsPage() {
 
   return (
     <AppShell>
-      <div className="px-8 py-8">
+      {/* Ambient glow — consistent with analytics / alerts */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          width: "700px",
+          height: "500px",
+          background:
+            "radial-gradient(ellipse at 80% -10%, rgba(99,102,241,0.055) 0%, transparent 60%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
 
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+      {/* ── Page container — matches analytics / alerts pattern ── */}
+      <div
+        style={{
+          maxWidth: "1380px",
+          margin: "0 auto",
+          padding: "48px 52px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {/* ── Page header ──────────────────────────────────────────── */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "16px",
+            marginBottom: "40px",
+          }}
+        >
           <div>
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #22d3ee)" }} />
-              <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>Contract Management</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  height: "4px",
+                  width: "24px",
+                  borderRadius: "999px",
+                  background: "linear-gradient(90deg, #6366f1, #22d3ee)",
+                }}
+              />
+              <span
+                style={{
+                  color: "#6366f1",
+                  fontSize: "0.65rem",
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Contract Management
+              </span>
             </div>
-                      <div className="h-1" />
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Contracts Library</h1>
-                      <div className="h-1" />
-
-            <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
-              {loading ? "Loading..." : `${filtered.length} of ${contracts.length} contracts`}
+            <h1
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "#dae2fd",
+                letterSpacing: "-0.02em",
+                marginBottom: "6px",
+              }}
+            >
+              Contracts Library
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6 }}>
+              {loading
+                ? "Loading…"
+                : `${filtered.length} of ${contracts.length} contract${contracts.length !== 1 ? "s" : ""}`}
             </p>
           </div>
+
+          {/* Upload CTA */}
           <Link
             href="/upload"
-            className="flex items-center gap-2 rounded-xl px-6 py-5 text-sm font-semibold transition-all hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg, #7e80ef, #7a75da)",
-              color: "white",
-              boxShadow: "2px 9px 39px rgba(99,102,241,0.35)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "11px 20px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              color: "#ffffff",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              textDecoration: "none",
+              flexShrink: 0,
+              boxShadow:
+                "0 4px 20px rgba(99,102,241,0.28), 0 0 40px rgba(99,102,241,0.10)",
+              transition: "opacity 0.15s, box-shadow 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.opacity = "0.9";
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                "0 6px 28px rgba(99,102,241,0.4), 0 0 50px rgba(99,102,241,0.16)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.opacity = "1";
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                "0 4px 20px rgba(99,102,241,0.28), 0 0 40px rgba(99,102,241,0.10)";
             }}
           >
-               New Contract <Plus size={20} />
+            <Plus size={16} />
+            New Contract
           </Link>
         </div>
 
-        {/* Error */}
+        {/* ── Error banner ─────────────────────────────────────────── */}
         {error && (
           <div
-            className="mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
-            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}
+            style={{
+              marginBottom: "28px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "14px 18px",
+              borderRadius: "14px",
+              fontSize: "0.82rem",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.20)",
+              color: "#f87171",
+            }}
           >
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
             {error}
           </div>
         )}
-          <div className="h-4" />
 
-        {/* Filters row */}
-        <div className="mb-4 flex flex-wrap gap-3">
+        {/* ── Filters row ──────────────────────────────────────────── */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "20px",
+          }}
+        >
           {/* Search */}
           <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2 w-64"
-            style={{ background: "rgba(19,27,46,0.8)", border: "1px solid rgba(99,102,241,0.12)" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              width: "280px",
+              borderRadius: "12px",
+              padding: "10px 14px",
+              background: "rgba(19,27,46,0.8)",
+              border: "1px solid rgba(99,102,241,0.14)",
+              flexShrink: 0,
+            }}
           >
-            <Search size={14} style={{ color: "#64748b" }} />
+            <Search size={14} style={{ color: "#64748b", flexShrink: 0 }} />
             <input
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search contracts..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#3a4560]"
-              style={{ color: "#dae2fd" }}
+              placeholder="Search contracts…"
+              style={{
+                flex: 1,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                fontSize: "0.82rem",
+                color: "#dae2fd",
+              }}
+              className="placeholder:text-[#3a4560]"
             />
           </div>
-          <div className="h-6" />
 
-          {/* Status filter */}
-          <div className="flex items-center gap-1">
-            <Filter size={13} style={{ color: "#64748b" }} />
-            <div className="flex items-center gap-2 flex-wrap">
-              {STATUS_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => { setStatus(s); setPage(1); }}
-                  className="rounded-full px-4 py-2.5 text-xs font-medium capitalize transition-all border"                   
-                    style={{
-                      background:
-                        statusFilter === s
-                          ? "rgba(99,102,241,0.16)"
-                          : "rgba(255,255,255,0.03)",
-                      color:
-                        statusFilter === s
-                          ? "#a5b4fc"
-                          : "#64748b",
-                      border:
-                        statusFilter === s
-                          ? "1px solid rgba(99,102,241,0.28)"
-                          : "1px solid rgba(255,255,255,0.06)",
-                    }}>
-               {s}
-                </button>
-              ))}
-            </div>
+          {/* Divider */}
+          <div
+            style={{
+              width: "1px",
+              height: "28px",
+              background: "rgba(99,102,241,0.12)",
+              flexShrink: 0,
+            }}
+          />
+
+          {/* Status filter chips */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              flexWrap: "wrap",
+            }}
+          >
+            <Filter size={13} style={{ color: "#64748b", flexShrink: 0 }} />
+            {STATUS_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setStatus(s); setPage(1); }}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  fontSize: "0.73rem",
+                  fontWeight: 500,
+                  textTransform: "capitalize",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  background:
+                    statusFilter === s
+                      ? "rgba(99,102,241,0.16)"
+                      : "rgba(255,255,255,0.03)",
+                  color: statusFilter === s ? "#a5b4fc" : "#64748b",
+                  border:
+                    statusFilter === s
+                      ? "1px solid rgba(99,102,241,0.30)"
+                      : "1px solid rgba(255,255,255,0.06)",
+                }}
+                onMouseEnter={(e) => {
+                  if (statusFilter !== s)
+                    (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+                }}
+                onMouseLeave={(e) => {
+                  if (statusFilter !== s)
+                    (e.currentTarget as HTMLElement).style.color = "#64748b";
+                }}
+              >
+                {s}
+              </button>
+            ))}
           </div>
         </div>
-          <div className="h-6" />
 
-        {/* Table */}
+        {/* ── Content ──────────────────────────────────────────────── */}
         {loading ? (
           <LoadingState rows={6} type="table" />
         ) : filtered.length === 0 ? (
-          <GlassCard>
+          <GlassCard glow>
             <EmptyState
               icon={FileText}
-              title={search || statusFilter !== "All" ? "No contracts match your filters" : "No contracts yet"}
-              description={search || statusFilter !== "All" ? "Try adjusting your search or filters." : "Upload your first contract to get started."}
+              title={
+                search || statusFilter !== "All"
+                  ? "No contracts match your filters"
+                  : "No contracts yet"
+              }
+              description={
+                search || statusFilter !== "All"
+                  ? "Try adjusting your search or filters."
+                  : "Upload your first contract to get started."
+              }
               action={{ label: "Upload Contract", href: "/upload" }}
             />
           </GlassCard>
@@ -186,23 +343,97 @@ export default function ContractsPage() {
           <GlassCard>
             {/* Table header */}
             <div
-              className="grid text-xs uppercase tracking-widest"
               style={{
+                display: "grid",
                 gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
-                padding: "14px 24px",
+                padding: "13px 28px",
                 borderBottom: "1px solid rgba(99,102,241,0.10)",
                 color: "#64748b",
+                fontSize: "0.6rem",
                 fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
               }}
             >
-              <button className="flex items-center gap-1.5 text-left hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("title")}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  textAlign: "left",
+                  color: "inherit",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "inherit",
+                  fontFamily: "inherit",
+                  fontWeight: "inherit",
+                  letterSpacing: "inherit",
+                  textTransform: "inherit",
+                  transition: "color 0.15s",
+                }}
+                onClick={() => toggleSort("title")}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#94a3b8")
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#64748b")
+                }
+              >
                 Contract <SortIndicator field="title" />
               </button>
-              <button className="flex items-center gap-1.5 hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("status")}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: "inherit",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "inherit",
+                  fontFamily: "inherit",
+                  fontWeight: "inherit",
+                  letterSpacing: "inherit",
+                  textTransform: "inherit",
+                  transition: "color 0.15s",
+                }}
+                onClick={() => toggleSort("status")}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#94a3b8")
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#64748b")
+                }
+              >
                 Status <SortIndicator field="status" />
               </button>
               <span>Embedding</span>
-              <button className="flex items-center gap-1.5 hover:text-[#94a3b8] transition-colors" onClick={() => toggleSort("created_at")}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: "inherit",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "inherit",
+                  fontFamily: "inherit",
+                  fontWeight: "inherit",
+                  letterSpacing: "inherit",
+                  textTransform: "inherit",
+                  transition: "color 0.15s",
+                }}
+                onClick={() => toggleSort("created_at")}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#94a3b8")
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = "#64748b")
+                }
+              >
                 Uploaded <SortIndicator field="created_at" />
               </button>
               <span />
@@ -214,31 +445,77 @@ export default function ContractsPage() {
                 <Link
                   key={contract.id}
                   href={`/contracts/${contract.id}`}
-                  className="group grid items-center px-6 py-5 transition-all hover:bg-[rgba(99,102,241,0.06)] hover:shadow-[0_0_20px_rgba(99,102,241,0.06)]"
+                  className="group"
                   style={{
+                    display: "grid",
                     gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
-                    borderBottom: i < pageRows.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none",
+                    alignItems: "center",
+                    padding: "16px 28px",
+                    textDecoration: "none",
+                    transition: "background 0.15s",
+                    borderBottom:
+                      i < pageRows.length - 1
+                        ? "1px solid rgba(99,102,241,0.07)"
+                        : "none",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background =
+                      "rgba(99,102,241,0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
                   }}
                 >
                   {/* Name */}
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      minWidth: 0,
+                    }}
+                  >
                     <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all group-hover:bg-[rgba(99,102,241,0.16)]"
-                      style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.14)" }}
+                      className="group-hover:bg-[rgba(99,102,241,0.16)] transition-colors"
+                      style={{
+                        display: "flex",
+                        width: "36px",
+                        height: "36px",
+                        flexShrink: 0,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "10px",
+                        background: "rgba(99,102,241,0.08)",
+                        border: "1px solid rgba(99,102,241,0.14)",
+                      }}
                     >
                       <FileText size={14} style={{ color: "#6366f1" }} />
                     </div>
-                    <div className="min-w-0">
+                    <div style={{ minWidth: 0 }}>
                       <p
-                        className="text-[0.95rem] font-semibold truncate transition-colors group-hover:text-[#818cf8]"
-                        style={{ color: "#dae2fd" }}
+                        className="group-hover:text-[#818cf8] transition-colors"
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                          color: "#dae2fd",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {contract.title}
                       </p>
                       {contract.file_type && (
-                        <p className="text-xs font-mono-label mt-0.5" style={{ color: "#3a4560", fontSize: "0.6rem" }}>
+                        <p
+                          style={{
+                            fontSize: "0.6rem",
+                            fontFamily: "var(--font-mono, monospace)",
+                            color: "#3a4560",
+                            marginTop: "2px",
+                          }}
+                        >
                           {contract.file_type.toUpperCase()}
-                          {contract.ocr_used ? " Â· OCR" : ""}
+                          {contract.ocr_used ? " · OCR" : ""}
                         </p>
                       )}
                     </div>
@@ -246,7 +523,10 @@ export default function ContractsPage() {
 
                   {/* Status */}
                   <div>
-                    <StatusBadge status={contract.status} pulse={contract.status === "processing"} />
+                    <StatusBadge
+                      status={contract.status}
+                      pulse={contract.status === "processing"}
+                    />
                   </div>
 
                   {/* Embedding */}
@@ -255,17 +535,27 @@ export default function ContractsPage() {
                   </div>
 
                   {/* Date */}
-                  <div className="flex items-center gap-1.5 text-xs" style={{ color: "#64748b" }}>
-                    <Calendar size={11} />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.75rem",
+                      color: "#64748b",
+                    }}
+                  >
+                    <Calendar size={11} style={{ flexShrink: 0 }} />
                     {contract.created_at
                       ? new Date(contract.created_at).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
                         })
-                      : "â€”"}
+                      : "—"}
                   </div>
 
                   {/* Arrow */}
-                  <div className="flex justify-end">
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
                     <ArrowRight
                       size={14}
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -279,44 +569,107 @@ export default function ContractsPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div
-                className="flex items-center justify-between px-6 py-3"
-                style={{ borderTop: "1px solid rgba(99,102,241,0.10)" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 28px",
+                  borderTop: "1px solid rgba(99,102,241,0.10)",
+                }}
               >
-                <span className="text-xs" style={{ color: "#64748b" }}>
-                  Page {page} of {totalPages} â€” {filtered.length} results
+                <span style={{ fontSize: "0.73rem", color: "#64748b" }}>
+                  Page {page} of {totalPages} — {filtered.length} results
                 </span>
-                <div className="flex items-center gap-1">
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all disabled:opacity-30 hover:bg-[rgba(99,102,241,0.10)]"
-                    style={{ border: "1px solid rgba(99,102,241,0.14)" }}
+                    style={{
+                      display: "flex",
+                      width: "28px",
+                      height: "28px",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(99,102,241,0.14)",
+                      background: "transparent",
+                      cursor: page === 1 ? "not-allowed" : "pointer",
+                      opacity: page === 1 ? 0.3 : 1,
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== 1)
+                        (e.currentTarget as HTMLElement).style.background =
+                          "rgba(99,102,241,0.10)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }}
                   >
                     <ChevronLeft size={13} style={{ color: "#94a3b8" }} />
                   </button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-xs transition-all"
-                        style={{
-                          background: p === page ? "rgba(99,102,241,0.18)" : "transparent",
-                          border: p === page ? "1px solid rgba(99,102,241,0.35)" : "1px solid transparent",
-                          color: p === page ? "#818cf8" : "#64748b",
-                          fontFamily: "var(--font-mono,monospace)",
-                        }}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
+
+                  {Array.from(
+                    { length: Math.min(5, totalPages) },
+                    (_, i) => {
+                      const p =
+                        Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          style={{
+                            display: "flex",
+                            width: "28px",
+                            height: "28px",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "8px",
+                            fontSize: "0.73rem",
+                            fontFamily: "var(--font-mono, monospace)",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                            background:
+                              p === page
+                                ? "rgba(99,102,241,0.18)"
+                                : "transparent",
+                            border:
+                              p === page
+                                ? "1px solid rgba(99,102,241,0.35)"
+                                : "1px solid transparent",
+                            color: p === page ? "#818cf8" : "#64748b",
+                          }}
+                        >
+                          {p}
+                        </button>
+                      );
+                    }
+                  )}
+
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg transition-all disabled:opacity-30 hover:bg-[rgba(99,102,241,0.10)]"
-                    style={{ border: "1px solid rgba(99,102,241,0.14)" }}
+                    style={{
+                      display: "flex",
+                      width: "28px",
+                      height: "28px",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(99,102,241,0.14)",
+                      background: "transparent",
+                      cursor: page === totalPages ? "not-allowed" : "pointer",
+                      opacity: page === totalPages ? 0.3 : 1,
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (page !== totalPages)
+                        (e.currentTarget as HTMLElement).style.background =
+                          "rgba(99,102,241,0.10)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }}
                   >
                     <ChevronRight size={13} style={{ color: "#94a3b8" }} />
                   </button>

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Bell, LogOut, Upload, ChevronRight } from "lucide-react";
 import { api } from "@/services/api";
+import { useUser, getInitials } from "@/contexts/UserContext";
 
 const PAGE_LABELS: Record<string, string> = {
   "/dashboard":      "Dashboard",
@@ -23,9 +24,12 @@ const PAGE_LABELS: Record<string, string> = {
 export default function TopNavbar() {
   const router   = useRouter();
   const pathname = usePathname();
+  const { user } = useUser();
   const [alerts,      setAlerts]      = useState(0);
   const [search,      setSearch]      = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
+
+  const initials = getInitials(user?.full_name ?? "Legal Team");
 
   useEffect(() => {
     api
@@ -55,17 +59,17 @@ export default function TopNavbar() {
         alignItems: "center",
         gap: "10px",
         padding: "0 24px",
-        background: "rgba(5, 12, 25, 0.88)",
+        background: "var(--th-navbar-bg)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid var(--th-navbar-border)",
       }}
     >
       {/* Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
-        <span style={{ fontSize: "0.72rem", color: "#1e293b" }}>Contract Lens</span>
-        <ChevronRight size={11} style={{ color: "#1e293b" }} />
-        <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "#94a3b8" }}>{pageLabel}</span>
+        <span style={{ fontSize: "0.72rem", color: "var(--th-text-5)" }}>Contract Lens</span>
+        <ChevronRight size={11} style={{ color: "var(--th-text-5)" }} />
+        <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--th-text-2)" }}>{pageLabel}</span>
       </div>
 
       {/* Search */}
@@ -77,8 +81,8 @@ export default function TopNavbar() {
           padding: "0 12px",
           height: "34px",
           width: searchFocus ? "260px" : "210px",
-          background: "rgba(15, 28, 52, 0.8)",
-          border: `1px solid ${searchFocus ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.07)"}`,
+          background: "var(--th-input-bg)",
+          border: `1px solid ${searchFocus ? "rgba(59,130,246,0.4)" : "var(--th-input-border)"}`,
           borderRadius: "10px",
           boxShadow: searchFocus ? "0 0 0 3px rgba(59,130,246,0.07)" : "none",
           transition: "width 0.2s ease, border-color 0.15s, box-shadow 0.15s",
@@ -87,7 +91,7 @@ export default function TopNavbar() {
         <Search
           size={12}
           style={{
-            color: searchFocus ? "#3b82f6" : "#334155",
+            color: searchFocus ? "#3b82f6" : "var(--th-text-4)",
             flexShrink: 0,
             transition: "color 0.15s",
           }}
@@ -104,16 +108,16 @@ export default function TopNavbar() {
             background: "transparent",
             border: "none",
             outline: "none",
-            color: "#f1f5f9",
+            color: "var(--th-text-1)",
             fontSize: "0.78rem",
           }}
         />
         <kbd
           style={{
             fontSize: "0.58rem",
-            color: "#1e293b",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.07)",
+            color: "var(--th-text-5)",
+            background: "var(--th-tag-bg)",
+            border: "1px solid var(--th-tag-border)",
             borderRadius: "4px",
             padding: "1px 5px",
             fontFamily: "monospace",
@@ -135,18 +139,18 @@ export default function TopNavbar() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "10px",
-          color: "#475569",
+          color: "var(--th-text-3)",
           transition: "all 0.15s",
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLElement;
-          el.style.background = "rgba(255,255,255,0.06)";
-          el.style.color = "#94a3b8";
+          el.style.background = "var(--th-hover-bg)";
+          el.style.color = "var(--th-text-2)";
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement;
           el.style.background = "transparent";
-          el.style.color = "#475569";
+          el.style.color = "var(--th-text-3)";
         }}
       >
         <Bell size={15} />
@@ -160,7 +164,7 @@ export default function TopNavbar() {
               height: "6px",
               borderRadius: "50%",
               background: "#ef4444",
-              border: "1.5px solid #050c19",
+              border: "1.5px solid var(--th-body-bg)",
             }}
           />
         )}
@@ -186,7 +190,7 @@ export default function TopNavbar() {
           letterSpacing: "0.04em",
         }}
       >
-        LT
+        {initials}
       </Link>
 
       {/* Logout */}
@@ -200,7 +204,7 @@ export default function TopNavbar() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "10px",
-          color: "#475569",
+          color: "var(--th-text-3)",
           background: "transparent",
           border: "none",
           cursor: "pointer",
@@ -214,7 +218,7 @@ export default function TopNavbar() {
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement;
           el.style.background = "transparent";
-          el.style.color = "#475569";
+          el.style.color = "var(--th-text-3)";
         }}
       >
         <LogOut size={14} />

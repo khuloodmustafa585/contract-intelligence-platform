@@ -1,4 +1,16 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+
+export type User = {
+  id: number;
+  full_name: string;
+  email: string;
+  email_notifications_enabled: boolean;
+  created_at: string;
+  department?: string | null;
+  company?: string | null;
+  avatar_url?: string | null;
+};
+
 export type Contract = {
   id: number;
   title: string;
@@ -21,7 +33,7 @@ export type Contract = {
   embedding_status: string;
 };
 
-export type Clause = { id: number; contract_id: number; heading?: string | null; text: string; order_index: number };
+export type Clause = { id: number; contract_id: number; heading?: string | null; text: string; order_index: number; category?: string | null; page_number?: number | null; source_snippet?: string | null };
 export type Risk = { id: number; contract_id: number; clause_id?: number | null; risk_type: string; severity: string; title: string; explanation?: string | null; suggested_action?: string | null; source_snippet?: string | null; created_at: string };
 export type Summary = { id: number; contract_id: number; summary_type: string; summary_text: string; created_at: string };
 export type Obligation = { id: number; contract_id: number; clause_id?: number | null; title: string; description?: string | null; owner?: string | null; due_date?: string | null; status: string; source_snippet?: string | null; created_at: string };
@@ -75,7 +87,14 @@ export async function registerUser(data: { full_name: string; email: string; pas
 }
 
 export const api = {
-  me: () => request("/users/me"),
+  me: () => request<User>("/users/me"),
+  updateMe: (data: {
+    full_name?: string;
+    email_notifications_enabled?: boolean;
+    department?: string | null;
+    company?: string | null;
+    avatar_url?: string | null;
+  }) => request<User>("/users/me", { method: "PATCH", body: JSON.stringify(data) }),
   dashboard: () => request("/dashboard/metrics"),
   contracts: () => request<Contract[]>("/contracts/"),
   contract: (id: number | string) => request<ContractDetail>(`/contracts/${id}`),
@@ -110,12 +129,6 @@ export const api = {
         else reject(new Error(payload.detail || "Upload failed"));
       };
       xhr.onerror = () => reject(new Error("Upload failed"));
-      
-      console.log("TOKEN:", token);
-      console.log("API_BASE:", API_BASE);
-      console.log("UPLOAD URL:", `${API_BASE}/upload/`);
-      console.log("FILE:", file);
-      
       xhr.send(form);
     }),
 };

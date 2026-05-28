@@ -105,24 +105,69 @@ export default function UploadPage() {
 
   return (
     <AppShell>
-      <div className="px-8 pt-12 pb-8 max-w-6xl mx-auto">
+      {/* Ambient glow */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          width: "700px",
+          height: "500px",
+          background:
+            "radial-gradient(ellipse at 80% -10%, rgba(99,102,241,0.055) 0%, transparent 60%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: "1380px",
+          margin: "0 auto",
+          padding: "48px 52px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #22d3ee)" }} />
-            <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>
+        <div style={{ marginBottom: "40px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+            <div
+              style={{
+                height: "4px",
+                width: "24px",
+                borderRadius: "999px",
+                background: "linear-gradient(90deg, #6366f1, #22d3ee)",
+              }}
+            />
+            <span
+              style={{
+                color: "#6366f1",
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+              }}
+            >
               Contract Upload
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>
+          <h1
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: 700,
+              color: "#dae2fd",
+              letterSpacing: "-0.02em",
+              marginBottom: "6px",
+            }}
+          >
             Upload Center
           </h1>
-                    <div className="h-2" />
-          <p className="mt-2 text-sm" style={{ color: "#64748b" }}>
+          <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6 }}>
             Upload PDF, DOCX, or image contracts for AI-powered analysis.
           </p>
         </div>
-          <div className="h-2" />
 
         <div className="grid gap-6 items-start lg:grid-cols-[1fr_340px]">
           {/* Upload Zone */}

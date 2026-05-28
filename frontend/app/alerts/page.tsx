@@ -46,23 +46,103 @@ export default function AlertsPage() {
 
   return (
     <AppShell>
-      <div className="px-8 py-8">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-8">
+      {/* Ambient glow — consistent with dashboard / risks / analytics */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          width: "700px",
+          height: "500px",
+          background:
+            "radial-gradient(ellipse at 80% -10%, rgba(99,102,241,0.05) 0%, transparent 60%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* ── Page container — matches dashboard / risks / analytics pattern ── */}
+      <div
+        style={{
+          maxWidth: "1380px",
+          margin: "0 auto",
+          padding: "48px 52px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {/* ── Page header ──────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "16px",
+            marginBottom: "40px",
+          }}
+        >
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #6366f1, #ef4444)" }} />
-              <span className="font-mono-label" style={{ color: "#6366f1", fontSize: "0.65rem" }}>Notification Center</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  height: "4px",
+                  width: "24px",
+                  borderRadius: "999px",
+                  background: "linear-gradient(90deg, #6366f1, #ef4444)",
+                }}
+              />
+              <span
+                style={{
+                  color: "#6366f1",
+                  fontSize: "0.65rem",
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Notification Center
+              </span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Alerts</h1>
-            <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+            <h1
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "#dae2fd",
+                letterSpacing: "-0.02em",
+                marginBottom: "6px",
+              }}
+            >
+              Alerts
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6 }}>
               Deadline, renewal, overdue, and risk notifications across your portfolio.
             </p>
           </div>
+
+          {/* Unread count badge */}
           {unread.length > 0 && (
             <div
-              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold"
-              style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "9px 16px",
+                borderRadius: "12px",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                background: "rgba(239,68,68,0.10)",
+                border: "1px solid rgba(239,68,68,0.22)",
+                color: "#f87171",
+                flexShrink: 0,
+              }}
             >
               <Bell size={14} />
               {unread.length} unread
@@ -70,16 +150,32 @@ export default function AlertsPage() {
           )}
         </div>
 
+        {/* ── Error banner ─────────────────────────────────────────────── */}
         {error && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}>
-            <AlertCircle size={14} /> {error}
+          <div
+            style={{
+              marginBottom: "28px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "14px 18px",
+              borderRadius: "14px",
+              fontSize: "0.82rem",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.20)",
+              color: "#f87171",
+            }}
+          >
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
+            {error}
           </div>
         )}
 
+        {/* ── Content ──────────────────────────────────────────────────── */}
         {loading ? (
           <LoadingState rows={5} type="list" />
         ) : alerts.length === 0 ? (
-          <GlassCard>
+          <GlassCard glow>
             <EmptyState
               icon={CheckCircle2}
               title="All clear"
@@ -87,11 +183,22 @@ export default function AlertsPage() {
             />
           </GlassCard>
         ) : (
-          <div className="space-y-5">
-            {/* Unread */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+
+            {/* ── Unread alerts ─────────────────────────────────────── */}
             {unread.length > 0 && (
               <div>
-                <p className="font-mono-label mb-3" style={{ color: "#6366f1", fontSize: "0.62rem" }}>
+                <p
+                  style={{
+                    fontSize: "0.62rem",
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 600,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "#6366f1",
+                    marginBottom: "14px",
+                  }}
+                >
                   Unread — {unread.length}
                 </p>
                 <GlassCard>
@@ -100,54 +207,159 @@ export default function AlertsPage() {
                     return (
                       <div
                         key={alert.id}
-                        className="flex items-start gap-4 px-6 py-4 animate-fade-up"
+                        className="animate-fade-up"
                         style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "16px",
+                          padding: "18px 28px",
                           animationDelay: `${i * 40}ms`,
-                          borderBottom: i < unread.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none",
+                          borderBottom:
+                            i < unread.length - 1
+                              ? "1px solid rgba(99,102,241,0.07)"
+                              : "none",
                         }}
                       >
+                        {/* Type icon */}
                         <div
-                          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-                          style={{ background: t.bg, border: `1px solid ${t.border}` }}
+                          style={{
+                            marginTop: "2px",
+                            display: "flex",
+                            width: "34px",
+                            height: "34px",
+                            flexShrink: 0,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "10px",
+                            background: t.bg,
+                            border: `1px solid ${t.border}`,
+                          }}
                         >
                           <Bell size={14} style={{ color: t.color }} />
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3 mb-1">
-                            <p className="text-sm font-semibold" style={{ color: "#dae2fd" }}>
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              gap: "12px",
+                              marginBottom: "5px",
+                            }}
+                          >
+                            <p
+                              style={{
+                                fontSize: "0.88rem",
+                                fontWeight: 600,
+                                color: "#dae2fd",
+                                lineHeight: 1.4,
+                              }}
+                            >
                               {alert.title}
                             </p>
                             <span
-                              className="shrink-0 font-mono-label rounded-md px-2 py-0.5 uppercase"
-                              style={{ background: t.bg, color: t.color, border: `1px solid ${t.border}`, fontSize: "0.6rem" }}
+                              style={{
+                                flexShrink: 0,
+                                fontSize: "0.6rem",
+                                fontFamily: "var(--font-mono, monospace)",
+                                fontWeight: 600,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                background: t.bg,
+                                color: t.color,
+                                border: `1px solid ${t.border}`,
+                              }}
                             >
                               {alert.alert_type}
                             </span>
                           </div>
                           {alert.message && (
-                            <p className="text-xs mb-2" style={{ color: "#64748b" }}>{alert.message}</p>
+                            <p
+                              style={{
+                                fontSize: "0.78rem",
+                                color: "#64748b",
+                                lineHeight: 1.6,
+                                marginBottom: "6px",
+                              }}
+                            >
+                              {alert.message}
+                            </p>
                           )}
                           {alert.trigger_date && (
-                            <p className="flex items-center gap-1 text-xs" style={{ color: "#f59e0b" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                fontSize: "0.73rem",
+                                color: "#f59e0b",
+                              }}
+                            >
                               <Clock size={10} />
-                              {new Date(alert.trigger_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                            </p>
+                              {new Date(alert.trigger_date).toLocaleDateString("en-US", {
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        {/* Actions */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            flexShrink: 0,
+                          }}
+                        >
                           <Link
                             href={`/contracts/${alert.contract_id}`}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg transition-all hover:bg-[rgba(99,102,241,0.10)]"
-                            style={{ border: "1px solid rgba(99,102,241,0.14)" }}
+                            style={{
+                              display: "flex",
+                              width: "30px",
+                              height: "30px",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "8px",
+                              border: "1px solid rgba(99,102,241,0.16)",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background =
+                                "rgba(99,102,241,0.10)")
+                            }
+                            onMouseLeave={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "transparent")
+                            }
                           >
                             <ExternalLink size={11} style={{ color: "#818cf8" }} />
                           </Link>
                           <button
                             onClick={() => markRead(alert.id)}
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-[rgba(16,185,129,0.10)]"
-                            style={{ border: "1px solid rgba(16,185,129,0.18)", color: "#34d399" }}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "8px",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                              border: "1px solid rgba(16,185,129,0.20)",
+                              color: "#34d399",
+                              background: "transparent",
+                              cursor: "pointer",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background =
+                                "rgba(16,185,129,0.08)")
+                            }
+                            onMouseLeave={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "transparent")
+                            }
                           >
                             Mark read
                           </button>
@@ -159,10 +371,20 @@ export default function AlertsPage() {
               </div>
             )}
 
-            {/* Read */}
+            {/* ── Read alerts ───────────────────────────────────────── */}
             {read.length > 0 && (
               <div>
-                <p className="font-mono-label mb-3" style={{ color: "#3a4560", fontSize: "0.62rem" }}>
+                <p
+                  style={{
+                    fontSize: "0.62rem",
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 600,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "#3a4560",
+                    marginBottom: "14px",
+                  }}
+                >
                   Read — {read.length}
                 </p>
                 <GlassCard style={{ opacity: 0.6 }}>
@@ -170,12 +392,38 @@ export default function AlertsPage() {
                     <Link
                       key={alert.id}
                       href={`/contracts/${alert.contract_id}`}
-                      className="flex items-center gap-4 px-6 py-3 transition-all hover:opacity-80"
-                      style={{ borderBottom: i < read.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px",
+                        padding: "14px 28px",
+                        borderBottom:
+                          i < read.length - 1
+                            ? "1px solid rgba(99,102,241,0.07)"
+                            : "none",
+                        transition: "opacity 0.15s",
+                        textDecoration: "none",
+                      }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLElement).style.opacity = "0.7")
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLElement).style.opacity = "1")
+                      }
                     >
-                      <CheckCircle2 size={14} style={{ color: "#3a4560" }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate" style={{ color: "#64748b" }}>{alert.title}</p>
+                      <CheckCircle2 size={14} style={{ color: "#3a4560", flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "#64748b",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {alert.title}
+                        </p>
                       </div>
                     </Link>
                   ))}

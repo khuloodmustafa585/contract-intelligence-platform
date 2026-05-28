@@ -40,51 +40,145 @@ export default function ObligationsPage() {
 
   return (
     <AppShell>
-      <div className="px-8 py-8">
+      {/* Ambient glow */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          width: "700px",
+          height: "500px",
+          background:
+            "radial-gradient(ellipse at 80% -10%, rgba(245,158,11,0.05) 0%, transparent 60%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      <div
+        style={{
+          maxWidth: "1380px",
+          margin: "0 auto",
+          padding: "48px 52px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-1 w-6 rounded-full" style={{ background: "linear-gradient(90deg, #f59e0b, #22d3ee)" }} />
-            <span className="font-mono-label" style={{ color: "#f59e0b", fontSize: "0.65rem" }}>Contract Obligations</span>
+        <div style={{ marginBottom: "40px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+            <div
+              style={{
+                height: "4px",
+                width: "24px",
+                borderRadius: "999px",
+                background: "linear-gradient(90deg, #f59e0b, #22d3ee)",
+              }}
+            />
+            <span
+              style={{
+                color: "#f59e0b",
+                fontSize: "0.65rem",
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+              }}
+            >
+              Contract Obligations
+            </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "#dae2fd" }}>Obligations</h1>
-          <p className="mt-1 text-sm" style={{ color: "#64748b" }}>
+          <h1
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: 700,
+              color: "#dae2fd",
+              letterSpacing: "-0.02em",
+              marginBottom: "6px",
+            }}
+          >
+            Obligations
+          </h1>
+          <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6 }}>
             AI-extracted action items, deadlines, and performance obligations from your contracts.
           </p>
         </div>
 
         {!loading && items.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div
+            className="grid grid-cols-3"
+            style={{ gap: "16px", marginBottom: "24px" }}
+          >
             {[
-              { label: "Overdue",  value: overdue.length,  color: "#f87171", bg: "rgba(239,68,68,0.10)",  icon: AlertCircle },
-              { label: "Upcoming", value: upcoming.length, color: "#fbbf24", bg: "rgba(245,158,11,0.10)", icon: Clock        },
-              { label: "No Deadline", value: noDue.length, color: "#818cf8", bg: "rgba(99,102,241,0.10)", icon: CheckCircle2 },
+              { label: "Overdue",      value: overdue.length,  color: "#f87171", bg: "rgba(239,68,68,0.10)",  icon: AlertCircle },
+              { label: "Upcoming",     value: upcoming.length, color: "#fbbf24", bg: "rgba(245,158,11,0.10)", icon: Clock        },
+              { label: "No Deadline",  value: noDue.length,    color: "#818cf8", bg: "rgba(99,102,241,0.10)", icon: CheckCircle2 },
             ].map(({ label, value, color, bg, icon: Icon }) => (
               <div
                 key={label}
-                className="rounded-2xl p-5 animate-fade-up"
-                style={{ background: bg, border: `1px solid ${color}25` }}
+                className="animate-fade-up"
+                style={{
+                  borderRadius: "16px",
+                  padding: "20px 22px",
+                  background: bg,
+                  border: `1px solid ${color}25`,
+                }}
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Icon size={14} style={{ color }} />
-                  <p className="font-mono-label" style={{ color, fontSize: "0.62rem" }}>{label}</p>
+                  <p
+                    style={{
+                      color,
+                      fontSize: "0.62rem",
+                      fontFamily: "var(--font-mono, monospace)",
+                      fontWeight: 600,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {label}
+                  </p>
                 </div>
-                <p className="text-3xl font-bold tabular-nums" style={{ color }}>{value}</p>
+                <p
+                  style={{
+                    fontSize: "2rem",
+                    fontWeight: 700,
+                    color,
+                    fontVariantNumeric: "tabular-nums",
+                    lineHeight: 1,
+                  }}
+                >
+                  {value}
+                </p>
               </div>
             ))}
           </div>
         )}
 
         {error && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}>
-            <AlertCircle size={14} /> {error}
+          <div
+            style={{
+              marginBottom: "28px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "14px 18px",
+              borderRadius: "14px",
+              fontSize: "0.82rem",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.20)",
+              color: "#f87171",
+            }}
+          >
+            <AlertCircle size={14} style={{ flexShrink: 0 }} />
+            {error}
           </div>
         )}
 
         {loading ? (
           <LoadingState rows={5} type="list" />
         ) : items.length === 0 ? (
-          <GlassCard>
+          <GlassCard glow>
             <EmptyState
               icon={ClipboardList}
               title="No obligations extracted"
@@ -101,54 +195,106 @@ export default function ObligationsPage() {
                   <Link
                     key={item.id}
                     href={`/contracts/${item.contract_id}`}
-                    className="group flex flex-wrap items-start justify-between gap-4 px-6 py-4 transition-all hover:bg-[rgba(99,102,241,0.04)] animate-fade-up"
+                    className="animate-fade-up"
                     style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: "16px",
+                      padding: "18px 28px",
                       animationDelay: `${i * 30}ms`,
                       borderBottom: i < items.length - 1 ? "1px solid rgba(99,102,241,0.07)" : "none",
+                      textDecoration: "none",
+                      transition: "background 0.15s",
                     }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.04)")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLElement).style.background = "transparent")
+                    }
                   >
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flex: 1, minWidth: 0 }}>
                       <div
-                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
                         style={{
+                          marginTop: "2px",
+                          display: "flex",
+                          width: "28px",
+                          height: "28px",
+                          flexShrink: 0,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "8px",
                           background: overdue ? "rgba(239,68,68,0.10)" : "rgba(99,102,241,0.10)",
                           border: `1px solid ${overdue ? "rgba(239,68,68,0.20)" : "rgba(99,102,241,0.16)"}`,
                         }}
                       >
                         <ClipboardList size={12} style={{ color: overdue ? "#f87171" : "#818cf8" }} />
                       </div>
-                      <div className="min-w-0">
+                      <div style={{ minWidth: 0 }}>
                         <h2
-                          className="text-sm font-semibold mb-1 transition-colors group-hover:text-[#818cf8]"
-                          style={{ color: "#dae2fd" }}
+                          style={{
+                            fontSize: "0.88rem",
+                            fontWeight: 600,
+                            color: "#dae2fd",
+                            marginBottom: "4px",
+                            lineHeight: 1.4,
+                          }}
                         >
                           {item.title}
                         </h2>
                         {item.description && (
-                          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "#64748b" }}>
+                          <p
+                            style={{
+                              fontSize: "0.78rem",
+                              color: "#64748b",
+                              lineHeight: 1.6,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
+                              overflow: "hidden",
+                            }}
+                          >
                             {item.description}
                           </p>
                         )}
                         {item.owner && (
-                          <div className="mt-1.5 flex items-center gap-1 text-xs" style={{ color: "#3a4560" }}>
-                            <User size={10} /> {item.owner}
+                          <div
+                            style={{
+                              marginTop: "6px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "0.73rem",
+                              color: "#3a4560",
+                            }}
+                          >
+                            <User size={10} />
+                            {item.owner}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0">
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px", flexShrink: 0 }}>
                       <StatusBadge status={item.status} />
                       {item.due_date && (
                         <div
-                          className="flex items-center gap-1 text-xs font-medium"
-                          style={{ color: overdue ? "#f87171" : "#fbbf24" }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "0.73rem",
+                            fontWeight: 500,
+                            color: overdue ? "#f87171" : "#fbbf24",
+                          }}
                         >
                           <Calendar size={11} />
                           {new Date(item.due_date).toLocaleDateString("en-US", {
                             month: "short", day: "numeric", year: "numeric",
                           })}
-                          {overdue && <span className="ml-1">· Overdue</span>}
+                          {overdue && <span style={{ marginLeft: "4px" }}>· Overdue</span>}
                         </div>
                       )}
                     </div>

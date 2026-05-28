@@ -18,7 +18,6 @@ import {
   FileSearch,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
-import GlassCard from "@/components/ui/GlassCard";
 import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import { api, Contract } from "@/services/api";
 
@@ -263,43 +262,87 @@ export default function AskAIPage() {
 
   return (
     <AppShell>
-      <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
+      {/* ── Outer layout: full viewport minus topnav, with breathing room ── */}
+      <div
+        style={{
+          height: "calc(100vh - 56px)",
+          display: "flex",
+          padding: "20px 24px 24px 20px",
+          gap: "16px",
+          boxSizing: "border-box",
+        }}
+      >
 
-        {/* ── Sidebar ── */}
+        {/* ── Sidebar panel ─────────────────────────────────────────────── */}
         <aside
-          className="flex w-72 shrink-0 flex-col overflow-y-auto"
           style={{
-            background: "rgba(11,19,38,0.9)",
-            borderRight: "1px solid rgba(99,102,241,0.10)",
+            width: "296px",
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+            background: "rgba(11,19,38,0.92)",
+            border: "1px solid rgba(99,102,241,0.12)",
+            borderRadius: "16px",
           }}
         >
-          {/* Contract Selector */}
-          <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(99,102,241,0.08)" }}>
-            <p className="font-mono-label mb-3" style={{ color: "#6366f1", fontSize: "0.62rem" }}>
+          {/* Contract selector */}
+          <div
+            style={{
+              padding: "22px 24px 20px",
+              borderBottom: "1px solid rgba(99,102,241,0.08)",
+            }}
+          >
+            <p
+              style={{
+                color: "#6366f1",
+                fontSize: "0.6rem",
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: "14px",
+              }}
+            >
               Contract Context
             </p>
 
             {loadingContracts ? (
-              <div className="flex items-center gap-2 text-xs" style={{ color: "#64748b" }}>
-                <Loader2 size={12} className="animate-spin" /> Loading contracts...
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "0.78rem",
+                  color: "#64748b",
+                }}
+              >
+                <Loader2 size={12} className="animate-spin" /> Loading contracts…
               </div>
             ) : contracts.length === 0 ? (
-              <div className="text-xs" style={{ color: "#64748b" }}>
+              <p style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.5 }}>
                 No indexed contracts. Upload a contract first.
-              </div>
+              </p>
             ) : (
-              <div className="relative">
+              <div style={{ position: "relative" }}>
                 <select
                   value={contractId}
                   onChange={(e) => {
                     setContractId(e.target.value);
                     setMessages([]);
                   }}
-                  className="w-full appearance-none rounded-xl px-3 py-2.5 pr-8 text-sm outline-none transition-all"
                   style={{
+                    width: "100%",
+                    appearance: "none",
+                    borderRadius: "12px",
+                    padding: "10px 36px 10px 14px",
+                    fontSize: "0.82rem",
+                    outline: "none",
                     background: "rgba(19,27,46,0.8)",
                     border: "1px solid rgba(99,102,241,0.18)",
                     color: "#dae2fd",
+                    cursor: "pointer",
+                    transition: "border-color 0.15s",
                   }}
                 >
                   {contracts.map((c) => (
@@ -310,36 +353,88 @@ export default function AskAIPage() {
                 </select>
                 <ChevronDown
                   size={13}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "#64748b" }}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#64748b",
+                    pointerEvents: "none",
+                  }}
                 />
               </div>
             )}
 
             {selectedContract && (
-              <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "#64748b" }}>
-                <FileText size={11} style={{ color: "#6366f1" }} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  marginTop: "10px",
+                  fontSize: "0.73rem",
+                  color: "#64748b",
+                }}
+              >
+                <FileText size={11} style={{ color: "#6366f1", flexShrink: 0 }} />
                 {selectedContract.status} · {selectedContract.embedding_status}
               </div>
             )}
           </div>
 
-          {/* Suggested Questions */}
-          <div className="px-5 py-5 flex-1">
-            <p className="font-mono-label mb-3" style={{ color: "#6366f1", fontSize: "0.62rem" }}>
+          {/* Suggested questions */}
+          <div
+            style={{
+              padding: "20px 24px",
+              flex: 1,
+            }}
+          >
+            <p
+              style={{
+                color: "#6366f1",
+                fontSize: "0.6rem",
+                fontFamily: "var(--font-mono, monospace)",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom: "14px",
+              }}
+            >
               Suggested Questions
             </p>
-            <div className="space-y-1.5">
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
                   onClick={() => submit(null, q)}
                   disabled={!contractId || loading}
-                  className="group w-full text-left rounded-xl px-3 py-2.5 text-xs transition-all hover:bg-[rgba(99,102,241,0.08)] disabled:opacity-40"
                   style={{
-                    border: "1px solid rgba(99,102,241,0.10)",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "11px 14px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(99,102,241,0.12)",
                     color: "#94a3b8",
                     background: "rgba(19,27,46,0.4)",
+                    fontSize: "0.78rem",
+                    lineHeight: 1.55,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    opacity: !contractId || loading ? 0.4 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(!contractId || loading)) {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.background = "rgba(99,102,241,0.08)";
+                      el.style.borderColor = "rgba(99,102,241,0.22)";
+                      el.style.color = "#c7d2fe";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.background = "rgba(19,27,46,0.4)";
+                    el.style.borderColor = "rgba(99,102,241,0.12)";
+                    el.style.color = "#94a3b8";
                   }}
                 >
                   {q}
@@ -348,65 +443,152 @@ export default function AskAIPage() {
             </div>
           </div>
 
-          {/* AI note */}
-          <div className="px-5 py-4" style={{ borderTop: "1px solid rgba(99,102,241,0.08)" }}>
+          {/* AI insight note */}
+          <div
+            style={{
+              padding: "16px 24px 22px",
+              borderTop: "1px solid rgba(99,102,241,0.08)",
+            }}
+          >
             <AIInsightPanel title="Grounded Analysis" compact>
               Responses quote exact contract language retrieved via vector search — no hallucination.
             </AIInsightPanel>
           </div>
         </aside>
 
-        {/* ── Chat Area ── */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-
-          {/* Chat Header */}
+        {/* ── Chat panel ────────────────────────────────────────────────── */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            background: "rgba(11,19,38,0.7)",
+            border: "1px solid rgba(99,102,241,0.10)",
+            borderRadius: "16px",
+          }}
+        >
+          {/* Chat header */}
           <div
-            className="flex items-center gap-3 px-6 py-4 shrink-0"
-            style={{ borderBottom: "1px solid rgba(99,102,241,0.10)", background: "rgba(11,19,38,0.8)" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              padding: "18px 28px",
+              borderBottom: "1px solid rgba(99,102,241,0.10)",
+              background: "rgba(11,19,38,0.85)",
+              flexShrink: 0,
+              borderRadius: "16px 16px 0 0",
+            }}
           >
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
               style={{
+                display: "flex",
+                width: "38px",
+                height: "38px",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "12px",
                 background: "linear-gradient(135deg, #6366f1, #4f46e5)",
                 boxShadow: "0 0 16px rgba(99,102,241,0.35)",
+                flexShrink: 0,
               }}
             >
-              <Sparkles size={16} className="text-white" />
+              <Sparkles size={16} style={{ color: "#ffffff" }} />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: "#dae2fd" }}>
+              <p
+                style={{
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  color: "#dae2fd",
+                  lineHeight: 1.3,
+                }}
+              >
                 Contract Intelligence AI
               </p>
-              <p className="text-xs" style={{ color: "#64748b" }}>
-                {selectedContract ? `Analyzing: ${selectedContract.title}` : "Select a contract to begin"}
+              <p style={{ fontSize: "0.73rem", color: "#64748b", marginTop: "2px" }}>
+                {selectedContract
+                  ? `Analyzing: ${selectedContract.title}`
+                  : "Select a contract to begin"}
               </p>
             </div>
-            <div className="ml-auto flex items-center gap-1.5">
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+              }}
+            >
               <div
-                className="h-2 w-2 rounded-full animate-pulse"
-                style={{ background: "#10b981", boxShadow: "0 0 6px rgba(16,185,129,0.5)" }}
+                className="animate-pulse"
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  boxShadow: "0 0 6px rgba(16,185,129,0.5)",
+                }}
               />
-              <span className="text-xs" style={{ color: "#64748b" }}>Online</span>
+              <span style={{ fontSize: "0.73rem", color: "#64748b" }}>Online</span>
             </div>
           </div>
 
-          {/* Error Banner */}
+          {/* Error banner */}
           {error && (
             <div
-              className="mx-6 mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.20)", color: "#f87171" }}
+              style={{
+                margin: "16px 28px 0",
+                display: "flex",
+                alignItems: "center",
+                gap: "9px",
+                padding: "12px 16px",
+                borderRadius: "12px",
+                fontSize: "0.82rem",
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.20)",
+                color: "#f87171",
+                flexShrink: 0,
+              }}
             >
-              <AlertCircle size={14} /> {error}
+              <AlertCircle size={14} style={{ flexShrink: 0 }} /> {error}
             </div>
           )}
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          {/* Messages area */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "32px 32px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
+            }}
+          >
+            {/* Empty state */}
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  textAlign: "center",
+                  padding: "0 24px",
+                }}
+              >
                 <div
-                  className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
                   style={{
+                    marginBottom: "20px",
+                    display: "flex",
+                    width: "68px",
+                    height: "68px",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "20px",
                     background: "rgba(99,102,241,0.08)",
                     border: "1px solid rgba(99,102,241,0.16)",
                     boxShadow: "0 0 40px rgba(99,102,241,0.1)",
@@ -414,40 +596,87 @@ export default function AskAIPage() {
                 >
                   <Bot size={28} style={{ color: "#6366f1", opacity: 0.7 }} />
                 </div>
-                <h3 className="text-base font-semibold mb-2" style={{ color: "#dae2fd" }}>
+                <h3
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    color: "#dae2fd",
+                    marginBottom: "8px",
+                  }}
+                >
                   Contract Intelligence AI
                 </h3>
-                <p className="text-sm max-w-sm" style={{ color: "#64748b" }}>
-                  Ask natural language questions about your contracts. Every answer is grounded in exact clause text — with legal interpretation and risk guidance.
+                <p
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "#64748b",
+                    maxWidth: "380px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Ask natural language questions about your contracts. Every answer is grounded
+                  in exact clause text — with legal interpretation and risk guidance.
                 </p>
 
-                <div className="mt-8 grid grid-cols-2 gap-3 max-w-lg w-full">
+                {/* Feature cards */}
+                <div
+                  style={{
+                    marginTop: "36px",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "14px",
+                    width: "100%",
+                    maxWidth: "480px",
+                  }}
+                >
                   {[
-                    { icon: BookOpen, label: "Clause Analysis",      desc: "Exact quotes + legal interpretation" },
-                    { icon: Lightbulb, label: "Risk Identification", desc: "Concrete risk and business impact" },
+                    { icon: BookOpen,  label: "Clause Analysis",      desc: "Exact quotes + legal interpretation" },
+                    { icon: Lightbulb, label: "Risk Identification",  desc: "Concrete risk and business impact"   },
                   ].map(({ icon: Icon, label, desc }) => (
                     <div
                       key={label}
-                      className="rounded-xl p-4 text-left"
                       style={{
+                        borderRadius: "14px",
+                        padding: "18px 18px 16px",
+                        textAlign: "left",
                         background: "rgba(19,27,46,0.7)",
                         border: "1px solid rgba(99,102,241,0.12)",
                       }}
                     >
                       <div
-                        className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg"
-                        style={{ background: "rgba(99,102,241,0.12)" }}
+                        style={{
+                          marginBottom: "10px",
+                          display: "flex",
+                          width: "32px",
+                          height: "32px",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "10px",
+                          background: "rgba(99,102,241,0.12)",
+                        }}
                       >
-                        <Icon size={14} style={{ color: "#818cf8" }} />
+                        <Icon size={15} style={{ color: "#818cf8" }} />
                       </div>
-                      <p className="text-xs font-semibold mb-1" style={{ color: "#dae2fd" }}>{label}</p>
-                      <p className="text-xs" style={{ color: "#64748b" }}>{desc}</p>
+                      <p
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          color: "#dae2fd",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        {label}
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "#64748b", lineHeight: 1.5 }}>
+                        {desc}
+                      </p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Message bubbles */}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -455,8 +684,15 @@ export default function AskAIPage() {
               >
                 {/* Avatar */}
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl mt-0.5"
                   style={{
+                    display: "flex",
+                    width: "32px",
+                    height: "32px",
+                    flexShrink: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "10px",
+                    marginTop: "2px",
                     background: msg.role === "user"
                       ? "rgba(99,102,241,0.18)"
                       : "rgba(34,211,238,0.12)",
@@ -473,13 +709,18 @@ export default function AskAIPage() {
                 </div>
 
                 {/* Bubble */}
-                <div className={`max-w-[82%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                <div
+                  className={`max-w-[82%] flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
+                >
                   {msg.role === "assistant" && msg.structured ? (
                     <StructuredResponse data={msg.structured} />
                   ) : (
                     <div
-                      className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
                       style={{
+                        borderRadius: "16px",
+                        padding: "12px 16px",
+                        fontSize: "0.85rem",
+                        lineHeight: 1.65,
                         background: msg.role === "user"
                           ? "rgba(99,102,241,0.14)"
                           : "rgba(19,27,46,0.8)",
@@ -488,25 +729,38 @@ export default function AskAIPage() {
                           : "1px solid rgba(99,102,241,0.10)",
                         color: "#dae2fd",
                         borderBottomRightRadius: msg.role === "user" ? "4px" : undefined,
-                        borderBottomLeftRadius: msg.role === "assistant" ? "4px" : undefined,
+                        borderBottomLeftRadius:  msg.role === "assistant" ? "4px" : undefined,
                       }}
                     >
                       {msg.content}
                     </div>
                   )}
-                  <span className="text-[0.65rem] px-1" style={{ color: "#3a4560" }}>
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "#3a4560",
+                      padding: "0 4px",
+                    }}
+                  >
                     {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
               </div>
             ))}
 
-            {/* Skeleton loading — mirrors the 4-card structured response layout */}
+            {/* Loading skeleton */}
             {loading && (
               <div className="flex gap-3 animate-fade-in">
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl mt-0.5"
                   style={{
+                    display: "flex",
+                    width: "32px",
+                    height: "32px",
+                    flexShrink: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "10px",
+                    marginTop: "2px",
                     background: "rgba(34,211,238,0.12)",
                     border: "1px solid rgba(34,211,238,0.20)",
                   }}
@@ -516,18 +770,31 @@ export default function AskAIPage() {
                 <ResponseSkeleton />
               </div>
             )}
+
             <div ref={bottomRef} />
           </div>
 
-          {/* Input Area */}
+          {/* Input area */}
           <div
-            className="shrink-0 px-6 py-4"
-            style={{ borderTop: "1px solid rgba(99,102,241,0.10)", background: "rgba(11,19,38,0.8)" }}
+            style={{
+              flexShrink: 0,
+              padding: "16px 28px 22px",
+              borderTop: "1px solid rgba(99,102,241,0.10)",
+              background: "rgba(11,19,38,0.85)",
+              borderRadius: "0 0 16px 16px",
+            }}
           >
-            <form onSubmit={submit} className="flex gap-3">
+            <form
+              onSubmit={submit}
+              style={{ display: "flex", gap: "12px", alignItems: "center" }}
+            >
               <div
-                className="relative flex-1 flex items-center rounded-xl overflow-hidden"
                 style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  borderRadius: "14px",
+                  overflow: "hidden",
                   background: "rgba(19,27,46,0.8)",
                   border: "1px solid rgba(99,102,241,0.18)",
                 }}
@@ -538,17 +805,36 @@ export default function AskAIPage() {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(null); }
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      submit(null);
+                    }
                   }}
-                  placeholder={contractId ? "Ask anything about this contract..." : "Select a contract first"}
+                  placeholder={
+                    contractId
+                      ? "Ask anything about this contract…"
+                      : "Select a contract first"
+                  }
                   disabled={!contractId || loading}
                   maxLength={1000}
-                  className="flex-1 bg-transparent px-4 py-3 text-sm outline-none disabled:opacity-50 placeholder:text-[#3a4560]"
-                  style={{ color: "#dae2fd" }}
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    padding: "13px 16px",
+                    fontSize: "0.85rem",
+                    outline: "none",
+                    color: "#dae2fd",
+                    opacity: !contractId || loading ? 0.5 : 1,
+                  }}
                 />
                 <span
-                  className="mr-3 text-xs px-1"
-                  style={{ color: "#3a4560", fontFamily: "var(--font-mono,monospace)", whiteSpace: "nowrap" }}
+                  style={{
+                    marginRight: "14px",
+                    fontSize: "0.7rem",
+                    color: "#3a4560",
+                    fontFamily: "var(--font-mono, monospace)",
+                    whiteSpace: "nowrap",
+                  }}
                 >
                   {question.length}/1000
                 </span>
@@ -557,21 +843,45 @@ export default function AskAIPage() {
               <button
                 type="submit"
                 disabled={!question.trim() || !contractId || loading}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-40 hover:opacity-90"
                 style={{
+                  display: "flex",
+                  width: "48px",
+                  height: "48px",
+                  flexShrink: 0,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "14px",
+                  border: "none",
+                  cursor: !question.trim() || !contractId || loading ? "not-allowed" : "pointer",
+                  opacity: !question.trim() || !contractId || loading ? 0.4 : 1,
                   background: "linear-gradient(135deg, #6366f1, #4f46e5)",
                   boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+                  transition: "opacity 0.15s, transform 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!(!question.trim() || !contractId || loading))
+                    (e.currentTarget as HTMLElement).style.transform = "scale(1.04)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = "scale(1)";
                 }}
               >
                 {loading ? (
-                  <Loader2 size={18} className="animate-spin text-white" />
+                  <Loader2 size={18} className="animate-spin" style={{ color: "#ffffff" }} />
                 ) : (
-                  <Send size={18} className="text-white" />
+                  <Send size={18} style={{ color: "#ffffff" }} />
                 )}
               </button>
             </form>
 
-            <p className="mt-2 text-center text-xs" style={{ color: "#3a4560" }}>
+            <p
+              style={{
+                marginTop: "10px",
+                textAlign: "center",
+                fontSize: "0.7rem",
+                color: "#3a4560",
+              }}
+            >
               Answers quote exact contract language — grounded in indexed clauses, never hallucinated
             </p>
           </div>

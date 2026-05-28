@@ -24,6 +24,10 @@ class User(Base):
         nullable=False
     )
 
+    department = Column(String(255), nullable=True)
+    company = Column(String(255), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
+
     verification_code = Column(String(6), nullable=True)
     code_expires_at = Column(DateTime, nullable=True)
 

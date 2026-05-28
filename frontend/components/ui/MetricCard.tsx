@@ -35,10 +35,12 @@ export default function MetricCard({
       <div
         style={{
           padding: "20px 22px",
-          background: "rgba(10, 20, 38, 0.65)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--th-card-bg)",
+          border: "1px solid var(--th-card-border)",
           borderRadius: "20px",
           backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          boxShadow: "var(--th-card-shadow)",
         }}
       >
         <div className="skeleton h-9 w-9 rounded-xl mb-4" />
@@ -53,17 +55,17 @@ export default function MetricCard({
     <div
       style={{
         padding: "20px 22px",
-        background: "rgba(10, 20, 38, 0.65)",
+        background: "var(--th-card-bg)",
         border: `1px solid ${colors.border}`,
         borderRadius: "20px",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        boxShadow: `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
+        boxShadow: "var(--th-card-shadow)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Ambient glow */}
+      {/* Ambient glow — subtle, works in both modes */}
       <div
         style={{
           position: "absolute",
@@ -103,7 +105,7 @@ export default function MetricCard({
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.12em",
-          color: "#475569",
+          color: "var(--th-text-3)",
           marginBottom: "8px",
         }}
       >
@@ -116,7 +118,7 @@ export default function MetricCard({
           style={{
             fontSize: "2rem",
             fontWeight: 700,
-            color: "#f8fafc",
+            color: "var(--th-text-1)",
             lineHeight: 1,
             fontVariantNumeric: "tabular-nums",
           }}
@@ -145,7 +147,7 @@ export default function MetricCard({
 
       {/* Subtitle */}
       {subtitle && (
-        <p style={{ marginTop: "6px", fontSize: "0.7rem", color: "#334155" }}>
+        <p style={{ marginTop: "6px", fontSize: "0.7rem", color: "var(--th-text-4)" }}>
           {subtitle}
         </p>
       )}
