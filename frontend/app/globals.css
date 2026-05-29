@@ -45,28 +45,28 @@
   --th-navbar-border:   rgba(255,255,255,0.06);
 
   /* Cards */
-  --th-card-bg:         rgba(10, 20, 38, 0.65);
-  --th-card-border:     rgba(255,255,255,0.06);
-  --th-card-shadow:     0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
+  --th-card-bg:         rgba(10, 20, 38, 0.72);
+  --th-card-border:     rgba(255,255,255,0.09);
+  --th-card-shadow:     0 4px 32px rgba(0,0,0,0.38), 0 1px 0 rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.06);
 
   /* Structural */
-  --th-divider:         rgba(255,255,255,0.05);
+  --th-divider:         rgba(255,255,255,0.07);
   --th-subtle-bg:       rgba(255,255,255,0.04);
   --th-hover-bg:        rgba(255,255,255,0.06);
   --th-inner-hover:     rgba(255,255,255,0.03);
 
   /* Tables */
-  --th-row-hover:       rgba(59,130,246,0.035);
-  --th-table-header-bg: rgba(255,255,255,0.018);
+  --th-row-hover:       rgba(59,130,246,0.05);
+  --th-table-header-bg: rgba(255,255,255,0.026);
 
   /* Inputs */
   --th-input-bg:        rgba(15, 28, 52, 0.8);
-  --th-input-border:    rgba(255,255,255,0.07);
+  --th-input-border:    rgba(255,255,255,0.08);
 
   /* Tags / badges */
-  --th-tag-bg:          rgba(255,255,255,0.05);
-  --th-tag-border:      rgba(255,255,255,0.07);
-  --th-tag-color:       #475569;
+  --th-tag-bg:          rgba(255,255,255,0.065);
+  --th-tag-border:      rgba(255,255,255,0.09);
+  --th-tag-color:       #64748b;
 
   /* Dropdowns */
   --th-dropdown-bg:     #0a1628;
@@ -75,9 +75,9 @@
   /* Typography */
   --th-text-1: #f1f5f9;
   --th-text-2: #94a3b8;
-  --th-text-3: #475569;
-  --th-text-4: #334155;
-  --th-text-5: #1e293b;
+  --th-text-3: #64748b;
+  --th-text-4: #475569;
+  --th-text-5: #2d4060;
 
   /* Gradient title */
   --th-title-from: #f1f5f9;
@@ -85,8 +85,8 @@
 
   /* Misc component tokens */
   --th-insights-header-bg: linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(59,130,246,0.06) 100%);
-  --th-gauge-track:         rgba(255,255,255,0.05);
-  --th-row-divider:         rgba(255,255,255,0.03);
+  --th-gauge-track:         rgba(255,255,255,0.08);
+  --th-row-divider:         rgba(255,255,255,0.05);
   --th-dropdown-shadow:     0 16px 40px rgba(0,0,0,0.65);
 }
 

@@ -86,6 +86,14 @@ export async function registerUser(data: { full_name: string; email: string; pas
   return request("/auth/register", { method: "POST", body: JSON.stringify(data) });
 }
 
+export async function verifyEmail(data: { email: string; code: string }) {
+  return request("/auth/verify-email", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function resendVerification(data: { email: string }) {
+  return request("/auth/resend-verification", { method: "POST", body: JSON.stringify(data) });
+}
+
 export const api = {
   me: () => request<User>("/users/me"),
   updateMe: (data: {

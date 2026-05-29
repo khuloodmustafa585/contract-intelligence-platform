@@ -54,8 +54,8 @@ export default function SignUpPage() {
     setError("");
     try {
       await registerUser(form);
-      setMessage("Account created. Check your email to verify before signing in.");
-      setTimeout(() => router.push("/login"), 2800);
+      setMessage("Account created! Check your email for a 6-digit verification code.");
+      setTimeout(() => router.push(`/verify?email=${encodeURIComponent(form.email)}`), 2200);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Registration failed. Please retry."

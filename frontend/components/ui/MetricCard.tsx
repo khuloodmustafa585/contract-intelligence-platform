@@ -12,11 +12,11 @@ interface MetricCardProps {
 }
 
 const ACCENT_MAP = {
-  indigo:  { iconBg: "rgba(59,130,246,0.12)",  iconColor: "#60a5fa", glowColor: "rgba(59,130,246,0.15)",  border: "rgba(59,130,246,0.12)"  },
-  cyan:    { iconBg: "rgba(34,211,238,0.1)",    iconColor: "#22d3ee", glowColor: "rgba(34,211,238,0.12)",  border: "rgba(34,211,238,0.1)"   },
-  danger:  { iconBg: "rgba(239,68,68,0.12)",    iconColor: "#f87171", glowColor: "rgba(239,68,68,0.15)",   border: "rgba(239,68,68,0.12)"   },
-  warning: { iconBg: "rgba(245,158,11,0.12)",   iconColor: "#fbbf24", glowColor: "rgba(245,158,11,0.12)",  border: "rgba(245,158,11,0.1)"   },
-  success: { iconBg: "rgba(16,185,129,0.12)",   iconColor: "#34d399", glowColor: "rgba(16,185,129,0.12)",  border: "rgba(16,185,129,0.1)"   },
+  indigo:  { iconBg: "rgba(59,130,246,0.15)",  iconColor: "#60a5fa", glowColor: "rgba(59,130,246,0.22)",  border: "rgba(59,130,246,0.20)"  },
+  cyan:    { iconBg: "rgba(34,211,238,0.13)",   iconColor: "#22d3ee", glowColor: "rgba(34,211,238,0.20)",  border: "rgba(34,211,238,0.18)"  },
+  danger:  { iconBg: "rgba(239,68,68,0.15)",    iconColor: "#f87171", glowColor: "rgba(239,68,68,0.24)",   border: "rgba(239,68,68,0.20)"   },
+  warning: { iconBg: "rgba(245,158,11,0.15)",   iconColor: "#fbbf24", glowColor: "rgba(245,158,11,0.22)",  border: "rgba(245,158,11,0.18)"  },
+  success: { iconBg: "rgba(16,185,129,0.15)",   iconColor: "#34d399", glowColor: "rgba(16,185,129,0.22)",  border: "rgba(16,185,129,0.18)"  },
 };
 
 export default function MetricCard({
@@ -65,14 +65,14 @@ export default function MetricCard({
         overflow: "hidden",
       }}
     >
-      {/* Ambient glow — subtle, works in both modes */}
+      {/* Ambient glow — bottom-right corner, accent-tinted */}
       <div
         style={{
           position: "absolute",
-          bottom: "-20px",
-          right: "-20px",
-          width: "110px",
-          height: "110px",
+          bottom: "-24px",
+          right: "-24px",
+          width: "130px",
+          height: "130px",
           borderRadius: "50%",
           background: colors.glowColor,
           filter: "blur(45px)",
@@ -95,17 +95,17 @@ export default function MetricCard({
           position: "relative",
         }}
       >
-        <Icon size={16} style={{ color: colors.iconColor }} />
+        <Icon size={17} style={{ color: colors.iconColor }} />
       </div>
 
       {/* Label */}
       <p
         style={{
-          fontSize: "0.6rem",
+          fontSize: "0.65rem",
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.12em",
-          color: "var(--th-text-3)",
+          color: "var(--th-text-2)",
           marginBottom: "8px",
         }}
       >
@@ -147,7 +147,7 @@ export default function MetricCard({
 
       {/* Subtitle */}
       {subtitle && (
-        <p style={{ marginTop: "6px", fontSize: "0.7rem", color: "var(--th-text-4)" }}>
+        <p style={{ marginTop: "6px", fontSize: "0.72rem", color: "var(--th-text-3)" }}>
           {subtitle}
         </p>
       )}

@@ -150,7 +150,7 @@ function CardHeader({
             flexShrink: 0,
           }}
         >
-          <Icon size={13} style={{ color: iconColor ?? "#64748b" }} />
+          <Icon size={14} style={{ color: iconColor ?? "#7280a0" }} />
         </div>
       )}
       <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
@@ -316,8 +316,8 @@ function ErrorBanner({ message }: { message: string }) {
         marginBottom: "24px",
         padding: "12px 18px",
         borderRadius: "14px",
-        background: "rgba(239,68,68,0.07)",
-        border: "1px solid rgba(239,68,68,0.14)",
+        background: "rgba(239,68,68,0.08)",
+        border: "1px solid rgba(239,68,68,0.22)",
         color: "#f87171",
         fontSize: "0.82rem",
       }}
@@ -399,7 +399,7 @@ function DashboardHeader({
             </div>
           )}
         </div>
-        <p style={{ fontSize: "0.78rem", color: "var(--th-text-4)" }}>{dateStr}</p>
+        <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)" }}>{dateStr}</p>
       </div>
       {alertCount > 0 && (
         <Link
@@ -570,7 +570,7 @@ function ContractsSection({
               borderRadius: "8px",
             }}
           >
-            <Search size={10} style={{ color: "#4b5563", flexShrink: 0 }} />
+            <Search size={10} style={{ color: "#64748b", flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search..."
@@ -706,11 +706,11 @@ function ContractsSection({
             <span
               key={h}
               style={{
-                fontSize: "0.58rem",
+                fontSize: "0.64rem",
                 fontWeight: 600,
-                color: "var(--th-text-4)",
+                color: "var(--th-text-3)",
                 textTransform: "uppercase",
-                letterSpacing: "0.1em",
+                letterSpacing: "0.09em",
               }}
             >
               {h}
@@ -835,9 +835,9 @@ function ContractsSection({
                 <StatusBadge status={contract.status} />
               </div>
 
-              <span style={{ color: "var(--th-text-5)", fontSize: "0.8rem" }}>—</span>
+              <span style={{ color: "var(--th-text-4)", fontSize: "0.8rem" }}>—</span>
 
-              <span style={{ fontSize: "0.72rem", color: "var(--th-text-3)" }}>
+              <span style={{ fontSize: "0.73rem", color: "var(--th-text-3)" }}>
                 {contract.created_at
                   ? new Date(contract.created_at).toLocaleDateString("en-US", {
                       month: "short",
@@ -932,10 +932,10 @@ function AIInsightsCard() {
               className="animate-pulse"
               style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#a78bfa" }}
             />
-            <span style={{ fontSize: "0.58rem", color: "#a78bfa", fontWeight: 500 }}>Live</span>
+            <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: 500 }}>Live</span>
           </div>
         </div>
-        <p style={{ fontSize: "0.7rem", color: "var(--th-text-3)" }}>AI-generated contract intelligence</p>
+        <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)" }}>AI-generated contract intelligence</p>
       </div>
 
       {/* Insight items */}
@@ -954,9 +954,9 @@ function AIInsightsCard() {
               <span
                 style={{
                   display: "inline-flex",
-                  fontSize: "0.58rem",
+                  fontSize: "0.64rem",
                   fontWeight: 700,
-                  letterSpacing: "0.06em",
+                  letterSpacing: "0.05em",
                   textTransform: "uppercase",
                   padding: "2px 7px",
                   borderRadius: "999px",
@@ -966,7 +966,7 @@ function AIInsightsCard() {
               >
                 {insight.badge}
               </span>
-              <p style={{ fontSize: "0.73rem", color: "var(--th-text-3)", lineHeight: 1.6 }}>
+              <p style={{ fontSize: "0.75rem", color: "var(--th-text-2)", lineHeight: 1.6 }}>
                 {insight.text}
               </p>
             </div>
@@ -1053,7 +1053,7 @@ function RiskDistributionCard({
                       boxShadow: `0 0 7px ${glow}`,
                     }}
                   />
-                  <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>{label} Risk</span>
+                  <span style={{ fontSize: "0.79rem", color: "var(--th-text-2)" }}>{label} Risk</span>
                 </div>
                 {loading ? (
                   <div className="skeleton h-3.5 w-8 rounded" />
@@ -1062,7 +1062,7 @@ function RiskDistributionCard({
                     style={{
                       fontSize: "0.82rem",
                       fontWeight: 600,
-                      color: value > 0 ? color : "var(--th-text-5)",
+                      color: value > 0 ? color : "var(--th-text-4)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -1071,15 +1071,15 @@ function RiskDistributionCard({
                 )}
               </div>
               <div
-                style={{ height: "5px", borderRadius: "999px", background: track, overflow: "hidden" }}
+                style={{ height: "6px", borderRadius: "999px", background: track, overflow: "hidden" }}
               >
                 <div
                   style={{
                     height: "100%",
                     borderRadius: "999px",
                     width: loading ? "0%" : `${Math.max(pct, value > 0 ? 4 : 0)}%`,
-                    background: `linear-gradient(90deg, ${color}99, ${color})`,
-                    boxShadow: `0 0 8px ${glow}`,
+                    background: `linear-gradient(90deg, ${color}bb, ${color})`,
+                    boxShadow: `0 0 10px ${glow}`,
                     transition: "width 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 />
@@ -1087,7 +1087,7 @@ function RiskDistributionCard({
             </div>
           );
         })}
-        <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "2px" }}>
+        <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)", marginTop: "2px" }}>
           {!loading &&
             (high === 0
               ? "No high-risk contracts detected"
@@ -1215,11 +1215,11 @@ function ActivityTimelineCard({
                   >
                     {u.title}
                   </p>
-                  <p style={{ fontSize: "0.68rem", color: "var(--th-text-3)", marginTop: "1px" }}>
+                  <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginTop: "2px" }}>
                     {ev.label}
                   </p>
                 </div>
-                <span style={{ fontSize: "0.68rem", color: "var(--th-text-4)", flexShrink: 0 }}>
+                <span style={{ fontSize: "0.71rem", color: "var(--th-text-3)", flexShrink: 0 }}>
                   {u.created_at
                     ? new Date(u.created_at).toLocaleDateString("en-US", {
                         month: "short",
@@ -1272,7 +1272,7 @@ function UpcomingObligationsCard({
                   size={12}
                   style={{ color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "#1e293b" }}
                 />
-                <span style={{ fontSize: "0.8rem", color: "var(--th-text-2)" }}>{label}</span>
+                <span style={{ fontSize: "0.81rem", color: "var(--th-text-2)" }}>{label}</span>
               </div>
               {loading ? (
                 <div className="skeleton h-3.5 w-6 rounded" />
@@ -1281,7 +1281,7 @@ function UpcomingObligationsCard({
                   style={{
                     fontSize: "0.88rem",
                     fontWeight: 600,
-                    color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "var(--th-text-5)",
+                    color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "var(--th-text-4)",
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
@@ -1298,7 +1298,7 @@ function UpcomingObligationsCard({
             borderTop: "1px solid var(--th-divider)",
           }}
         >
-          <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)" }}>
+          <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)" }}>
             {!loading &&
               (metrics?.overdue_obligations ?? 0) === 0 &&
               (metrics?.overdue_contracts ?? 0) === 0
@@ -1420,7 +1420,7 @@ function ComplianceScoreCard({
                 >
                   {score}
                 </span>
-                <span style={{ fontSize: "0.56rem", color: "var(--th-text-3)", marginTop: "2px" }}>/100</span>
+                <span style={{ fontSize: "0.62rem", color: "var(--th-text-3)", marginTop: "2px" }}>/100</span>
               </div>
             </div>
 
@@ -1429,7 +1429,7 @@ function ComplianceScoreCard({
               <p style={{ fontSize: "0.88rem", fontWeight: 600, color: scoreColor, marginBottom: "4px" }}>
                 {scoreLabel}
               </p>
-              <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginBottom: "14px" }}>
+              <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginBottom: "14px" }}>
                 Based on portfolio risk profile
               </p>
               {/* Mini breakdown bars */}
@@ -1439,8 +1439,8 @@ function ComplianceScoreCard({
               ].map(({ label, pct, color }) => (
                 <div key={label} style={{ marginBottom: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "0.65rem", color: "var(--th-text-3)" }}>{label}</span>
-                    <span style={{ fontSize: "0.65rem", color, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
+                    <span style={{ fontSize: "0.68rem", color: "var(--th-text-3)" }}>{label}</span>
+                    <span style={{ fontSize: "0.68rem", color, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
                   </div>
                   <div style={{ height: "3px", borderRadius: "999px", background: "var(--th-tag-bg)", overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})`, borderRadius: "999px", transition: "width 0.8s ease" }} />
@@ -1503,7 +1503,7 @@ function StatusChartCard({
             ))}
           </div>
         ) : bars.length === 0 ? (
-          <p style={{ fontSize: "0.78rem", color: "var(--th-text-4)", textAlign: "center", padding: "20px 0" }}>
+          <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", textAlign: "center", padding: "20px 0" }}>
             Upload contracts to see status breakdown
           </p>
         ) : (
@@ -1522,23 +1522,23 @@ function StatusChartCard({
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
                       <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>{label}</span>
+                      <span style={{ fontSize: "0.79rem", color: "var(--th-text-2)" }}>{label}</span>
                     </div>
                     <span
                       style={{
-                        fontSize: "0.78rem",
+                        fontSize: "0.79rem",
                         fontWeight: 500,
                         color: "var(--th-text-1)",
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {value}{" "}
-                      <span style={{ color: "var(--th-text-4)", fontWeight: 400 }}>({pct}%)</span>
+                      <span style={{ color: "var(--th-text-3)", fontWeight: 400 }}>({pct}%)</span>
                     </span>
                   </div>
                   <div
                     style={{
-                      height: "5px",
+                      height: "6px",
                       borderRadius: "999px",
                       background: "var(--th-subtle-bg)",
                       overflow: "hidden",
@@ -1549,7 +1549,7 @@ function StatusChartCard({
                         height: "100%",
                         borderRadius: "999px",
                         width: `${Math.max(pct, value > 0 ? 3 : 0)}%`,
-                        background: `linear-gradient(90deg, ${color}99, ${color})`,
+                        background: `linear-gradient(90deg, ${color}bb, ${color})`,
                         transition: "width 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
                       }}
                     />
@@ -1621,7 +1621,7 @@ export default function DashboardPage() {
           right: 0,
           width: "700px",
           height: "500px",
-          background: "radial-gradient(ellipse at 80% -10%, rgba(59,130,246,0.065) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 80% -10%, rgba(59,130,246,0.10) 0%, transparent 60%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -1723,8 +1723,8 @@ export default function DashboardPage() {
               <span
                 key={b}
                 style={{
-                  fontSize: "0.6rem",
-                  color: "var(--th-text-4)",
+                  fontSize: "0.62rem",
+                  color: "var(--th-text-3)",
                   letterSpacing: "0.07em",
                   fontWeight: 500,
                   textTransform: "uppercase",
@@ -1734,7 +1734,7 @@ export default function DashboardPage() {
               </span>
             ))}
           </div>
-          <span style={{ fontSize: "0.68rem", color: "var(--th-text-5)" }}>
+          <span style={{ fontSize: "0.68rem", color: "var(--th-text-4)" }}>
             Contract Lens · {new Date().getFullYear()}
           </span>
         </div>
