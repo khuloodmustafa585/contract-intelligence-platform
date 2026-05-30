@@ -9,15 +9,12 @@ import {
   AlertCircle,
   Loader2,
   X,
-  File,
   ArrowRight,
-  Sparkles,
   Clock,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
 import StatusBadge from "@/components/ui/StatusBadge";
-import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import { api, Contract } from "@/services/api";
 
 type UploadState = "idle" | "uploading" | "success" | "error";
@@ -30,14 +27,6 @@ function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-const TIMELINE_STEPS = [
-  { label: "File Validation",    icon: File,         key: "validation" },
-  { label: "OCR Processing",     icon: Sparkles,     key: "ocr"        },
-  { label: "Text Extraction",    icon: FileText,     key: "extraction" },
-  { label: "AI Analysis",        icon: Loader2,      key: "analysis"   },
-  { label: "Ready",              icon: CheckCircle2, key: "ready"      },
-];
 
 export default function UploadPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -97,11 +86,6 @@ export default function UploadPage() {
     setError("");
     if (inputRef.current) inputRef.current.value = "";
   };
-
-  const activeStep =
-    uploadState === "uploading" ? (progress < 100 ? 0 : 1)
-    : uploadState === "success" ? 4
-    : -1;
 
   return (
     <AppShell>
@@ -236,7 +220,7 @@ export default function UploadPage() {
                       {dragging ? "Drop to upload" : "Drag & drop or click to select"}
                     </p>
                     <p className="text-sm mb-4" style={{ color: "#64748b" }}>
-                      PDF, DOCX, JPG, PNG up to 50MB
+                      PDF, DOCX, JPG, PNG up to 10 MB
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {ACCEPTED_TYPES.map((t) => (
@@ -406,74 +390,88 @@ export default function UploadPage() {
             </GlassCard>
           </div>
 
-{/* Sidebar — Upload Status */}
-<div className="space-y-5">
-  <GlassCard>
-    <div
-      className="px-5 py-4"
-      style={{ borderBottom: "1px solid rgba(99,102,241,0.10)" }}
-    >
-      <p
-        className="text-sm font-semibold"
-        style={{ color: "#dae2fd" }}
-      >
-        Upload Status
-      </p>
+          {/* Sidebar — Upload Status */}
+          <div className="space-y-5">
+            <GlassCard>
+              {/* Card header — title reflects current state */}
+              <div
+                className="px-5 py-4"
+                style={{ borderBottom: "1px solid rgba(99,102,241,0.10)" }}
+              >
+                <p className="text-sm font-semibold" style={{ color: "#dae2fd" }}>
+                  {uploadState === "success" ? "Upload Complete"
+                    : uploadState === "error"    ? "Upload Failed"
+                    : uploadState === "uploading" ? "Uploading…"
+                    : "Upload Status"}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#64748b" }}>
+                  {uploadState === "success"   ? "AI analysis is running in the background"
+                    : uploadState === "error"    ? "Please dismiss and try again"
+                    : uploadState === "uploading" ? "Saving file and queueing analysis"
+                    : "Drop a contract above to get started"}
+                </p>
+              </div>
 
-      <p
-        className="text-xs mt-0.5"
-        style={{ color: "#64748b" }}
-      >
-        Your contract is being processed
-      </p>
-    </div>
+              {/* Status indicator row */}
+              <div className="px-5 py-6">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-full shrink-0"
+                    style={{
+                      background: uploadState === "success"
+                        ? "rgba(16,185,129,0.18)"
+                        : uploadState === "error"
+                        ? "rgba(239,68,68,0.18)"
+                        : "rgba(99,102,241,0.18)",
+                      border: uploadState === "success"
+                        ? "1px solid rgba(16,185,129,0.35)"
+                        : uploadState === "error"
+                        ? "1px solid rgba(239,68,68,0.35)"
+                        : "1px solid rgba(99,102,241,0.35)",
+                      boxShadow: uploadState === "success"
+                        ? "0 0 18px rgba(16,185,129,0.22)"
+                        : uploadState === "error"
+                        ? "0 0 18px rgba(239,68,68,0.22)"
+                        : "0 0 18px rgba(99,102,241,0.22)",
+                    }}
+                  >
+                    {uploadState === "success" ? (
+                      <CheckCircle2 size={18} style={{ color: "#34d399" }} />
+                    ) : uploadState === "error" ? (
+                      <AlertCircle size={18} style={{ color: "#f87171" }} />
+                    ) : (
+                      <Loader2
+                        size={18}
+                        className={uploadState === "uploading" ? "animate-spin" : ""}
+                        style={{ color: "#818cf8" }}
+                      />
+                    )}
+                  </div>
 
-    <div className="px-5 py-6">
-      <div className="flex items-center gap-4">
-        {/* Status Icon */}
-        <div
-          className="flex h-11 w-11 items-center justify-center rounded-full"
-          style={{
-            background: "rgba(99,102,241,0.18)",
-            border: "1px solid rgba(99,102,241,0.35)",
-            boxShadow: "0 0 18px rgba(99,102,241,0.22)",
-          }}
-        >
-          <Loader2
-            size={18}
-            className={uploadState === "uploading" ? "animate-spin" : ""}
-            style={{ color: "#818cf8" }}
-          />
-        </div>
-
-        {/* Status Text */}
-        <div>
-          <p
-            className="text-sm font-semibold"
-            style={{ color: "#dae2fd" }}
-          >
-            {uploadState === "uploading" ? "Processing" : "Awaiting Upload"}
-          </p>
-
-          <p
-            className="text-xs mt-1"
-            style={{ color: "#64748b" }}
-          >
-            {
-            uploadState === "uploading"
-              ? "AI analysis in progress..."
-              : "Upload a contract to begin analysis"
-            }
-          </p>
+                  <div>
+                    <p className="text-sm font-semibold" style={{
+                      color: uploadState === "success" ? "#34d399"
+                        : uploadState === "error" ? "#f87171"
+                        : "#dae2fd",
+                    }}>
+                      {uploadState === "success"   ? "Analysis queued"
+                        : uploadState === "error"    ? "Something went wrong"
+                        : uploadState === "uploading" ? `Uploading — ${progress}%`
+                        : "Ready"}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#64748b" }}>
+                      {uploadState === "success"   ? "Results appear in the contract list"
+                        : uploadState === "error"    ? error || "Check file and try again"
+                        : uploadState === "uploading" ? "Please wait…"
+                        : "No file selected"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
         </div>
       </div>
-    </div>
-  </GlassCard>
-
-
-    </div>
-    </div>
-        </div>
-  </AppShell>
+    </AppShell>
   );
 }

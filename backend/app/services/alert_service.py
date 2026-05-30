@@ -216,7 +216,6 @@ def generate_alerts_for_contract(
                     body=alert.message
                 )
 
-    # Obligation alerts
     obligations = db.query(Obligation).filter(
         Obligation.contract_id == contract_id
     ).all()
@@ -267,7 +266,6 @@ def generate_alerts_for_contract(
                     body=alert.message
                 )
 
-    # High risk alerts
     risks = db.query(Risk).filter(
         Risk.contract_id == contract_id,
         Risk.severity == "high"

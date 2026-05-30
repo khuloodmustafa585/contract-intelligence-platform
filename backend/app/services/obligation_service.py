@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.ai.openai_client import get_openai_client
 from app.core.config import settings
 from app.core.constants import OBLIGATION_STATUS_PENDING, OBLIGATION_STATUSES
+from app.core.logging import app_logger
 from app.models.clause import Clause
 from app.models.obligation import Obligation
 
@@ -46,9 +47,11 @@ def _fallback_obligations(clauses: list[Clause]) -> list[dict]:
 
 def _ai_obligations(contract_text: str) -> list[dict]:
     if not settings.OPENAI_API_KEY:
+        app_logger.info("obligation extraction: OPENAI_API_KEY missing, using fallback")
         return []
     client = get_openai_client()
     safe_text = (contract_text or "")[: settings.AI_MAX_INPUT_CHARS]
+    app_logger.info("obligation extraction: calling OpenAI with %s chars", len(safe_text))
     response = client.chat.completions.create(
         model=settings.OPENAI_MODEL,
         timeout=settings.OPENAI_TIMEOUT_SECONDS,
@@ -60,12 +63,25 @@ def _ai_obligations(contract_text: str) -> list[dict]:
         ],
     )
     data = json.loads(response.choices[0].message.content or "{}")
-    return data.get("obligations", []) if isinstance(data.get("obligations"), list) else []
+    obligations = data.get("obligations", []) if isinstance(data.get("obligations"), list) else []
+    app_logger.info("obligation extraction: returned %s obligations", len(obligations))
+    return obligations
 
 
 def create_or_replace_obligations(db: Session, contract_id: int, contract_text: str) -> list[Obligation]:
     clauses = db.query(Clause).filter(Clause.contract_id == contract_id).order_by(Clause.order_index).all()
-    extracted = _ai_obligations(contract_text) or _fallback_obligations(clauses)
+    app_logger.info("contract id=%s obligation extraction: %s clauses available", contract_id, len(clauses))
+
+    ai_results = _ai_obligations(contract_text)
+    if ai_results:
+        app_logger.info("contract id=%s obligation extraction: AI returned %s raw items", contract_id, len(ai_results))
+        extracted = ai_results
+    else:
+        app_logger.info("contract id=%s obligation extraction: AI empty or unavailable — using regex fallback", contract_id)
+        extracted = _fallback_obligations(clauses)
+        app_logger.info("contract id=%s obligation extraction: fallback returned %s items", contract_id, len(extracted))
+
+    app_logger.info("contract id=%s obligation extraction returned %s items (before DB insert)", contract_id, len(extracted))
     db.query(Obligation).filter(Obligation.contract_id == contract_id).delete()
 
     obligations: list[Obligation] = []
@@ -89,7 +105,9 @@ def create_or_replace_obligations(db: Session, contract_id: int, contract_text: 
         db.add(obligation)
         obligations.append(obligation)
 
+    app_logger.info("contract id=%s obligation DB insert count=%s — committing", contract_id, len(obligations))
     db.commit()
+    app_logger.info("contract id=%s obligation save committed", contract_id)
     for obligation in obligations:
         db.refresh(obligation)
     return obligations

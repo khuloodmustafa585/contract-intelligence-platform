@@ -10,7 +10,7 @@ from app.models.summary import Summary
 from app.models.user import User
 from app.schemas.contract import ObligationResponse, RiskResponse, SummaryResponse
 
-router = APIRouter(tags=["Insights"])
+router = APIRouter(prefix="/insights", tags=["Insights"])
 
 
 @router.get("/risks", response_model=list[RiskResponse])

@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Pencil,
   Building2,
+  Briefcase,
   Mail,
   BadgeCheck,
 } from "lucide-react";
@@ -298,7 +299,9 @@ function WorkspaceSection() {
           <div>
             <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--th-text-1)" }}>{displayName}</p>
             <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginTop: "2px" }}>
-              Enterprise · {user?.email ?? "—"}
+              {user?.job_title
+                ? `${user.job_title} · ${user.email ?? "—"}`
+                : (user?.email ?? "—")}
             </p>
           </div>
         </div>
@@ -463,6 +466,12 @@ function AccountSection() {
       value: user?.email ?? "—",
       icon: Mail,
       color: "#60a5fa",
+    },
+    {
+      label: "Job Title",
+      value: user?.job_title ?? "—",
+      icon: Briefcase,
+      color: "#22d3ee",
     },
     {
       label: "Account Status",

@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
-import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import MetricCard from "@/components/ui/MetricCard";
 import { api } from "@/services/api";
 
@@ -377,21 +376,47 @@ export default function AnalyticsPage() {
               ))}
             </div>
 
-            {/* AI Portfolio Intelligence */}
+            {/* AI Portfolio Intelligence — real computed insights */}
             {!loading && metrics && (
-              <AIInsightPanel title="Portfolio Intelligence">
-                {metrics.high_risk_contracts === 0
-                  ? "Your contract portfolio shows no high-risk exposure. Continue monitoring for clause changes during active negotiations."
-                  : `${metrics.high_risk_contracts} high-risk contract${
-                      metrics.high_risk_contracts > 1 ? "s" : ""
-                    } require attention. ${
-                      metrics.expiring_soon > 0
-                        ? `Additionally, ${metrics.expiring_soon} contract${
-                            metrics.expiring_soon > 1 ? "s are" : " is"
-                          } expiring soon.`
-                        : ""
-                    }`}
-              </AIInsightPanel>
+              <div style={{ borderRadius: "16px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.16)", overflow: "hidden" }}>
+                {/* Header */}
+                <div style={{ padding: "14px 18px 10px", borderBottom: "1px solid rgba(99,102,241,0.10)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                    <Activity size={12} style={{ color: "#818cf8" }} />
+                    <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "var(--font-mono,monospace)" }}>
+                      Portfolio Intelligence
+                    </p>
+                    <div className="ml-auto animate-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#6366f1" }} />
+                  </div>
+                  <p style={{ fontSize: "0.65rem", color: "#475569" }}>AI-derived observations from your contract data</p>
+                </div>
+                {/* Observations */}
+                <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {[
+                    metrics.total_contracts === 0
+                      ? { icon: "📁", text: "Upload your first contract to begin generating portfolio insights.", accent: "#818cf8" }
+                      : metrics.high_risk_contracts === 0
+                      ? { icon: "✅", text: `All ${metrics.total_contracts} contracts in your portfolio show no high-severity risk exposure.`, accent: "#34d399" }
+                      : { icon: "⚠️", text: `${metrics.high_risk_contracts} of ${metrics.total_contracts} contract${metrics.total_contracts !== 1 ? "s" : ""} (${Math.round((metrics.high_risk_contracts / metrics.total_contracts) * 100)}%) carry high-severity clauses requiring legal review.`, accent: "#f87171" },
+                    metrics.expiring_soon > 0
+                      ? { icon: "⏱️", text: `${metrics.expiring_soon} contract${metrics.expiring_soon !== 1 ? "s" : ""} expire within the next 30 days — initiate renewal or renegotiation.`, accent: "#fbbf24" }
+                      : null,
+                    metrics.overdue_obligations > 0
+                      ? { icon: "🔴", text: `${metrics.overdue_obligations} obligation${metrics.overdue_obligations !== 1 ? "s are" : " is"} overdue. Assign owners and resolve immediately.`, accent: "#f87171" }
+                      : metrics.upcoming_obligations > 0
+                      ? { icon: "📋", text: `${metrics.upcoming_obligations} obligation${metrics.upcoming_obligations !== 1 ? "s" : ""} due within 30 days — review the obligations tracker.`, accent: "#fbbf24" }
+                      : { icon: "✅", text: "No upcoming obligation deadlines detected in the next 30 days.", accent: "#34d399" },
+                    metrics.unread_alerts > 0
+                      ? { icon: "🔔", text: `${metrics.unread_alerts} unread alert${metrics.unread_alerts !== 1 ? "s" : ""} require your attention.`, accent: "#818cf8" }
+                      : null,
+                  ].filter(Boolean).map((obs, i) => obs && (
+                    <div key={i} style={{ display: "flex", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: `${obs.accent}0d`, border: `1px solid ${obs.accent}22` }}>
+                      <span style={{ fontSize: "0.75rem", flexShrink: 0 }}>{obs.icon}</span>
+                      <p style={{ fontSize: "0.72rem", color: "#94a3b8", lineHeight: 1.6, margin: 0 }}>{obs.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Portfolio Risk Score */}

@@ -10,34 +10,32 @@ class ContractBase(BaseModel):
 class ContractCreate(ContractBase):
     pass
 
-class ContractResponse(ContractBase):
+class ContractListResponse(ContractBase):
+    """Lean schema returned by collection endpoints — no large text blobs."""
     id: int
     owner_id: int
-    
     status: str
     processing_error: str | None = None
-
-    extracted_text: str | None = None
-    cleaned_text: str | None = None
-
     effective_date: date | None = None
     expiration_date: date | None = None
     notice_period_days: int | None = None
     created_at: datetime | None = None
-
+    updated_at: datetime | None = None
     file_name: str | None = None
-    file_path: str | None = None
     file_type: str | None = None
-
     ocr_used: bool
     parse_method: str | None = None
     is_indexed: bool
     embedding_status: str
 
-
-    updated_at: datetime | None = None
-
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContractResponse(ContractListResponse):
+    """Full schema including extracted text — used on the detail endpoint."""
+    extracted_text: str | None = None
+    cleaned_text: str | None = None
+    file_path: str | None = None
 
 
 class ClauseResponse(BaseModel):
@@ -63,6 +61,11 @@ class RiskResponse(BaseModel):
     explanation: str | None = None
     suggested_action: str | None = None
     source_snippet: str | None = None
+    # Per-risk AI-generated detail fields.  NULL for risks created before this
+    # feature was added; the frontend falls back to type-based templates then.
+    business_impact: str | None = None
+    why_this_matters: str | None = None
+    trigger_terms: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -100,6 +103,10 @@ class ContractDetailResponse(ContractResponse):
     summaries: list[SummaryResponse] = Field(default_factory=list)
     obligations: list[ObligationResponse] = Field(default_factory=list)
     alerts: list[AlertResponse] = Field(default_factory=list)
+
+
+class ObligationStatusUpdate(BaseModel):
+    status: str = Field(pattern="^(pending|completed|overdue)$")
 
 
 class AskAIRequest(BaseModel):

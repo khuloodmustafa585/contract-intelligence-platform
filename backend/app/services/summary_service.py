@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.openai_client import get_openai_client
 from app.core.config import settings
+from app.core.logging import app_logger
 from app.models.summary import Summary
 
 
@@ -15,8 +16,10 @@ def _fallback_summary(text: str) -> str:
 def generate_summary_text(contract_text: str) -> str:
     safe_text = (contract_text or "")[: settings.AI_MAX_INPUT_CHARS]
     if not settings.OPENAI_API_KEY:
+        app_logger.info("summary generation: OPENAI_API_KEY missing, using fallback")
         return _fallback_summary(safe_text)
 
+    app_logger.info("summary generation: calling OpenAI with %s chars", len(safe_text))
     client = get_openai_client()
     response = client.chat.completions.create(
         model=settings.OPENAI_MODEL,

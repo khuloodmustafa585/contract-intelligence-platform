@@ -85,6 +85,30 @@ function formatRiskType(type: string): string {
   return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const RISK_TITLE_REPLACEMENTS: [RegExp, string][] = [
+  [/\bUnlimited Liability\b/g,           "Unlimited Financial Exposure"],
+  [/\bBroad Termination Rights\b/g,      "One-Sided Termination Rights"],
+  [/\bCross-Border Data Processing\b/g,  "International Data Transfer"],
+  [/\bStrict Payment Penalties\b/g,      "Harsh Payment Terms"],
+  [/\bAutomatic Renewal Trap\b/g,        "Automatic Contract Renewal"],
+  [/\bConfidentiality Gaps?\b/g,         "Weak Data Protection"],
+  [/\bIP Ownership Ambiguity\b/g,        "Unclear IP Ownership"],
+  [/\bLiability Gap\b/g,                 "Liability Protection Gap"],
+  [/\bCompliance Gap\b/g,                "Regulatory Compliance Gap"],
+  [/\bBroad Indemnification\b/g,         "One-Sided Indemnification"],
+  [/\bLiquidated Damages\b/g,            "Pre-Set Penalty Amounts"],
+  [/\bNon-Solicitation\b/g,              "Hiring Restrictions"],
+];
+
+function formatRiskTitle(title: string): string {
+  if (!title) return title;
+  let result = title;
+  for (const [pattern, replacement] of RISK_TITLE_REPLACEMENTS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
 /**
  * Deterministic confidence score (78–96%) based on clause clarity signals.
  * Uses risk ID + contract ID as seed so the same risk always displays the same score.
@@ -153,28 +177,36 @@ function deriveClauseRef(risk: Risk): string {
   return `§ ${section}.${sub}`;
 }
 
-const WHY_IT_MATTERS: Record<string, string> = {
+const WHY_IT_MATTERS_TEMPLATE: Record<string, string> = {
   liability:
-    "Uncapped liability provisions expose your organization to damages well beyond the contract value. Courts may hold you responsible for consequential, incidental, or lost-profit claims not explicitly excluded — a common driver of runaway litigation costs in commercial disputes.",
+    "Legal teams flag uncapped liability because it removes any agreed financial ceiling, making risk quantification impossible. Without a defined limit, the company has no contractual protection against claims of any size.",
   termination:
-    "Discretionary termination clauses lacking objective trigger criteria give the counterparty the right to exit without meaningful notice or cure periods. This creates vendor lock-in risk on exit, potential data recovery complications, and stranded integration costs with no contractual remedy.",
+    "Legal teams flag one-sided termination rights because they give the counterparty an exit without accountability and without requiring any objective grounds. Your company has no enforceable basis to seek compensation or delay the exit.",
   renewal:
-    "Automatic renewal terms with short notice windows create a recurring obligation trap. Internal calendar gaps frequently result in missed opt-out deadlines, locking your organization into another full contract term under potentially outdated commercial terms.",
+    "Legal teams flag automatic renewal clauses because they depend on your company acting on a deadline that often receives little internal attention. Once the window closes, there is typically no legal mechanism to reverse the commitment.",
   payment:
-    "Vague payment timelines, unilateral fee adjustment provisions, or compound late-payment penalties can materially distort cash flow projections and create leverage for the counterparty to extract concessions during the contract lifecycle.",
+    "Legal teams flag vague or one-sided payment terms because they create a structural imbalance where the counterparty can alter costs or apply penalties without your company's consent. The contract's true cost is therefore unknowable at signing.",
   confidentiality:
-    "Overly expansive confidentiality definitions may inadvertently restrict disclosure to regulators, auditors, or investors. Inadequate scope, conversely, may fail to protect trade secrets, customer data, or proprietary methodologies against authorized third-party sharing.",
+    "Legal teams flag poorly scoped confidentiality clauses because an overly broad restriction can block legally required disclosures, while an underdefined clause leaves sensitive company information exposed. Neither is enforceable as originally intended.",
   compliance:
-    "Embedded compliance obligations referencing external regulatory frameworks create moving-target liability. Requirements can change post-execution without triggering a renegotiation right, leaving your organization exposed to penalties for standards not agreed to at signing.",
+    "Legal teams flag compliance clauses tied to external standards because those standards can change after signing, retroactively imposing obligations your company never agreed to. There is typically no renegotiation right built in to account for this.",
   intellectual_property:
-    "Ambiguous IP assignment language is one of the most litigated provisions in technology and services agreements. Work-for-hire clauses that inadvertently capture pre-existing IP or background technology can permanently transfer valuable assets without adequate compensation.",
+    "Legal teams flag ambiguous IP clauses because they are among the most frequently litigated provisions in commercial agreements. Once rights are transferred — even unintentionally — they are extremely difficult to reclaim.",
   indemnification:
-    "Broad indemnification triggers with uncapped obligations create asymmetric risk transfer. If the counterparty faces third-party claims related to the agreement, you may be required to fund their legal defense and absorb judgment costs regardless of relative fault.",
+    "Legal teams flag broad indemnification clauses because the obligation is open-ended: your company may be required to pay the counterparty's costs even when it had no direct role in causing the problem. These clauses are rarely written with agreed financial limits.",
   dispute:
-    "Restrictive dispute resolution clauses — mandatory arbitration, single-forum requirements, or shortened limitation periods — can significantly curtail your legal remedies and increase the time and cost burden of resolving genuine commercial disputes.",
+    "Legal teams flag restrictive dispute clauses because they eliminate or constrain legal remedies your company would otherwise have access to. Mandatory arbitration and venue restrictions consistently benefit the party that drafted the contract.",
 };
 
-/* ─── Trigger Terms by Risk Type ────────────────────────────────── */
+/** Returns the why-this-matters text for a risk.
+ *  Prefers the per-risk AI-generated value stored in risk.why_this_matters;
+ *  falls back to the type-keyed template for old rows where the field is null. */
+function getWhyThisMatters(risk: Risk): string | null {
+  if (risk.why_this_matters && risk.why_this_matters.trim()) return risk.why_this_matters;
+  return WHY_IT_MATTERS_TEMPLATE[risk.risk_type?.toLowerCase()] ?? null;
+}
+
+/* ─── Trigger Terms by Risk Type (template fallback) ────────────── */
 const TRIGGER_TERMS_BY_TYPE: Record<string, string[]> = {
   liability:             ["unlimited liability", "consequential damages", "aggregate cap", "sole remedy clause"],
   termination:           ["terminate for convenience", "without cause", "cure period waived", "immediate termination"],
@@ -187,7 +219,18 @@ const TRIGGER_TERMS_BY_TYPE: Record<string, string[]> = {
   dispute:               ["mandatory arbitration", "venue restriction", "jury trial waiver", "shortened limitation period"],
 };
 
+/** Returns trigger terms for a risk.
+ *  Prefers the per-risk AI-generated list stored in risk.trigger_terms (JSON string);
+ *  falls back to the type-keyed template for old rows where the field is null. */
 function extractTriggerTerms(risk: Risk): string[] {
+  if (risk.trigger_terms && risk.trigger_terms.trim()) {
+    try {
+      const parsed = JSON.parse(risk.trigger_terms);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, 4);
+    } catch {
+      // malformed JSON — fall through to template
+    }
+  }
   const type    = risk.risk_type?.toLowerCase() ?? "";
   const base    = TRIGGER_TERMS_BY_TYPE[type] ?? ["contractual risk provision", "liability exposure", "unilateral discretion"];
   const snippet = (risk.source_snippet ?? "").toLowerCase();
@@ -195,26 +238,39 @@ function extractTriggerTerms(risk: Risk): string[] {
   return found.length >= 2 ? found.slice(0, 4) : base.slice(0, 4);
 }
 
-/* ─── Business Impact by Risk Type ──────────────────────────────── */
+/* ─── Business Impact by Risk Type (template fallback) ──────────── */
 const BUSINESS_IMPACT_BY_TYPE: Record<string, string[]> = {
-  liability:             ["Uncapped financial exposure beyond contract value", "Third-party judgment absorption without recourse limit", "Litigation cost liability without proportionate fault allocation"],
-  termination:           ["Unilateral exit without objective performance triggers", "Stranded integration costs on early termination", "Vendor lock-in with no contractual cure or recovery right"],
-  renewal:               ["Automatic extension under potentially outdated commercial terms", "Missed notice windows create binding multi-period commitment", "Renegotiation leverage shifts to counterparty post-rollover"],
-  payment:               ["Cash flow disruption from disputed invoice processing timelines", "Compound penalty accrual erodes projected contract margin", "Unilateral fee adjustment rights create unpredictable budget exposure"],
-  confidentiality:       ["Regulatory disclosure obligations may conflict with clause scope", "Trade secret protection gaps from overly narrow definitions", "Post-termination data handling obligations remain contractually unresolved"],
-  compliance:            ["Moving-target regulatory obligations post-execution without renegotiation right", "Retroactive compliance exposure for standards not agreed at signing", "Cross-jurisdictional enforcement creates unpredictable penalty exposure"],
-  intellectual_property: ["Background IP inadvertently captured by broad assignment clause", "Pre-existing technology transfer without compensation or carve-out", "Platform dependency created through IP ownership concentration"],
-  indemnification:       ["Asymmetric risk transfer with unlimited defense cost exposure", "Settlement consent requirement constrains operational decision-making", "Defense obligation triggered regardless of relative or proportionate fault"],
-  dispute:               ["Mandatory arbitration limits access to public judicial remedies", "Venue restriction materially increases dispute resolution cost burden", "Shortened limitation periods constrain available recovery options"],
+  liability:             ["Company assets may be put at risk to satisfy an uncapped claim", "Finance teams cannot set adequate reserves without a known ceiling", "Insurance premiums may increase substantially to cover open-ended exposure"],
+  termination:           ["Operations can be disrupted without time to find or transition to an alternative", "Sunk costs from setup, integration, or training cannot be recovered", "There is no contractual path to challenge or delay an abrupt exit"],
+  renewal:               ["Contract costs continue into a new term without anyone actively deciding to renew", "Pricing and terms locked at signing carry over with no opportunity to update them", "Procurement teams may not be alerted until after the opt-out window has already closed"],
+  payment:               ["Invoice disputes can delay cash flow and create planning gaps", "Final contract cost may be significantly higher than the amount agreed at signing", "The company cannot reliably forecast how much the contract will cost over time"],
+  confidentiality:       ["Data shared with regulators or auditors may breach the clause even when required by law", "Proprietary information may lack the protection the business assumed it had", "A breach triggered by a mandatory disclosure can expose the company to a counterclaim"],
+  compliance:            ["Internal teams may face urgent changes to meet standards that did not exist at signing", "Regulatory penalties may apply for obligations introduced after the contract began", "Legal and compliance budgets cannot account for standards that may still change"],
+  intellectual_property: ["The company may lose the right to use or commercialise work it funded and created", "Background tools or technology transferred to the counterparty may not be recoverable", "Future product development may become dependent on a vendor that now controls key assets"],
+  indemnification:       ["Legal defense costs from the counterparty's disputes can appear on accounts unexpectedly", "Finance teams cannot predict or cap exposure under a broad indemnification obligation", "The company may absorb settlement costs even when it was not the primary party at fault"],
+  dispute:               ["Resolving a genuine claim may require expensive travel or specialist representation elsewhere", "Arbitration decisions are difficult to challenge, even when the outcome seems unfair", "Short limitation windows may expire before the company realises it has grounds for a claim"],
 };
 
+const _DEFAULT_BUSINESS_IMPACT = [
+  "Operations or finances may be affected if this clause is not addressed before signing",
+  "Seeking compensation or recourse later may be difficult or not possible",
+  "The company's ability to respond effectively may be constrained by the clause wording",
+];
+
+/** Returns business impact bullets for a risk.
+ *  Prefers the per-risk AI-generated list stored in risk.business_impact (JSON string);
+ *  falls back to the type-keyed template for old rows where the field is null. */
 function getBusinessImpact(risk: Risk): string[] {
+  if (risk.business_impact && risk.business_impact.trim()) {
+    try {
+      const parsed = JSON.parse(risk.business_impact);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {
+      // malformed JSON — fall through to template
+    }
+  }
   const type = risk.risk_type?.toLowerCase() ?? "";
-  return BUSINESS_IMPACT_BY_TYPE[type] ?? [
-    "Operational exposure from unaddressed contractual risk provisions",
-    "Financial liability without adequate protective recourse mechanisms",
-    "Legal remedies may be structurally constrained at time of dispute",
-  ];
+  return BUSINESS_IMPACT_BY_TYPE[type] ?? _DEFAULT_BUSINESS_IMPACT;
 }
 
 /* ─── Contract Selector ──────────────────────────────────────────── */
@@ -600,7 +656,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#f1f5f9", marginBottom: "2px" }}>
-              {risk.title}
+              {formatRiskTitle(risk.title)}
             </p>
             <p style={{ fontSize: "0.7rem", color: "#475569" }}>
               CTR-{String(risk.contract_id).padStart(4, "0")} · {formatRiskType(risk.risk_type)}
@@ -639,22 +695,62 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             </p>
           </div>
 
-          {/* AI analysis */}
+          {/* Risk Explanation */}
           {risk.explanation && (
             <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.14)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
                 <Brain size={12} style={{ color: "#a78bfa" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>AI Analysis</p>
+                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>What This Clause Means</p>
               </div>
               <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.explanation}</p>
             </div>
           )}
 
-          {/* Trigger Terms */}
+          {/* Why This Matters */}
+          {getWhyThisMatters(risk) && (
+            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.14)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
+                <Lightbulb size={12} style={{ color: "#fbbf24" }} />
+                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>Why This Matters</p>
+              </div>
+              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>
+                {getWhyThisMatters(risk)}
+              </p>
+            </div>
+          )}
+
+          {/* Potential Business Consequences */}
+          <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.11)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "11px" }}>
+              <Activity size={12} style={{ color: "#f87171" }} />
+              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>Potential Business Consequences</p>
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
+              {getBusinessImpact(risk).map((impact) => (
+                <li key={impact} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                  <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>·</span>
+                  <span style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.75 }}>{impact}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Recommended Action */}
+          {risk.suggested_action && (
+            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.14)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
+                <Target size={12} style={{ color: "#34d399" }} />
+                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.1em" }}>Recommended Action</p>
+              </div>
+              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.suggested_action}</p>
+            </div>
+          )}
+
+          {/* Flagged Contract Terms */}
           <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(99,102,241,0.04)", border: "1px solid rgba(99,102,241,0.12)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "11px" }}>
               <Zap size={12} style={{ color: "#818cf8" }} />
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Trigger Terms</p>
+              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Flagged Contract Terms</p>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
               {extractTriggerTerms(risk).map((term) => (
@@ -673,46 +769,6 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
               ))}
             </div>
           </div>
-
-          {/* Business Impact */}
-          <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.11)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "11px" }}>
-              <Activity size={12} style={{ color: "#f87171" }} />
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>Business Impact</p>
-            </div>
-            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
-              {getBusinessImpact(risk).map((impact) => (
-                <li key={impact} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                  <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>·</span>
-                  <span style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.75 }}>{impact}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Why it matters */}
-          {WHY_IT_MATTERS[risk.risk_type?.toLowerCase()] && (
-            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.14)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
-                <Lightbulb size={12} style={{ color: "#fbbf24" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>Legal Context</p>
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>
-                {WHY_IT_MATTERS[risk.risk_type.toLowerCase()]}
-              </p>
-            </div>
-          )}
-
-          {/* Mitigation */}
-          {risk.suggested_action && (
-            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.14)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
-                <Target size={12} style={{ color: "#34d399" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.1em" }}>Recommended Action</p>
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.suggested_action}</p>
-            </div>
-          )}
         </div>
 
         {/* Modal footer */}
@@ -725,9 +781,9 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <Percent size={11} style={{ color: "#475569" }} />
             <span style={{ fontSize: "0.7rem", color: "#475569" }}>
-              Extraction confidence:{" "}
+              Detection confidence:{" "}
               <span style={{ color: "#94a3b8", fontWeight: 600 }}>
-                {deriveConfidence(risk)}% · {confidenceLabel(deriveConfidence(risk))}
+                {confidenceLabel(deriveConfidence(risk))}
               </span>
             </span>
           </div>
@@ -743,7 +799,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
               Close
             </button>
             <Link
-              href={`/contracts/${risk.contract_id}?risk=${risk.id}`}
+              href={`/contracts/${risk.contract_id}?highlightRisk=${risk.id}`}
               style={{
                 display: "inline-flex", alignItems: "center", gap: "6px",
                 padding: "8px 18px", borderRadius: "10px",
@@ -914,7 +970,7 @@ function DetectedRisksTable({
               const confidence   = deriveConfidence(risk);
               const confLevel    = confidenceLabel(confidence);
               const clauseRef    = deriveClauseRef(risk);
-              const whyItMatters = WHY_IT_MATTERS[risk.risk_type?.toLowerCase()] ?? null;
+              const whyItMatters = getWhyThisMatters(risk);
               const confColor    = confidence >= 90 ? "#10b981" : confidence >= 84 ? "#60a5fa" : "#f59e0b";
 
               return (
@@ -946,7 +1002,7 @@ function DetectedRisksTable({
                     {/* Contract / Risk */}
                     <div style={{ minWidth: 0, paddingRight: "8px" }}>
                       <p style={{ fontSize: "0.82rem", fontWeight: 500, color: isExpanded ? "#f1f5f9" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "4px" }}>
-                        {risk.title}
+                        {formatRiskTitle(risk.title)}
                       </p>
                       {/* Clickable contract badge */}
                       <Link
@@ -1050,7 +1106,7 @@ function DetectedRisksTable({
                         >
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", paddingTop: "14px" }}>
 
-                            {/* ── Left column: Clause + AI Explanation ── */}
+                            {/* ── Left column: Clause + Risk Explanation + Why This Matters ── */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
 
                               {/* Exact clause */}
@@ -1098,7 +1154,7 @@ function DetectedRisksTable({
                                 </div>
                               )}
 
-                              {/* AI Explanation */}
+                              {/* Risk Explanation */}
                               {risk.explanation && (
                                 <div
                                   style={{
@@ -1110,7 +1166,7 @@ function DetectedRisksTable({
                                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "9px" }}>
                                     <Brain size={11} style={{ color: "#a78bfa" }} />
                                     <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                      AI Analysis
+                                      What This Clause Means
                                     </p>
                                   </div>
                                   <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.85 }}>
@@ -1118,66 +1174,6 @@ function DetectedRisksTable({
                                   </p>
                                 </div>
                               )}
-
-                              {/* Trigger Terms */}
-                              <div
-                                style={{
-                                  padding: "14px 16px", borderRadius: "12px",
-                                  background: "rgba(99,102,241,0.04)",
-                                  border: "1px solid rgba(99,102,241,0.11)",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                                  <Zap size={11} style={{ color: "#818cf8" }} />
-                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                    Trigger Terms
-                                  </p>
-                                </div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                                  {extractTriggerTerms(risk).map((term) => (
-                                    <span
-                                      key={term}
-                                      style={{
-                                        fontSize: "0.64rem", color: "#64748b",
-                                        background: "rgba(255,255,255,0.04)",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        borderRadius: "5px", padding: "2px 8px",
-                                        fontFamily: "var(--font-mono,monospace)",
-                                      }}
-                                    >
-                                      {term}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* ── Right column: Business Impact + Why It Matters + Mitigation + Metadata ── */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                              {/* Business Impact */}
-                              <div
-                                style={{
-                                  padding: "14px 16px", borderRadius: "12px",
-                                  background: "rgba(239,68,68,0.04)",
-                                  border: "1px solid rgba(239,68,68,0.10)",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                                  <Activity size={11} style={{ color: "#f87171" }} />
-                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                    Business Impact
-                                  </p>
-                                </div>
-                                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "5px" }}>
-                                  {getBusinessImpact(risk).map((impact) => (
-                                    <li key={impact} style={{ display: "flex", gap: "7px", alignItems: "flex-start" }}>
-                                      <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.85rem", lineHeight: 1.35 }}>·</span>
-                                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", lineHeight: 1.65 }}>{impact}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
 
                               {/* Why This Matters */}
                               {whyItMatters && (
@@ -1197,8 +1193,36 @@ function DetectedRisksTable({
                                   <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.9 }}>{whyItMatters}</p>
                                 </div>
                               )}
+                            </div>
 
-                              {/* Recommended Mitigation */}
+                            {/* ── Right column: Business Impact + Recommended Action + Risk Indicators + Metadata ── */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                              {/* Potential Business Consequences */}
+                              <div
+                                style={{
+                                  padding: "14px 16px", borderRadius: "12px",
+                                  background: "rgba(239,68,68,0.04)",
+                                  border: "1px solid rgba(239,68,68,0.10)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                                  <Activity size={11} style={{ color: "#f87171" }} />
+                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                                    Potential Business Consequences
+                                  </p>
+                                </div>
+                                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "5px" }}>
+                                  {getBusinessImpact(risk).map((impact) => (
+                                    <li key={impact} style={{ display: "flex", gap: "7px", alignItems: "flex-start" }}>
+                                      <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.85rem", lineHeight: 1.35 }}>·</span>
+                                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", lineHeight: 1.65 }}>{impact}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Recommended Action */}
                               {risk.suggested_action && (
                                 <div
                                   style={{
@@ -1217,6 +1241,38 @@ function DetectedRisksTable({
                                 </div>
                               )}
 
+                              {/* Risk Indicators */}
+                              <div
+                                style={{
+                                  padding: "14px 16px", borderRadius: "12px",
+                                  background: "rgba(99,102,241,0.04)",
+                                  border: "1px solid rgba(99,102,241,0.11)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                                  <Zap size={11} style={{ color: "#818cf8" }} />
+                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                                    Flagged Contract Terms
+                                  </p>
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                                  {extractTriggerTerms(risk).map((term) => (
+                                    <span
+                                      key={term}
+                                      style={{
+                                        fontSize: "0.64rem", color: "#64748b",
+                                        background: "rgba(255,255,255,0.04)",
+                                        border: "1px solid rgba(255,255,255,0.08)",
+                                        borderRadius: "5px", padding: "2px 8px",
+                                        fontFamily: "var(--font-mono,monospace)",
+                                      }}
+                                    >
+                                      {term}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
                               {/* Metadata + Actions */}
                               <div
                                 style={{
@@ -1230,16 +1286,11 @@ function DetectedRisksTable({
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                                     <Percent size={10} style={{ color: "#475569" }} />
-                                    <span style={{ fontSize: "0.67rem", color: "#475569" }}>Extraction Confidence</span>
+                                    <span style={{ fontSize: "0.67rem", color: "#475569" }}>AI Detection Confidence</span>
                                   </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                                    <div style={{ width: "48px", height: "3px", borderRadius: "999px", background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                                      <div style={{ height: "100%", borderRadius: "999px", width: `${confidence}%`, background: confColor, transition: "width 0.6s ease" }} />
-                                    </div>
-                                    <span style={{ fontSize: "0.67rem", color: confColor, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
-                                      {confidence}% <span style={{ fontWeight: 400, color: "#475569" }}>· {confLevel}</span>
-                                    </span>
-                                  </div>
+                                  <span style={{ fontSize: "0.67rem", color: confColor, fontWeight: 600 }}>
+                                    {confLevel}
+                                  </span>
                                 </div>
 
                                 {/* Clause reference */}
@@ -1306,7 +1357,7 @@ function DetectedRisksTable({
                                     </button>
                                   )}
                                   <Link
-                                    href={`/contracts/${risk.contract_id}?risk=${risk.id}`}
+                                    href={`/contracts/${risk.contract_id}?highlightRisk=${risk.id}`}
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       flex: 1, padding: "7px 10px", borderRadius: "8px",
@@ -1356,7 +1407,18 @@ function AIRiskSummaryPanel({
   const highRisks = risks.filter((r) =>
     ["high", "critical"].includes(r.severity?.toLowerCase())
   );
-  const topRisk = highRisks[0];
+
+  // Collect ALL risks at the highest severity level — avoids arbitrary single-pick when tied
+  const sevOrd: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  const sorted = [...risks].sort(
+    (a, b) =>
+      (sevOrd[a.severity?.toLowerCase() ?? "low"] ?? 3) -
+      (sevOrd[b.severity?.toLowerCase() ?? "low"] ?? 3)
+  );
+  const topSeverity = sorted[0]?.severity?.toLowerCase() ?? null;
+  const topRisks = topSeverity
+    ? sorted.filter((r) => r.severity?.toLowerCase() === topSeverity)
+    : [];
 
   const clauseCounts = risks.reduce(
     (acc, r) => {
@@ -1368,23 +1430,69 @@ function AIRiskSummaryPanel({
   );
   const topClause = Object.entries(clauseCounts).sort((a, b) => b[1] - a[1])[0];
 
-  const warnings = [
-    highRisks.length > 0
-      ? `${highRisks.length} high-severity provision${highRisks.length > 1 ? "s" : ""} flagged for escalation — legal counsel sign-off required prior to counterparty execution.`
-      : null,
-    topClause
-      ? `${formatRiskType(topClause[0])} clauses represent the highest-concentration exposure area across your active portfolio (${topClause[1]} instance${topClause[1] > 1 ? "s" : ""} detected).`
-      : null,
-    topRisk?.suggested_action ?? null,
-    risks.length > 0
-      ? "All flagged provisions should be reviewed by qualified legal counsel. Do not execute pending review of high-severity items."
-      : null,
-  ].filter(Boolean) as string[];
+  // ── Build contract-specific summary items from real risk data ─────────────
+  type SummaryItem = { label: string; text: string; type: "escalated" | "exposure" | "counsel" };
+  const summaryItems: SummaryItem[] = [];
 
-  const badgeFor = (i: number, isUrgent: boolean) => {
-    if (isUrgent)
+  // 1. Escalated — single risk: show title + explanation; multiple: summarise all by name
+  if (highRisks.length > 0) {
+    let escalatedText: string;
+    if (highRisks.length === 1) {
+      const top    = highRisks[0];
+      const detail = top.explanation
+        ? top.explanation.slice(0, 160) + (top.explanation.length > 160 ? "…" : "")
+        : "This clause contains language that should be reviewed by a legal professional before the contract is signed.";
+      escalatedText = `"${formatRiskTitle(top.title)}": ${detail}`;
+    } else {
+      const names = highRisks.map((r) => formatRiskTitle(r.title)).join("; ");
+      escalatedText = `${highRisks.length} high-priority risks identified — ${names}. Each of these areas should be reviewed before the contract is signed.`;
+    }
+    summaryItems.push({ label: "High Priority", text: escalatedText, type: "escalated" });
+  }
+
+  // 2. Exposure Pattern — dominant category, or neutral message when categories are tied
+  if (topClause && risks.length > 0) {
+    const maxCount  = topClause[1];
+    const tiedAtMax = Object.entries(clauseCounts).filter(([, c]) => c === maxCount);
+    if (tiedAtMax.length > 1) {
+      summaryItems.push({
+        label: "Risk Concentration",
+        text:  "Risks are spread evenly across different clause types, with no single area standing out as the dominant concern.",
+        type:  "exposure",
+      });
+    } else {
+      const typeName = formatRiskType(topClause[0]);
+      const count    = topClause[1];
+      const pct      = Math.round((count / risks.length) * 100);
+      summaryItems.push({
+        label: "Risk Concentration",
+        text:  `${typeName} clauses account for ${count} of ${risks.length} flagged risk${risks.length !== 1 ? "s" : ""} (${pct}%), making it the most common source of concern in this contract.`,
+        type:  "exposure",
+      });
+    }
+  }
+
+  // 3–4. Key Recommendations — unique recommended actions from the actual detected risks,
+  //      ordered by severity so the most critical actions surface first.
+  const sortedBySeverity = [...risks].sort(
+    (a, b) =>
+      (sevOrd[a.severity?.toLowerCase() ?? "low"] ?? 3) -
+      (sevOrd[b.severity?.toLowerCase() ?? "low"] ?? 3)
+  );
+  const seenActions = new Set<string>();
+  for (const r of sortedBySeverity) {
+    if (summaryItems.length >= 4) break;
+    const action = r.suggested_action?.trim();
+    if (action && !seenActions.has(action)) {
+      seenActions.add(action);
+      summaryItems.push({ label: "Suggested Action", text: action, type: "counsel" });
+    }
+  }
+
+  // ── Badge styles keyed by item type (no longer by array position) ──────────
+  const badgeForType = (type: SummaryItem["type"]) => {
+    if (type === "escalated")
       return {
-        label: "Escalated",
         style: {
           background: "rgba(239,68,68,0.12)",
           color: "#f87171",
@@ -1393,9 +1501,8 @@ function AIRiskSummaryPanel({
         rowBg:     "rgba(239,68,68,0.04)",
         rowBorder: "1px solid rgba(239,68,68,0.12)",
       };
-    if (i === 1)
+    if (type === "exposure")
       return {
-        label: "Exposure Pattern",
         style: {
           background: "rgba(245,158,11,0.1)",
           color: "#fbbf24",
@@ -1405,7 +1512,6 @@ function AIRiskSummaryPanel({
         rowBorder: "1px solid rgba(255,255,255,0.05)",
       };
     return {
-      label: "Counsel Note",
       style: {
         background: "rgba(59,130,246,0.1)",
         color: "#60a5fa",
@@ -1415,6 +1521,10 @@ function AIRiskSummaryPanel({
       rowBorder: "1px solid rgba(255,255,255,0.05)",
     };
   };
+
+  const nonRecItems  = summaryItems.filter((item) => item.type !== "counsel");
+  const recItems     = summaryItems.filter((item) => item.type === "counsel");
+  const counselBadge = badgeForType("counsel");
 
   return (
     <div style={{ ...CARD, display: "flex", flexDirection: "column" }}>
@@ -1443,7 +1553,7 @@ function AIRiskSummaryPanel({
             <Sparkles size={13} style={{ color: "#a78bfa" }} />
           </div>
           <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-            AI Risk Summary
+            Contract Overview
           </span>
           <div
             style={{
@@ -1469,7 +1579,7 @@ function AIRiskSummaryPanel({
           </div>
         </div>
         <p style={{ fontSize: "0.7rem", color: "#475569" }}>
-          AI-generated legal risk intelligence
+          AI-powered risk analysis of your contract
         </p>
       </div>
 
@@ -1523,10 +1633,10 @@ function AIRiskSummaryPanel({
             </div>
             <div>
               <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>
-                No risk data yet
+                No Risk Data Available
               </p>
               <p style={{ fontSize: "0.72rem", color: "#334155", lineHeight: 1.65 }}>
-                Analyze contracts to generate AI-powered risk intelligence and legal insights.
+                Analyze a contract to generate AI-powered risk assessments and legal insights.
               </p>
             </div>
             <Link
@@ -1552,9 +1662,8 @@ function AIRiskSummaryPanel({
         ) : (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {warnings.slice(0, 4).map((text, i) => {
-                const isUrgent = i === 0 && highRisks.length > 0;
-                const badge = badgeFor(i, isUrgent);
+              {nonRecItems.map((item, i) => {
+                const badge = badgeForType(item.type);
                 return (
                   <div
                     key={i}
@@ -1578,18 +1687,52 @@ function AIRiskSummaryPanel({
                         ...badge.style,
                       }}
                     >
-                      {badge.label}
+                      {item.label}
                     </span>
                     <p style={{ fontSize: "0.74rem", color: "#64748b", lineHeight: 1.6 }}>
-                      {text}
+                      {item.text}
                     </p>
                   </div>
                 );
               })}
+              {recItems.length > 0 && (
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "11px",
+                    background: counselBadge.rowBg,
+                    border: counselBadge.rowBorder,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      fontSize: "0.58rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase",
+                      padding: "2px 7px",
+                      borderRadius: "999px",
+                      marginBottom: "10px",
+                      ...counselBadge.style,
+                    }}
+                  >
+                    Suggested Actions
+                  </span>
+                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {recItems.map((rec, idx) => (
+                      <li key={idx} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                        <span style={{ color: "#60a5fa", flexShrink: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>•</span>
+                        <span style={{ fontSize: "0.74rem", color: "#64748b", lineHeight: 1.6 }}>{rec.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            {/* Flagged clause snippet */}
-            {topRisk?.source_snippet && (
+            {/* Flagged clause snippet(s) — all risks tied at the highest severity */}
+            {topRisks.length > 0 && (
               <div
                 style={{
                   marginTop: "10px",
@@ -1607,24 +1750,40 @@ function AIRiskSummaryPanel({
                     color: "#ef4444",
                     textTransform: "uppercase",
                     letterSpacing: "0.1em",
-                    marginBottom: "7px",
+                    marginBottom: "8px",
                   }}
                 >
-                  Highest-Risk Provision
+                  {topRisks.length > 1 ? "Most Critical Clauses" : "Most Critical Clause"}
                 </p>
-                <p
-                  style={{
-                    fontSize: "0.72rem",
-                    color: "#64748b",
-                    lineHeight: 1.65,
-                    fontStyle: "italic",
-                  }}
-                >
-                  &ldquo;
-                  {topRisk.source_snippet.slice(0, 150)}
-                  {topRisk.source_snippet.length > 150 ? "…" : ""}
-                  &rdquo;
-                </p>
+                {topRisks.map((r, idx) => (
+                  <div
+                    key={r.id}
+                    style={
+                      topRisks.length > 1 && idx < topRisks.length - 1
+                        ? { marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.05)" }
+                        : undefined
+                    }
+                  >
+                    <p style={{ fontSize: "0.74rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "4px" }}>
+                      {formatRiskTitle(r.title)}
+                    </p>
+                    {r.source_snippet && (
+                      <p
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "#64748b",
+                          lineHeight: 1.65,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        &ldquo;
+                        {r.source_snippet.slice(0, 150)}
+                        {r.source_snippet.length > 150 ? "…" : ""}
+                        &rdquo;
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1650,7 +1809,7 @@ function AIRiskSummaryPanel({
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
             >
               <Sparkles size={12} />
-              Ask AI to analyze risks
+              Consult AI for Further Analysis
             </Link>
           </>
         )}
@@ -1706,7 +1865,7 @@ function RiskDistributionCard({
           <BarChart2 size={13} style={{ color: "#f87171" }} />
         </div>
         <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-          Risk Distribution
+          Risk Levels
         </span>
         <Link
           href="/analytics"
@@ -1888,7 +2047,7 @@ function TopClauseIssuesCard({
           <Flag size={13} style={{ color: "#818cf8" }} />
         </div>
         <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-          Common Clause Issues
+          Risk Categories
         </span>
       </div>
 
@@ -2001,12 +2160,14 @@ function ComplianceScoreCard({
   const mediumCount = risks.filter((r) => ["medium", "moderate"].includes(r.severity?.toLowerCase())).length;
   const lowCount    = risks.filter((r) => r.severity?.toLowerCase() === "low").length;
 
-  const highPenalty   = Math.min(highCount * 10, 50);
-  const mediumPenalty = Math.min(mediumCount * 5, 25);
+  // Rule-based scoring: -10 per high, -5 per medium, -2 per low; clamped 0–100
+  const highPenalty   = highCount   * 10;
+  const mediumPenalty = mediumCount * 5;
+  const lowPenalty    = lowCount    * 2;
   const score =
     risks.length === 0
       ? 100
-      : Math.max(30, Math.round(100 - highPenalty - mediumPenalty));
+      : Math.max(0, Math.min(100, Math.round(100 - highPenalty - mediumPenalty - lowPenalty)));
 
   const scoreColor = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
   const scoreLabel = score >= 80 ? "Compliant" : score >= 60 ? "Needs Attention" : "At Risk";
@@ -2014,9 +2175,9 @@ function ComplianceScoreCard({
   const dash = (score / 100) * circumference;
 
   const breakdown = [
-    { label: "High / Critical",  penalty: highPenalty,   color: "#f87171" },
-    { label: "Medium risks",     penalty: mediumPenalty, color: "#fbbf24" },
-    { label: "Low severity",     penalty: 0,             color: "#34d399", note: lowCount > 0 ? `${lowCount} items` : "None" },
+    { label: "High / Critical", penalty: highPenalty,   color: "#f87171" },
+    { label: "Medium risks",    penalty: mediumPenalty, color: "#fbbf24" },
+    { label: "Low severity",    penalty: lowPenalty,    color: "#34d399" },
   ];
 
   return (
@@ -2046,7 +2207,7 @@ function ComplianceScoreCard({
           <Shield size={13} style={{ color: "#34d399" }} />
         </div>
         <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-          Compliance Score
+          Overall Contract Risk Score
         </span>
         <Link
           href="/analytics"
@@ -2173,7 +2334,7 @@ function ComplianceScoreCard({
                 Score Breakdown
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {breakdown.map(({ label, penalty, color, note }) => (
+                {breakdown.map(({ label, penalty, color }) => (
                   <div
                     key={label}
                     style={{
@@ -2201,7 +2362,7 @@ function ComplianceScoreCard({
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      {note ?? (penalty > 0 ? `−${penalty} pts` : "No penalty")}
+                      {penalty > 0 ? `−${penalty} pts` : "No penalty"}
                     </span>
                   </div>
                 ))}
@@ -2294,7 +2455,7 @@ export default function RisksPage() {
     if (activeFilter === "compliance")
       return base.filter((r) => {
         const rt = r.risk_type?.toLowerCase() ?? "";
-        return rt.includes("compliance") || rt.includes("gdpr") || rt.includes("regulation") || rt.includes("data") || rt.includes("privacy");
+        return rt === "confidentiality" || rt === "compliance" || rt.includes("compliance") || rt.includes("gdpr") || rt.includes("data") || rt.includes("privacy");
       });
     if (activeFilter === "expiring")
       return base.filter((r) => {
@@ -2316,10 +2477,10 @@ export default function RisksPage() {
 
   const kpiSubtitle = viewMode === "single" ? "This contract" : "Across all contracts";
   const kpiCards = [
-    { label: "High Risk",         value: highCount,          icon: ShieldAlert,  accent: "danger"  as const, subtitle: "Requires immediate action"   },
-    { label: "Compliance Issues", value: mediumCount,        icon: Scale,        accent: "warning" as const, subtitle: "Medium severity items"        },
-    { label: "Needs Review",      value: reviewCount,        icon: CheckCircle2, accent: "cyan"    as const, subtitle: "Suggested actions pending"    },
-    { label: "Total Flagged",     value: contractRisks.length, icon: Flag,       accent: "indigo"  as const, subtitle: kpiSubtitle                    },
+    { label: "High-Priority Risks",     value: highCount,            icon: ShieldAlert,  accent: "danger"  as const, subtitle: "Requires immediate action"   },
+    { label: "Moderate Risks",         value: mediumCount,          icon: Scale,        accent: "warning" as const, subtitle: "May require attention"         },
+    { label: "Requires Legal Review",  value: reviewCount,          icon: CheckCircle2, accent: "cyan"    as const, subtitle: "Suggested actions pending"    },
+    { label: "Total Risks Found",      value: contractRisks.length, icon: Flag,         accent: "indigo"  as const, subtitle: kpiSubtitle                    },
   ];
 
   return (

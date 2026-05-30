@@ -1,19 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Hexagon, Mail, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { Hexagon, Mail, CheckCircle2, ArrowRight } from "lucide-react";
 
 export default function VerificationPage() {
-  const router  = useRouter();
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  function resend() {
-    setLoading(true);
-    setTimeout(() => { setLoading(false); setSent(true); }, 1200);
-  }
 
   return (
     <div
@@ -50,21 +40,15 @@ export default function VerificationPage() {
             We sent a verification link to your email address. Click the link to activate your workspace.
           </p>
 
-          {sent && (
-            <div className="mb-4 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)", color: "#34d399" }}>
-              <CheckCircle2 size={14} /> Verification email resent.
-            </div>
-          )}
-
           <div className="space-y-3">
-            <button
-              onClick={resend}
-              disabled={loading || sent}
-              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+            {/* Redirect to the real verify page where the user can enter their code */}
+            <Link
+              href="/verify"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all hover:opacity-90"
               style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.22)", color: "#818cf8" }}
             >
-              {loading ? <><Loader2 size={14} className="animate-spin" /> Sending...</> : "Resend verification email"}
-            </button>
+              <CheckCircle2 size={14} /> Enter verification code
+            </Link>
 
             <Link
               href="/login"

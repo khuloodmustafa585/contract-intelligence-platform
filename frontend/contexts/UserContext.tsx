@@ -9,6 +9,9 @@ export type AppUser = {
   email: string;
   is_verified: boolean;
   email_notifications_enabled: boolean;
+  first_name?: string | null;
+  last_name?: string | null;
+  job_title?: string | null;
   department?: string | null;
   company?: string | null;
   avatar_url?: string | null;

@@ -26,6 +26,8 @@ import {
   AlertTriangle,
   Zap,
   Activity,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -34,7 +36,7 @@ import AIInsightPanel from "@/components/ui/AIInsightPanel";
 import AIProcessingIndicator from "@/components/ui/AIProcessingIndicator";
 import { api, Clause, ContractDetail, Risk } from "@/services/api";
 
-type PanelKey = "summary" | "risks" | "obligations" | "alerts" | "ask";
+type PanelKey = "summary" | "risks" | "obligations" | "alerts" | "ask" | "timeline";
 
 /* ── Severity → colour tokens ── */
 const SEV_TOKENS: Record<string, { border: string; bg: string; bgFlash: string; glow: string; text: string; passiveBorder: string }> = {
@@ -140,20 +142,38 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
   const load = useCallback(async () => {
     const data = await api.contract(id);
     setContract(data);
+    return data;
   }, [id]);
 
   useEffect(() => {
+    const TERMINAL = new Set(["completed", "failed"]);
     let active = true;
     api.contract(id)
       .then((data) => { if (active) setContract(data); })
       .catch((err)  => { if (active) setError(err.message); })
       .finally(()   => { if (active) setLoading(false); });
-    const timer = setInterval(() => load().catch(() => undefined), 6000);
+    const timer = setInterval(async () => {
+      if (!active) return;
+      try {
+        const data = await load();
+        if (TERMINAL.has(data.status)) clearInterval(timer);
+      } catch { /* ignore transient errors */ }
+    }, 6000);
     return () => { active = false; clearInterval(timer); };
   }, [id, load]);
 
   const clauses  = useMemo(() => contract?.clauses ?? [], [contract]);
   const risks    = useMemo(() => contract?.risks   ?? [], [contract]);
+
+  /* ── Contract risk score 0-100 derived from real risk severities ── */
+  const riskScore = useMemo(() => {
+    if (!contract || contract.status !== "completed") return null;
+    const hi  = risks.filter((r) => ["high","critical"].includes(r.severity?.toLowerCase())).length;
+    const med = risks.filter((r) => ["medium","moderate"].includes(r.severity?.toLowerCase())).length;
+    const lo  = risks.filter((r) => r.severity?.toLowerCase() === "low").length;
+    const raw = 100 - Math.min(hi * 15, 45) - Math.min(med * 7, 28) - Math.min(lo * 2, 10);
+    return Math.max(30, Math.round(raw));
+  }, [contract, risks]);
 
   /* ── Build a set of clause IDs that have any risk (for passive indicators) ── */
   const riskByClauseId = useMemo(() => {
@@ -224,13 +244,18 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
     finally { setAnalyzing(false); }
   }
 
-  async function askAI(e: React.FormEvent) {
+  async function askAI(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!question.trim()) return;
     setAsking(true); setAnswer("");
     try {
       const result = await api.ask(id, question);
-      setAnswer(result.answer);
+      const parts: string[] = [];
+      if (result.clause_summary) parts.push(result.clause_summary);
+      if (result.quoted_clause) parts.push(`\n\nKey Provision: "${result.quoted_clause}"`);
+      if (result.legal_risk) parts.push(`\n\nRisk: ${result.legal_risk}`);
+      if (result.recommendation) parts.push(`\n\nRecommendation: ${result.recommendation}`);
+      setAnswer(parts.join("") || "No relevant information found in this contract.");
     } catch (err) {
       setAnswer(err instanceof Error ? err.message : "Failed to get answer.");
     } finally { setAsking(false); }
@@ -239,6 +264,7 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
   const TABS: { key: PanelKey; label: string; icon: React.ElementType; count?: number }[] = [
     { key: "summary",     label: "Summary",     icon: FileText,      count: contract?.summaries?.length   },
     { key: "risks",       label: "Risks",        icon: ShieldAlert,   count: contract?.risks?.length       },
+    { key: "timeline",    label: "Timeline",     icon: Clock,         count: undefined                     },
     { key: "obligations", label: "Obligations",  icon: ClipboardList, count: contract?.obligations?.length },
     { key: "alerts",      label: "Alerts",       icon: Bell,          count: contract?.alerts?.length      },
     { key: "ask",         label: "Ask AI",       icon: Sparkles,      count: undefined                     },
@@ -247,10 +273,41 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
   if (loading) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)] gap-3">
-          <div className="h-5 w-5 rounded-full border-2 animate-spin"
-            style={{ borderColor: "rgba(99,102,241,0.2)", borderTopColor: "#6366f1" }} />
-          <span className="text-sm" style={{ color: "#64748b" }}>Loading contract...</span>
+        <div className="flex flex-col" style={{ minHeight: "calc(100vh - 64px)" }}>
+          {/* Topbar skeleton */}
+          <div className="flex items-center gap-3 px-6 py-3 shrink-0"
+            style={{ borderBottom: "1px solid rgba(99,102,241,0.10)", background: "rgba(11,19,38,0.7)" }}>
+            <div className="skeleton h-6 w-20 rounded-lg" />
+            <div className="skeleton h-4 w-px" style={{ background: "rgba(99,102,241,0.18)" }} />
+            <div className="skeleton h-5 w-48 rounded" />
+          </div>
+          <div className="flex flex-1 overflow-hidden">
+            {/* Document skeleton */}
+            <div className="flex-1 p-8" style={{ background: "#0b1326" }}>
+              <div className="mx-auto max-w-3xl rounded-2xl overflow-hidden" style={{ background: "#f9f7f2" }}>
+                <div style={{ padding: "18px 32px 14px", background: "#f3f0e8", borderBottom: "1px solid rgba(26,26,46,0.1)" }}>
+                  <div className="skeleton h-3 w-24 rounded mb-2" style={{ background: "rgba(0,0,0,0.08)" }} />
+                  <div className="skeleton h-5 w-64 rounded" style={{ background: "rgba(0,0,0,0.08)" }} />
+                </div>
+                <div style={{ padding: "28px 32px 40px", display: "flex", flexDirection: "column", gap: "18px" }}>
+                  {[80, 60, 90, 50, 70, 65, 85].map((w, i) => (
+                    <div key={i} className="skeleton h-3 rounded" style={{ width: `${w}%`, background: "rgba(0,0,0,0.07)" }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Sidebar skeleton */}
+            <div className="w-[430px] shrink-0 flex flex-col" style={{ background: "rgba(9,17,34,0.97)", borderLeft: "1px solid rgba(99,102,241,0.12)" }}>
+              <div className="flex gap-1 px-3 py-2 shrink-0" style={{ borderBottom: "1px solid rgba(99,102,241,0.10)" }}>
+                {[60,50,55,45,40,45].map((w,i) => <div key={i} className="skeleton h-8 rounded-lg" style={{ width: `${w}px` }} />)}
+              </div>
+              <div className="p-4 flex flex-col gap-3">
+                {[1,2,3].map(i => (
+                  <div key={i} className="skeleton rounded-xl" style={{ height: "80px" }} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </AppShell>
     );
@@ -417,7 +474,7 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                         </p>
                       </div>
                     ) : (
-                      clauses.map((clause: Clause, idx: number) => {
+                      clauses.map((clause: Clause) => {
                         const isActive   = highlightedClauseId === clause.id;
                         const isFlashing = flashClauseId === clause.id;
                         const passiveRisks = riskByClauseId.get(clause.id) ?? [];
@@ -532,6 +589,43 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                 borderLeft: "1px solid rgba(99,102,241,0.12)",
               }}
             >
+              {/* ── Risk Score Header ── */}
+              {riskScore !== null && (
+                <div
+                  className="flex items-center gap-4 px-4 py-3 shrink-0"
+                  style={{ borderBottom: "1px solid rgba(99,102,241,0.08)", background: "rgba(7,13,26,0.6)" }}
+                >
+                  {/* Circular gauge */}
+                  <div style={{ position: "relative", width: "44px", height: "44px", flexShrink: 0 }}>
+                    <svg width="44" height="44" viewBox="0 0 44 44">
+                      <circle cx="22" cy="22" r="16" fill="none" strokeWidth="4"
+                        style={{ stroke: "rgba(255,255,255,0.06)" }} />
+                      <circle cx="22" cy="22" r="16" fill="none" strokeWidth="4"
+                        stroke={riskScore >= 75 ? "#10b981" : riskScore >= 50 ? "#f59e0b" : "#ef4444"}
+                        strokeLinecap="round"
+                        strokeDasharray={`${(riskScore / 100) * (2 * Math.PI * 16)} ${2 * Math.PI * 16}`}
+                        transform="rotate(-90 22 22)"
+                        style={{ transition: "stroke-dasharray 1s ease", filter: `drop-shadow(0 0 4px ${riskScore >= 75 ? "#10b981" : riskScore >= 50 ? "#f59e0b" : "#ef4444"}88)` }}
+                      />
+                    </svg>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--th-text-1)", fontVariantNumeric: "tabular-nums" }}>{riskScore}</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "0.72rem", fontWeight: 600, color: riskScore >= 75 ? "#34d399" : riskScore >= 50 ? "#fbbf24" : "#f87171", marginBottom: "2px" }}>
+                      {riskScore >= 75 ? "Low Risk" : riskScore >= 50 ? "Moderate Risk" : "High Risk"} · Score {riskScore}/100
+                    </p>
+                    <p style={{ fontSize: "0.65rem", color: "#475569" }}>
+                      {risks.filter(r => ["high","critical"].includes(r.severity?.toLowerCase())).length} critical
+                      · {risks.filter(r => ["medium","moderate"].includes(r.severity?.toLowerCase())).length} medium
+                      · {risks.filter(r => r.severity?.toLowerCase() === "low").length} low
+                    </p>
+                  </div>
+                  <TrendingUp size={13} style={{ color: riskScore >= 75 ? "#34d399" : riskScore >= 50 ? "#fbbf24" : "#f87171", flexShrink: 0 }} />
+                </div>
+              )}
+
               {/* Tabs */}
               <div
                 className="flex shrink-0 overflow-x-auto"
@@ -569,16 +663,69 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                     {contract.summaries?.length === 0 ? (
                       <div className="py-8 text-center"><AIProcessingIndicator label="Generating summary…" variant="pulse" /></div>
                     ) : (
-                      contract.summaries?.map((s: { id: number; summary_type: string; summary_text: string }) => (
-                        <div key={s.id} className="rounded-xl p-4"
-                          style={{ background: "rgba(19,27,46,0.5)", border: "1px solid rgba(99,102,241,0.09)" }}>
-                          <p className="mb-2 uppercase"
-                            style={{ color: "#6366f1", fontSize: "0.6rem", fontFamily: "var(--font-mono,monospace)", letterSpacing: "0.1em" }}>
-                            {s.summary_type}
-                          </p>
-                          <p className="text-sm" style={{ color: "#94a3b8", lineHeight: 1.9 }}>{s.summary_text}</p>
-                        </div>
-                      ))
+                      contract.summaries?.map((s: { id: number; summary_type: string; summary_text: string }) => {
+                        // Split into sentences to build a structured card
+                        const sentences = s.summary_text
+                          .replace(/\n/g, " ")
+                          .split(/(?<=[.!?])\s+/)
+                          .filter(Boolean);
+                        const headline = sentences[0] ?? s.summary_text;
+                        const body     = sentences.slice(1).join(" ");
+                        return (
+                          <div key={s.id} className="rounded-xl overflow-hidden"
+                            style={{ background: "rgba(19,27,46,0.5)", border: "1px solid rgba(99,102,241,0.09)" }}>
+                            {/* Card header */}
+                            <div className="px-4 py-2.5 flex items-center gap-2"
+                              style={{ borderBottom: "1px solid rgba(99,102,241,0.08)", background: "rgba(99,102,241,0.05)" }}>
+                              <Brain size={11} style={{ color: "#818cf8" }} />
+                              <span style={{ color: "#6366f1", fontSize: "0.58rem", fontFamily: "var(--font-mono,monospace)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                                {s.summary_type} Summary
+                              </span>
+                            </div>
+                            {/* Key finding */}
+                            <div className="px-4 pt-3 pb-2">
+                              <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#dae2fd", lineHeight: 1.55, marginBottom: "8px" }}>
+                                {headline}
+                              </p>
+                              {body && (
+                                <p style={{ fontSize: "0.73rem", color: "#64748b", lineHeight: 1.8 }}>{body}</p>
+                              )}
+                            </div>
+                            {/* Quick meta-facts from contract */}
+                            {(contract.effective_date || contract.expiration_date || contract.notice_period_days) && (
+                              <div className="px-4 pb-3 flex flex-wrap gap-2 mt-1">
+                                {contract.effective_date && (
+                                  <span style={{ fontSize: "0.62rem", padding: "2px 8px", borderRadius: "6px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)", color: "#34d399" }}>
+                                    Effective: {new Date(contract.effective_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  </span>
+                                )}
+                                {contract.expiration_date && (
+                                  <span style={{ fontSize: "0.62rem", padding: "2px 8px", borderRadius: "6px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)", color: "#fbbf24" }}>
+                                    Expires: {new Date(contract.expiration_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  </span>
+                                )}
+                                {contract.notice_period_days && (
+                                  <span style={{ fontSize: "0.62rem", padding: "2px 8px", borderRadius: "6px", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)", color: "#818cf8" }}>
+                                    Notice: {contract.notice_period_days} days
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                    {/* Ask AI CTA at bottom of summary */}
+                    {contract.summaries && contract.summaries.length > 0 && (
+                      <button
+                        onClick={() => setActivePanel("ask")}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium transition-all"
+                        style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.14)", color: "#818cf8", cursor: "pointer" }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.12)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.06)"; }}
+                      >
+                        <Sparkles size={11} /> Ask AI about this contract
+                      </button>
                     )}
                   </>
                 )}
@@ -864,6 +1011,76 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                     )}
                   </>
                 )}
+
+                {/* ── Timeline ── */}
+                {activePanel === "timeline" && (() => {
+                  const now = new Date();
+                  // Build ordered list of timeline events from real contract data
+                  const events: { date: Date; label: string; sublabel?: string; type: "upload"|"effective"|"obligation"|"expiry"|"alert" }[] = [];
+
+                  if (contract.created_at)
+                    events.push({ date: new Date(contract.created_at), label: "Contract Uploaded", sublabel: contract.file_type?.toUpperCase() ?? "", type: "upload" });
+                  if (contract.effective_date)
+                    events.push({ date: new Date(contract.effective_date + "T00:00:00"), label: "Effective Date", sublabel: "Contract becomes active", type: "effective" });
+                  contract.obligations?.forEach((ob) => {
+                    if (ob.due_date)
+                      events.push({ date: new Date(ob.due_date + "T00:00:00"), label: ob.title, sublabel: `Obligation · ${ob.status}`, type: "obligation" });
+                  });
+                  if (contract.expiration_date)
+                    events.push({ date: new Date(contract.expiration_date + "T00:00:00"), label: "Contract Expiration", sublabel: "Agreement ends", type: "expiry" });
+
+                  events.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                  const typeStyle = {
+                    upload:     { dot: "#6366f1", bg: "rgba(99,102,241,0.12)",  label: "#818cf8"  },
+                    effective:  { dot: "#10b981", bg: "rgba(16,185,129,0.10)",  label: "#34d399"  },
+                    obligation: { dot: "#f59e0b", bg: "rgba(245,158,11,0.08)",  label: "#fbbf24"  },
+                    expiry:     { dot: "#ef4444", bg: "rgba(239,68,68,0.08)",   label: "#f87171"  },
+                    alert:      { dot: "#f59e0b", bg: "rgba(245,158,11,0.08)",  label: "#fbbf24"  },
+                  };
+
+                  return events.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <Calendar size={24} style={{ color: "#334155", margin: "0 auto 10px" }} />
+                      <p className="text-sm font-medium" style={{ color: "#475569" }}>No dates extracted yet</p>
+                      <p className="text-xs mt-1" style={{ color: "#334155" }}>Dates populate after AI analysis completes.</p>
+                    </div>
+                  ) : (
+                    <div style={{ position: "relative", paddingLeft: "20px" }}>
+                      {/* Vertical line */}
+                      <div style={{ position: "absolute", left: "7px", top: "8px", bottom: "8px", width: "1px", background: "rgba(255,255,255,0.06)" }} />
+                      {events.map((ev, i) => {
+                        const s        = typeStyle[ev.type];
+                        const isPast   = ev.date < now;
+                        const isToday  = Math.abs(ev.date.getTime() - now.getTime()) < 86400000;
+                        return (
+                          <div key={i} className="flex gap-3 mb-4 relative">
+                            {/* Dot */}
+                            <div style={{
+                              position: "absolute", left: "-16px", top: "4px",
+                              width: "10px", height: "10px", borderRadius: "50%",
+                              background: isPast ? s.dot : "transparent",
+                              border: `2px solid ${s.dot}`,
+                              boxShadow: !isPast ? `0 0 8px ${s.dot}88` : "none",
+                              flexShrink: 0,
+                            }} />
+                            <div className="rounded-xl px-3 py-2.5 flex-1"
+                              style={{ background: s.bg, border: `1px solid ${s.dot}22` }}>
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <p className="text-xs font-semibold" style={{ color: "var(--th-text-1)", lineHeight: 1.3 }}>{ev.label}</p>
+                                {isToday && <span style={{ fontSize: "0.55rem", padding: "1px 6px", borderRadius: "999px", background: `${s.dot}22`, color: s.label, fontWeight: 700 }}>TODAY</span>}
+                              </div>
+                              <p style={{ fontSize: "0.62rem", color: "#475569" }}>
+                                {ev.date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                                {ev.sublabel ? ` · ${ev.sublabel}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {/* ── Ask AI ── */}
                 {activePanel === "ask" && (

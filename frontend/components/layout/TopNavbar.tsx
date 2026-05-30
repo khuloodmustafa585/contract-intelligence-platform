@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Bell, LogOut, Upload, ChevronRight } from "lucide-react";
@@ -28,6 +28,7 @@ export default function TopNavbar() {
   const [alerts,      setAlerts]      = useState(0);
   const [search,      setSearch]      = useState("");
   const [searchFocus, setSearchFocus] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const initials = getInitials(user?.full_name ?? "Legal Team");
 
@@ -38,8 +39,34 @@ export default function TopNavbar() {
       .catch(() => undefined);
   }, []);
 
+  // Focus search on "/" keypress (skip when user is typing in another input/textarea)
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "/") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && search.trim()) {
+      router.push(`/contracts?q=${encodeURIComponent(search.trim())}`);
+      setSearch("");
+    }
+    if (e.key === "Escape") {
+      setSearch("");
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
+    // Clear the cookie that the middleware uses for route protection
+    document.cookie = "token=; path=/; max-age=0; SameSite=Strict";
     router.push("/login");
   };
 
@@ -97,12 +124,14 @@ export default function TopNavbar() {
           }}
         />
         <input
+          ref={searchRef}
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setSearchFocus(true)}
           onBlur={() => setSearchFocus(false)}
-          placeholder="Search contracts..."
+          onKeyDown={handleSearch}
+          placeholder="Search contracts…"
           style={{
             flex: 1,
             background: "transparent",

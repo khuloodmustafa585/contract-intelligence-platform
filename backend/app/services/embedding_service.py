@@ -93,6 +93,8 @@ def _cosine(a: list[float], b: list[float]) -> float:
     denom = (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))) or 1.0
     return sum(x * y for x, y in zip(a, b)) / denom
 
+MAX_CHUNKS = 500
+
 
 def _split_into_chunks(text: str) -> list[str]:
     """Split long clause text into overlapping chunks for sharper embeddings."""
@@ -106,17 +108,23 @@ def _split_into_chunks(text: str) -> list[str]:
     while start < len(text):
         end = min(start + _CHUNK_SIZE, len(text))
         chunk = text[start:end]
-        # Prefer breaking at a sentence boundary in the last 80 chars
-        if end < len(text):
-            for sep in (". ", ".\n", "; ", "\n"):
-                pos = chunk.rfind(sep, len(chunk) - 80)
-                if pos > len(chunk) // 2:
-                    end = start + pos + len(sep)
-                    chunk = text[start:end]
-                    break
+
         if chunk.strip():
             chunks.append(chunk.strip())
-        start = end - _CHUNK_OVERLAP
+
+        if len(chunks) >= MAX_CHUNKS:
+            app_logger.warning(
+                "Chunk limit exceeded. Text length=%s",
+                len(text)
+            )
+            break
+
+        next_start = end - _CHUNK_OVERLAP
+
+        if next_start <= start:
+            break
+
+        start = next_start
     return chunks
 
 
@@ -135,7 +143,17 @@ def upsert_embeddings(contract_id: int, db: Session):
     try:
         points: list[dict] = []
         for clause in clauses:
+            app_logger.warning(
+                "CLAUSE id=%s length=%s",
+                clause.id,
+                len(clause.text or "")
+            )
             chunks = _split_into_chunks(clause.text or "")
+            app_logger.warning(
+                "CLAUSE id=%s chunks=%s",
+                clause.id,
+                len(chunks)
+            )
             if not chunks:
                 continue
             for chunk_idx, chunk_text in enumerate(chunks):

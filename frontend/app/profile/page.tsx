@@ -11,7 +11,6 @@ import {
   BadgeCheck,
   Shield,
   Pencil,
-  Camera,
   Save,
   X,
   CheckCircle2,
@@ -336,10 +335,11 @@ export default function ProfilePage() {
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
-    firstName: "",
-    lastName: "",
+    firstName:  "",
+    lastName:   "",
+    jobTitle:   "",
     department: "",
-    company: "",
+    company:    "",
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{
@@ -349,12 +349,16 @@ export default function ProfilePage() {
 
   const handleEditStart = () => {
     if (!user) return;
-    const { firstName, lastName } = parseFullName(user.full_name);
+    // Prefer stored first/last; fall back to parsing full_name for legacy accounts
+    const stored_first = user.first_name ?? "";
+    const stored_last  = user.last_name  ?? "";
+    const fallback     = parseFullName(user.full_name);
     setDraft({
-      firstName,
-      lastName,
+      firstName:  stored_first || fallback.firstName,
+      lastName:   stored_last  || fallback.lastName,
+      jobTitle:   user.job_title  ?? "",
       department: user.department ?? "",
-      company: user.company ?? "",
+      company:    user.company    ?? "",
     });
     setEditing(true);
     setToast(null);
@@ -367,19 +371,24 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!user || !draft.firstName.trim()) return;
-    const fullName = joinFullName(draft.firstName, draft.lastName);
+    const computedFullName = joinFullName(draft.firstName, draft.lastName);
     setSaving(true);
     setToast(null);
     try {
       await api.updateMe({
-        full_name: fullName,
+        first_name: draft.firstName.trim() || undefined,
+        last_name:  draft.lastName.trim()  || null,
+        job_title:  draft.jobTitle.trim()  || null,
         department: draft.department.trim() || null,
-        company: draft.company.trim() || null,
+        company:    draft.company.trim()    || null,
       });
       updateUser({
-        full_name: fullName,
+        full_name:  computedFullName,
+        first_name: draft.firstName.trim() || null,
+        last_name:  draft.lastName.trim()  || null,
+        job_title:  draft.jobTitle.trim()  || null,
         department: draft.department.trim() || null,
-        company: draft.company.trim() || null,
+        company:    draft.company.trim()    || null,
       });
       setEditing(false);
       setToast({ type: "success", message: "Profile updated successfully" });
@@ -399,7 +408,7 @@ export default function ProfilePage() {
     ? joinFullName(draft.firstName, draft.lastName) || (user?.full_name ?? "")
     : (user?.full_name ?? "");
   const displayDepartment = editing ? draft.department : (user?.department ?? "");
-  const displayCompany = editing ? draft.company : (user?.company ?? "");
+  const displayCompany    = editing ? draft.company    : (user?.company    ?? "");
 
   const initials = getInitials(displayName || "U");
   const isVerified = user?.is_verified ?? false;
@@ -517,33 +526,6 @@ export default function ProfilePage() {
                         >
                           {initials}
                         </div>
-                        <button
-                          title="Profile picture upload coming soon"
-                          style={{
-                            position: "absolute",
-                            bottom: "2px",
-                            right: "2px",
-                            width: "26px",
-                            height: "26px",
-                            borderRadius: "50%",
-                            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-                            border: "2px solid var(--th-card-bg)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 8px rgba(59,130,246,0.45)",
-                            transition: "transform 0.15s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.transform = "scale(1.1)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.transform = "scale(1)";
-                          }}
-                        >
-                          <Camera size={11} style={{ color: "#ffffff" }} />
-                        </button>
                       </div>
 
                       {/* Active / Pending */}
@@ -563,10 +545,10 @@ export default function ProfilePage() {
                         }
                       />
 
-                      {/* Admin — shown for verified users */}
-                      {isVerified && (
+                      {/* Job title pill — shown when user has set a title */}
+                      {user?.job_title && (
                         <StatusPill
-                          label="Admin"
+                          label={user.job_title}
                           color="#60a5fa"
                           dotColor="#3b82f6"
                           bg="rgba(59,130,246,0.12)"
@@ -772,6 +754,15 @@ export default function ProfilePage() {
                             />
                           </div>
                           <EditField
+                            label="Job Title"
+                            value={draft.jobTitle}
+                            onChange={(v) =>
+                              setDraft((d) => ({ ...d, jobTitle: v }))
+                            }
+                            placeholder="e.g. Legal Counsel"
+                            maxLength={255}
+                          />
+                          <EditField
                             label="Department"
                             value={draft.department}
                             onChange={(v) =>
@@ -864,7 +855,10 @@ export default function ProfilePage() {
                           transition={{ duration: 0.2 }}
                         >
                           {(() => {
-                            const { firstName, lastName } = parseFullName(user.full_name);
+                            // Prefer stored first/last; fall back to parsing full_name
+                            const fallback  = parseFullName(user.full_name);
+                            const firstName = user.first_name ?? fallback.firstName;
+                            const lastName  = user.last_name  ?? fallback.lastName;
                             return (
                               <>
                                 <InfoRow
@@ -878,6 +872,12 @@ export default function ProfilePage() {
                                   iconColor="#60a5fa"
                                   label="Last Name"
                                   value={lastName}
+                                />
+                                <InfoRow
+                                  icon={MapPin}
+                                  iconColor="#a78bfa"
+                                  label="Job Title"
+                                  value={user.job_title ?? ""}
                                 />
                                 <InfoRow
                                   icon={MapPin}

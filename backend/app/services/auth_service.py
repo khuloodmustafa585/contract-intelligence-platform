@@ -1,6 +1,9 @@
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -32,12 +35,18 @@ def register_user(db: Session, user_data: UserCreate) -> User:
     hashed_password = hash_password(user_data.password)
     code = generate_verification_code()
 
+    first_name = user_data.first_name.strip()
+    last_name  = (user_data.last_name or "").strip()
+    full_name  = f"{first_name} {last_name}".strip()
+
     new_user = User(
-        full_name=user_data.full_name,
+        full_name=full_name,
+        first_name=first_name,
+        last_name=last_name or None,
         email=email,
         hashed_password=hashed_password,
         verification_code=code,
-        code_expires_at=datetime.utcnow() + timedelta(minutes=10),
+        code_expires_at=_utcnow() + timedelta(minutes=10),
         is_verified=False,
     )
 
@@ -79,9 +88,6 @@ def login_user(db: Session, email: str, password: str) -> dict:
 
 
 def verify_user_email(db: Session, email: str, code: str) -> User:
-    print("SEARCHING:", repr(email.lower()))
-    print("ALL USERS:", db.query(User).all())
-
     user = get_user_by_email(db, email.lower())
     normalized_code = code.strip()
 
@@ -92,13 +98,10 @@ def verify_user_email(db: Session, email: str, code: str) -> User:
         raise HTTPException(status_code=400, detail="User already verified")
 
     if user.verification_code != normalized_code:
-        print("DB CODE:", repr(user.verification_code))
-        print("INPUT CODE:", repr(normalized_code))
-
+        security_logger.warning("Invalid verification code attempt for email=%s", email.lower())
         raise HTTPException(status_code=400, detail="Invalid code")
-    if not user.code_expires_at or user.code_expires_at < datetime.utcnow():
-        print("EXPIRES:", user.code_expires_at)
-        print("NOW:", datetime.utcnow())
+    if not user.code_expires_at or user.code_expires_at < _utcnow():
+        security_logger.warning("Expired verification code attempt for email=%s", email.lower())
         raise HTTPException(status_code=400, detail="Code expired")
 
     user.is_verified = True
@@ -122,7 +125,7 @@ def resend_verification_email(db: Session, email: str) -> dict:
 
     code = generate_verification_code()
     user.verification_code = code
-    user.code_expires_at = datetime.utcnow() + timedelta(minutes=10)
+    user.code_expires_at = _utcnow() + timedelta(minutes=10)
 
     db.commit()
     db.refresh(user)

@@ -9,14 +9,20 @@ import EmptyState from "@/components/ui/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import { api, Alert } from "@/services/api";
 
-const TYPE_MAP: Record<string, { color: string; bg: string; border: string }> = {
-  expiry:    { color: "#f87171", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.20)"  },
-  renewal:   { color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.20)" },
-  overdue:   { color: "#f87171", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.16)"  },
-  deadline:  { color: "#fbbf24", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.16)" },
-  high_risk: { color: "#f87171", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.16)"  },
+const TYPE_MAP: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  expiring_soon:    { color: "#f87171", bg: "rgba(239,68,68,0.10)",  border: "rgba(239,68,68,0.20)",  label: "Expiring Soon"    },
+  renewal_upcoming: { color: "#fbbf24", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.20)", label: "Renewal Upcoming" },
+  due_soon:         { color: "#fbbf24", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.16)", label: "Due Soon"         },
+  overdue:          { color: "#f87171", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.16)",  label: "Overdue"          },
+  high_risk:        { color: "#f87171", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.16)",  label: "High Risk"        },
 };
-const DEFAULT_TYPE = { color: "#818cf8", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.16)" };
+const DEFAULT_TYPE = { color: "#818cf8", bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.16)", label: "Alert" };
+
+function alertTypeLabel(raw: string): string {
+  return TYPE_MAP[raw?.toLowerCase()]?.label
+    ?? raw?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    ?? "Alert";
+}
 
 export default function AlertsPage() {
   const [alerts, setAlerts]   = useState<Alert[]>([]);
@@ -37,11 +43,23 @@ export default function AlertsPage() {
     return () => { active = false; };
   }, []);
 
+  const [markingAll, setMarkingAll] = useState(false);
+
   const unread = alerts.filter((a) => a.status !== "read");
   const read   = alerts.filter((a) => a.status === "read");
 
   function markRead(id: number) {
     api.markAlertRead(id).then(load).catch(() => undefined);
+  }
+
+  async function markAllRead() {
+    if (unread.length === 0 || markingAll) return;
+    setMarkingAll(true);
+    try {
+      await Promise.all(unread.map((a) => api.markAlertRead(a.id)));
+      await load();
+    } catch { /* non-fatal */ }
+    finally { setMarkingAll(false); }
   }
 
   return (
@@ -127,25 +145,48 @@ export default function AlertsPage() {
             </p>
           </div>
 
-          {/* Unread count badge */}
+          {/* Unread count badge + Mark all read */}
           {unread.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "9px 16px",
-                borderRadius: "12px",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                background: "rgba(239,68,68,0.10)",
-                border: "1px solid rgba(239,68,68,0.22)",
-                color: "#f87171",
-                flexShrink: 0,
-              }}
-            >
-              <Bell size={14} />
-              {unread.length} unread
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  padding: "9px 16px",
+                  borderRadius: "12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  background: "rgba(239,68,68,0.10)",
+                  border: "1px solid rgba(239,68,68,0.22)",
+                  color: "#f87171",
+                }}
+              >
+                <Bell size={14} />
+                {unread.length} unread
+              </div>
+              <button
+                onClick={markAllRead}
+                disabled={markingAll}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "9px 16px",
+                  borderRadius: "12px",
+                  fontSize: "0.82rem",
+                  fontWeight: 500,
+                  background: "rgba(99,102,241,0.08)",
+                  border: "1px solid rgba(99,102,241,0.20)",
+                  color: "#818cf8",
+                  cursor: markingAll ? "not-allowed" : "pointer",
+                  opacity: markingAll ? 0.6 : 1,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                <CheckCircle2 size={14} />
+                {markingAll ? "Marking…" : "Mark all read"}
+              </button>
             </div>
           )}
         </div>
@@ -274,7 +315,7 @@ export default function AlertsPage() {
                                 border: `1px solid ${t.border}`,
                               }}
                             >
-                              {alert.alert_type}
+                              {alertTypeLabel(alert.alert_type)}
                             </span>
                           </div>
                           {alert.message && (

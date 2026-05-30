@@ -36,6 +36,14 @@ class Risk(Base):
     suggested_action = Column(Text, nullable=True)
     source_snippet = Column(Text, nullable=True)
 
+    # Per-risk AI-generated detail fields (JSON-serialised list stored as Text
+    # for business_impact and trigger_terms; plain Text for why_this_matters).
+    # NULL for risks created before this column was added — the frontend falls
+    # back to the type-based templates in that case.
+    business_impact  = Column(Text, nullable=True)
+    why_this_matters = Column(Text, nullable=True)
+    trigger_terms    = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

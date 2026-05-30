@@ -14,16 +14,18 @@ import {
   Bell,
   Settings,
   Scale,
+  LayoutGrid,
 } from "lucide-react";
 import { useUser, getInitials } from "@/contexts/UserContext";
 
 const NAV_MAIN = [
-  { href: "/dashboard",   label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/contracts",   label: "Contracts",     icon: FileText        },
-  { href: "/risks",       label: "Risk Insights", icon: ShieldAlert     },
-  { href: "/ask-ai",      label: "Ask AI",        icon: Sparkles        },
-  { href: "/obligations", label: "Obligations",   icon: ClipboardList   },
-  { href: "/analytics",   label: "Analytics",     icon: BarChart2       },
+  { href: "/dashboard",          label: "Dashboard",         icon: LayoutDashboard },
+  { href: "/contracts",          label: "Contracts",         icon: FileText        },
+  { href: "/contract-overview",  label: "Contract Overview", icon: LayoutGrid      },
+  { href: "/risks",              label: "Risk Insights",     icon: ShieldAlert     },
+  { href: "/ask-ai",             label: "Ask AI",            icon: Sparkles        },
+  { href: "/obligations",        label: "Obligations",       icon: ClipboardList   },
+  { href: "/analytics",          label: "Analytics",         icon: BarChart2       },
 ];
 
 const NAV_TOOLS = [
@@ -118,7 +120,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const displayName = user?.full_name ?? "Legal Team";
-  const initials = getInitials(displayName);
+  const initials    = getInitials(displayName);
+  // Show job_title → department → email as the subtitle, never a fake tier label
+  const userSubtitle = user?.job_title ?? user?.department ?? user?.email ?? "Contract Intelligence";
 
   return (
     <aside
@@ -239,7 +243,7 @@ export default function Sidebar() {
             >
               {displayName}
             </p>
-            <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)" }}>Enterprise</p>
+            <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userSubtitle}</p>
           </div>
         </Link>
       </div>

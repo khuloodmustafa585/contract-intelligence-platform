@@ -182,16 +182,7 @@ export default function LoginPage() {
                 }
               />
 
-              {/* Forgot password */}
-              <div className="mt-3 flex justify-end">
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-medium transition-opacity hover:opacity-75"
-                  style={{ color: "#4f6080" }}
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              {/* Forgot password — not yet implemented; removed to avoid 404 during demo */}
             </div>
 
             <div style={{ paddingTop: "2px" }}>

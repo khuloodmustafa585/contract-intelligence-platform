@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     OPENAI_TIMEOUT_SECONDS: int = 30
     AI_MAX_INPUT_CHARS: int = 18000
     AI_MAX_QUESTION_CHARS: int = 1000
-    AI_MAX_OUTPUT_TOKENS: int = 1200
+    AI_MAX_OUTPUT_TOKENS: int = 4000
     UPLOAD_DIR: str = "uploads"
     MAX_FILE_SIZE_MB: int = 10
     QDRANT_URL: Optional[str] = None

@@ -61,12 +61,12 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
 /* ─── Filter option constants ────────────────────────────────────── */
 const STATUS_OPTIONS = [
-  { value: "",           label: "All Statuses" },
-  { value: "analyzed",   label: "Analyzed"     },
-  { value: "processing", label: "Processing"   },
-  { value: "pending",    label: "Pending"      },
-  { value: "uploaded",   label: "Uploaded"     },
-  { value: "failed",     label: "Failed"       },
+  { value: "",                label: "All Statuses"     },
+  { value: "completed",       label: "Completed"        },
+  { value: "processing",      label: "Processing"       },
+  { value: "analysis_pending",label: "Analysis Pending" },
+  { value: "uploaded",        label: "Uploaded"         },
+  { value: "failed",          label: "Failed"           },
 ];
 
 const TYPE_OPTIONS = [
@@ -90,11 +90,10 @@ const SORT_OPTIONS = [
 ];
 
 const CONTRACT_TABS = [
-  { id: "all",      label: "All"          },
-  { id: "recent",   label: "Recent"       },
-  { id: "flagged",  label: "Flagged"      },
-  { id: "review",   label: "Needs Review" },
-  { id: "archived", label: "Archived"     },
+  { id: "all",     label: "All"          },
+  { id: "recent",  label: "Recent"       },
+  { id: "flagged", label: "Flagged"      },
+  { id: "review",  label: "Needs Review" },
 ];
 
 /* ─── Fade animation ─────────────────────────────────────────────── */
@@ -336,9 +335,10 @@ function DashboardHeader({
   loading: boolean;
   alertCount: number;
 }) {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const { theme } = useTheme();
-  const displayName = user?.full_name ?? "Legal Team";
+  const rawName = user?.first_name || user?.full_name?.split(" ")[0] || "Legal Team";
+  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
   const now = new Date();
   const hour = now.getHours();
   const greeting =
@@ -367,6 +367,9 @@ function DashboardHeader({
             style={{
               fontSize: "1.75rem",
               fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
               ...(theme === "dark"
                 ? {
                     background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
@@ -377,7 +380,22 @@ function DashboardHeader({
                 : { color: "var(--th-text-1)" }),
             }}
           >
-            {greeting}, {displayName}
+            {greeting},{" "}
+            {userLoading ? (
+              <span
+                className="skeleton"
+                style={{
+                  display: "inline-block",
+                  width: "110px",
+                  height: "1.75rem",
+                  borderRadius: "8px",
+                  verticalAlign: "middle",
+                  WebkitTextFillColor: "transparent",
+                }}
+              />
+            ) : (
+              displayName
+            )}
           </h1>
           {loading && (
             <div
@@ -463,11 +481,10 @@ function ContractsSection({
   const tabCounts = useMemo(() => {
     const now = Date.now();
     return {
-      all:      uploads.length,
-      recent:   uploads.filter((u) => new Date(u.created_at).getTime() > now - SEVEN_DAYS).length,
-      flagged:  uploads.filter((u) => u.status === "failed").length,
-      review:   uploads.filter((u) => ["pending", "uploaded"].includes(u.status)).length,
-      archived: 0,
+      all:     uploads.length,
+      recent:  uploads.filter((u) => new Date(u.created_at).getTime() > now - SEVEN_DAYS).length,
+      flagged: uploads.filter((u) => u.status === "failed").length,
+      review:  uploads.filter((u) => ["uploaded", "analysis_pending", "indexing", "parsed"].includes(u.status)).length,
     };
   }, [uploads]);
 
@@ -480,9 +497,7 @@ function ContractsSection({
     else if (activeTab === "flagged")
       result = result.filter((u) => u.status === "failed");
     else if (activeTab === "review")
-      result = result.filter((u) => ["pending", "uploaded"].includes(u.status));
-    else if (activeTab === "archived")
-      result = [];
+      result = result.filter((u) => ["uploaded", "analysis_pending", "indexing", "parsed"].includes(u.status));
 
     if (search.trim())
       result = result.filter((u) => u.title.toLowerCase().includes(search.toLowerCase()));
@@ -508,7 +523,15 @@ function ContractsSection({
   const trulyEmpty = !loading && uploads.length === 0;
 
   return (
-    <div style={{ ...CARD, display: "flex", flexDirection: "column", ...style }}>
+    <div
+      style={{
+        ...CARD,
+        display: "flex",
+        flexDirection: "column",
+        alignSelf: "stretch",
+        ...style,
+      }}
+    >
       {/* Toolbar */}
       <div
         style={{
@@ -855,22 +878,44 @@ function ContractsSection({
 }
 
 /* ─── AI Insights ────────────────────────────────────────────────── */
-function AIInsightsCard() {
+function AIInsightsCard({
+  metrics,
+  loading,
+}: {
+  metrics: Metrics | null;
+  loading: boolean;
+}) {
+  const high     = metrics?.high_risk_contracts  ?? 0;
+  const expiring = metrics?.expiring_soon        ?? 0;
+  const overdue  = metrics?.overdue_obligations  ?? 0;
+  const total    = metrics?.total_contracts      ?? 0;
+
   const insights = [
     {
-      type: "risk",
-      badge: "High Risk",
-      text: "NDA clauses contain unilateral IP ownership terms that may conflict with employment agreements.",
+      type:  "risk",
+      badge: "HIGH RISK CLAUSES",
+      text:
+        high === 0
+          ? "No high-risk clauses detected across your current portfolio."
+          : `${high} high-risk clause${high !== 1 ? "s" : ""} require immediate legal review.`,
     },
     {
-      type: "renewal",
-      badge: "Expiring",
-      text: "2 enterprise vendor contracts expire within 30 days. Renewal action required to maintain continuity.",
+      type:  "renewal",
+      badge: "EXPIRING",
+      text:
+        expiring === 0
+          ? "No upcoming contract expirations were detected."
+          : `${expiring} contract${expiring !== 1 ? "s" : ""} will expire within the next 30 days and may require renewal.`,
     },
     {
-      type: "compliance",
-      badge: "Compliance",
-      text: "Missing data processing addendums in 5 vendor contracts. GDPR review recommended.",
+      type:  "compliance",
+      badge: "OBLIGATIONS",
+      text:
+        overdue === 0
+          ? total === 0
+            ? "Upload contracts to begin AI-powered obligation tracking."
+            : "All tracked obligations are on schedule."
+          : `${overdue} overdue obligation${overdue !== 1 ? "s" : ""} require follow-up and owner assignment.`,
     },
   ];
 
@@ -941,7 +986,18 @@ function AIInsightsCard() {
       {/* Insight items */}
       <div style={{ padding: "14px 18px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {insights.map((insight, i) => (
+          {loading
+            ? [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  style={{ padding: "10px 14px", borderRadius: "11px", background: "var(--th-subtle-bg)", border: "1px solid var(--th-tag-border)" }}
+                >
+                  <div className="skeleton h-4 w-16 rounded-full mb-2" />
+                  <div className="skeleton h-3 w-full rounded mb-1" />
+                  <div className="skeleton h-3 w-4/5 rounded" />
+                </div>
+              ))
+            : insights.map((insight, i) => (
             <div
               key={i}
               style={{
@@ -1003,17 +1059,111 @@ function AIInsightsCard() {
 }
 
 /* ─── Risk Distribution ──────────────────────────────────────────── */
+/* ─── Quick Actions ──────────────────────────────────────────────── */
+function QuickActionsCard() {
+  const actions = [
+    {
+      label: "Upload Contract",
+      description: "Add a new document",
+      href: "/upload",
+      icon: Upload,
+      accent: "#6366f1",
+      bg: "rgba(99,102,241,0.09)",
+      border: "rgba(99,102,241,0.22)",
+    },
+    {
+      label: "Risk Report",
+      description: "Review all flagged risks",
+      href: "/risks",
+      icon: ShieldAlert,
+      accent: "#f87171",
+      bg: "rgba(239,68,68,0.07)",
+      border: "rgba(239,68,68,0.18)",
+    },
+    {
+      label: "Obligations",
+      description: "Track deadlines",
+      href: "/obligations",
+      icon: ClipboardList,
+      accent: "#fbbf24",
+      bg: "rgba(245,158,11,0.07)",
+      border: "rgba(245,158,11,0.18)",
+    },
+    {
+      label: "Ask AI",
+      description: "Query contract clauses",
+      href: "/ask-ai",
+      icon: Sparkles,
+      accent: "#a78bfa",
+      bg: "rgba(139,92,246,0.09)",
+      border: "rgba(139,92,246,0.22)",
+    },
+  ];
+
+  return (
+    <div style={CARD}>
+      <CardHeader
+        title="Quick Actions"
+        icon={Activity}
+        iconBg="rgba(99,102,241,0.1)"
+        iconColor="#818cf8"
+      />
+      <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        {actions.map(({ label, description, href, icon: Icon, accent, bg, border }) => (
+          <Link
+            key={label}
+            href={href}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "11px 13px",
+              borderRadius: "12px",
+              background: bg,
+              border: `1px solid ${border}`,
+              textDecoration: "none",
+              transition: "transform 0.15s, box-shadow 0.15s",
+              outline: "none",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = "translateY(-2px)";
+              el.style.boxShadow = `0 4px 16px ${border}`;
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = "translateY(0)";
+              el.style.boxShadow = "none";
+            }}
+          >
+            <div style={{
+              width: "30px", height: "30px", borderRadius: "9px",
+              background: `${accent}18`, border: `1px solid ${accent}30`,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Icon size={14} style={{ color: accent }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--th-text-1)", margin: 0, lineHeight: 1.2 }}>{label}</p>
+              <p style={{ fontSize: "0.65rem", color: "var(--th-text-4)", margin: 0, marginTop: "2px", lineHeight: 1.2 }}>{description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Risk Distribution ──────────────────────────────────────────── */
 function RiskDistributionCard({
-  metrics,
+  riskCounts,
   loading,
 }: {
-  metrics: Metrics | null;
+  riskCounts: { high: number; medium: number; low: number };
   loading: boolean;
 }) {
-  const total  = metrics?.total_contracts    || 0;
-  const high   = metrics?.high_risk_contracts ?? 0;
-  const medium = total > 0 ? Math.max(0, Math.round(total * 0.25)) : 0;
-  const low    = total > 0 ? Math.max(0, total - high - medium)    : 0;
+  const { high, medium, low } = riskCounts;
+  const total = high + medium + low;
 
   const rows = [
     { label: "High",   value: high,   color: "#ef4444", glow: "rgba(239,68,68,0.35)",  track: "rgba(239,68,68,0.07)"  },
@@ -1090,8 +1240,8 @@ function RiskDistributionCard({
         <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)", marginTop: "2px" }}>
           {!loading &&
             (high === 0
-              ? "No high-risk contracts detected"
-              : `${high} contract${high !== 1 ? "s" : ""} flagged for review`)}
+              ? "No high-risk clauses detected"
+              : `${high} high-risk clause${high !== 1 ? "s" : ""} require review`)}
         </p>
       </div>
     </div>
@@ -1110,17 +1260,22 @@ function ActivityTimelineCard({
     string,
     {
       label: string;
+      sublabel: string;
       icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
       bg: string;
       color: string;
     }
   > = {
-    analyzed:   { label: "Analysis completed",  icon: CheckCircle2, bg: "rgba(16,185,129,0.1)",  color: "#34d399" },
-    processing: { label: "Processing contract", icon: Activity,     bg: "rgba(59,130,246,0.1)",  color: "#60a5fa" },
-    uploaded:   { label: "Contract uploaded",   icon: Upload,       bg: "rgba(99,102,241,0.1)",  color: "#818cf8" },
-    failed:     { label: "Processing failed",   icon: AlertCircle,  bg: "rgba(239,68,68,0.1)",   color: "#f87171" },
-    pending:    { label: "Pending review",      icon: Circle,       bg: "rgba(100,116,139,0.08)", color: "var(--th-text-3)" },
-    indexed:    { label: "Contract indexed",    icon: CheckCircle2, bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
+    completed:        { label: "Analysis complete",   sublabel: "Risks, summary & obligations extracted", icon: CheckCircle2, bg: "rgba(16,185,129,0.1)",   color: "#34d399" },
+    analyzed:         { label: "Analysis complete",   sublabel: "Risks, summary & obligations extracted", icon: CheckCircle2, bg: "rgba(16,185,129,0.1)",   color: "#34d399" },
+    analysis_pending: { label: "Analysing clauses",   sublabel: "AI is extracting risks and summaries",   icon: Activity,     bg: "rgba(139,92,246,0.1)",   color: "#a78bfa" },
+    indexing:         { label: "Indexing clauses",    sublabel: "Building vector embeddings for Ask AI",  icon: Activity,     bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
+    parsed:           { label: "Text extracted",      sublabel: "Ready for clause segmentation",          icon: CheckCircle2, bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
+    processing:       { label: "Processing document", sublabel: "Extracting and cleaning text",           icon: Activity,     bg: "rgba(59,130,246,0.1)",   color: "#60a5fa" },
+    ocr_processing:   { label: "Running OCR",         sublabel: "Scanned document text extraction",       icon: Activity,     bg: "rgba(59,130,246,0.1)",   color: "#60a5fa" },
+    uploaded:         { label: "Contract uploaded",   sublabel: "Queued for AI processing",               icon: Upload,       bg: "rgba(99,102,241,0.1)",   color: "#818cf8" },
+    failed:           { label: "Processing failed",   sublabel: "Check file format or retry analysis",    icon: AlertCircle,  bg: "rgba(239,68,68,0.1)",    color: "#f87171" },
+    pending:          { label: "Awaiting processing", sublabel: "Queued for analysis",                    icon: Circle,       bg: "rgba(100,116,139,0.08)", color: "var(--th-text-3)" },
   };
 
   return (
@@ -1135,7 +1290,7 @@ function ActivityTimelineCard({
 
       {loading ? (
         <div style={{ padding: "14px 20px" }}>
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3].map((i) => (
             <div
               key={i}
               style={{
@@ -1163,7 +1318,7 @@ function ActivityTimelineCard({
         />
       ) : (
         <div style={{ padding: "8px 16px" }}>
-          {uploads.map((u, i) => {
+          {uploads.slice(0, 3).map((u, i, arr) => {
             const ev = EVENT[u.status?.toLowerCase()] ?? EVENT.pending;
             const Icon = ev.icon;
             return (
@@ -1177,7 +1332,7 @@ function ActivityTimelineCard({
                   padding: "10px 8px",
                   borderRadius: "10px",
                   borderBottom:
-                    i < uploads.length - 1 ? "1px solid var(--th-row-divider)" : "none",
+                    i < arr.length - 1 ? "1px solid var(--th-row-divider)" : "none",
                   textDecoration: "none",
                   transition: "background 0.12s ease",
                 }}
@@ -1215,8 +1370,11 @@ function ActivityTimelineCard({
                   >
                     {u.title}
                   </p>
-                  <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginTop: "2px" }}>
+                  <p style={{ fontSize: "0.72rem", color: ev.color, marginTop: "2px", fontWeight: 500 }}>
                     {ev.label}
+                  </p>
+                  <p style={{ fontSize: "0.65rem", color: "var(--th-text-4)", marginTop: "1px" }}>
+                    {ev.sublabel}
                   </p>
                 </div>
                 <span style={{ fontSize: "0.71rem", color: "var(--th-text-3)", flexShrink: 0 }}>
@@ -1252,6 +1410,7 @@ function UpcomingObligationsCard({
   ];
 
   return (
+
     <div style={CARD}>
       <CardHeader
         title="Upcoming Obligations"
@@ -1474,11 +1633,11 @@ function StatusChartCard({
 
   const total = uploads.length || 1;
   const bars = [
-    { label: "Analyzed",   value: counts.analyzed   || 0, color: "#10b981" },
-    { label: "Uploaded",   value: counts.uploaded   || 0, color: "#3b82f6" },
-    { label: "Processing", value: counts.processing || 0, color: "#f59e0b" },
-    { label: "Pending",    value: counts.pending    || 0, color: "var(--th-text-3)" },
-    { label: "Failed",     value: counts.failed     || 0, color: "#ef4444" },
+    { label: "Completed",        value: counts.completed        || 0, color: "#10b981" },
+    { label: "Uploaded",         value: counts.uploaded         || 0, color: "#3b82f6" },
+    { label: "Processing",       value: counts.processing       || 0, color: "#f59e0b" },
+    { label: "Analysis Pending", value: counts.analysis_pending || 0, color: "#a78bfa" },
+    { label: "Failed",           value: counts.failed           || 0, color: "#ef4444" },
   ].filter((b) => b.value > 0);
 
   return (
@@ -1566,19 +1725,46 @@ function StatusChartCard({
 
 /* ─── Main Dashboard Page ────────────────────────────────────────── */
 export default function DashboardPage() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(true);
+  const [metrics,    setMetrics]    = useState<Metrics | null>(null);
+  const [contracts,  setContracts]  = useState<Metrics["recent_uploads"]>([]);
+  const [riskCounts, setRiskCounts] = useState({ high: 0, medium: 0, low: 0 });
+  const [error,      setError]      = useState("");
+  const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
-    api
-      .dashboard()
-      .then((data) => setMetrics(data as Metrics))
+    Promise.all([
+      api.dashboard() as Promise<Metrics>,
+      api.contracts() as Promise<{ id: number; title: string; status: string; created_at?: string | null }[]>,
+      api.risks().catch(() => [] as import("@/services/api").Risk[]),
+    ])
+      .then(([dash, list, risks]) => {
+        setMetrics(dash);
+        setContracts(
+          list
+            .sort(
+              (a, b) =>
+                new Date(b.created_at ?? "").getTime() -
+                new Date(a.created_at ?? "").getTime()
+            )
+            .slice(0, 5)
+            .map((c) => ({
+              id: c.id,
+              title: c.title,
+              status: c.status,
+              created_at: c.created_at ?? new Date().toISOString(),
+            }))
+        );
+        setRiskCounts({
+          high:   risks.filter((r) => ["high", "critical"].includes(r.severity?.toLowerCase())).length,
+          medium: risks.filter((r) => ["medium", "moderate"].includes(r.severity?.toLowerCase())).length,
+          low:    risks.filter((r) => r.severity?.toLowerCase() === "low").length,
+        });
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const uploads = metrics?.recent_uploads ?? [];
+  const uploads = contracts;
 
   const kpiCards = [
     {
@@ -1589,11 +1775,11 @@ export default function DashboardPage() {
       subtitle: "All ingested documents",
     },
     {
-      label:    "High Risk",
+      label:    "High Risk Clauses",
       value:    metrics?.high_risk_contracts ?? 0,
       icon:     ShieldAlert,
       accent:   "danger"  as const,
-      subtitle: "Require immediate review",
+      subtitle: "Flagged for immediate review",
     },
     {
       label:    "Expiring Soon",
@@ -1603,11 +1789,11 @@ export default function DashboardPage() {
       subtitle: "Within 30 days",
     },
     {
-      label:    "Pending Review",
+      label:    "Unread Alerts",
       value:    metrics?.unread_alerts       ?? 0,
       icon:     Bell,
       accent:   "cyan"    as const,
-      subtitle: "Awaiting action",
+      subtitle: "Require attention",
     },
   ];
 
@@ -1660,23 +1846,39 @@ export default function DashboardPage() {
         </FadeUp>
 
         {/* Main grid: contracts spans both sidebar rows via gridRow: span 2 */}
-        <FadeUp delay={0.1}>
+      <FadeUp delay={0.1}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr",
+            gap: "20px",
+            alignItems: "start",
+            marginBottom: "20px",
+          }}
+        >
+          <ContractsSection
+            uploads={contracts}
+            loading={loading}
+          />
+
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr",
+              display: "flex",
+              flexDirection: "column",
               gap: "20px",
-              marginBottom: "20px",
             }}
           >
-            {/* Left column: spans both sidebar rows so heights always match */}
-            <div style={{ gridRow: "span 2", display: "flex", flexDirection: "column" }}>
-              <ContractsSection uploads={uploads} loading={loading} style={{ flex: 1 }} />
-            </div>
-            <AIInsightsCard />
-            <RiskDistributionCard metrics={metrics} loading={loading} />
+            <AIInsightsCard metrics={metrics} loading={loading} />
+
+            <QuickActionsCard />
+
+            <RiskDistributionCard
+              riskCounts={riskCounts}
+              loading={loading}
+            />
           </div>
-        </FadeUp>
+        </div>
+      </FadeUp>
 
         {/* Activity row: timeline (left 2fr) + obligations (right 1fr) */}
         <FadeUp delay={0.14}>
@@ -1723,7 +1925,7 @@ export default function DashboardPage() {
               <span
                 key={b}
                 style={{
-                  fontSize: "0.62rem",
+                  fontSize: "0.65rem",
                   color: "var(--th-text-3)",
                   letterSpacing: "0.07em",
                   fontWeight: 500,

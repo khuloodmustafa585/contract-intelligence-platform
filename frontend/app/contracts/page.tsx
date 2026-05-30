@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -23,16 +25,30 @@ import { api, Contract } from "@/services/api";
 
 const PAGE_SIZE = 15;
 
-const STATUS_OPTIONS = ["All", "pending", "processing", "uploaded", "analyzed", "failed"];
+const STATUS_OPTIONS = ["All", "completed", "processing", "uploaded", "analysis_pending", "failed"];
 
 type SortField = "title" | "status" | "created_at";
 type SortDir   = "asc" | "desc";
 
-export default function ContractsPage() {
+/** Returns a health colour and label derived from a contract's processing status. */
+function contractHealth(status: string): { color: string; glow: string; label: string } {
+  const s = status?.toLowerCase() ?? "";
+  if (s === "completed")            return { color: "#10b981", glow: "rgba(16,185,129,0.5)",  label: "Analyzed"    };
+  if (s === "failed")               return { color: "#ef4444", glow: "rgba(239,68,68,0.5)",   label: "Failed"      };
+  if (s === "processing" || s === "ocr_processing" || s === "indexing" || s === "analysis_pending" || s === "parsed")
+                                    return { color: "#f59e0b", glow: "rgba(245,158,11,0.5)",  label: "Processing"  };
+  if (s === "uploaded")             return { color: "#3b82f6", glow: "rgba(59,130,246,0.5)",  label: "Uploaded"    };
+  return                                   { color: "#64748b", glow: "rgba(100,116,139,0.4)", label: "Unknown"     };
+}
+
+function ContractsContent() {
+  const searchParams  = useSearchParams();
+  const initialSearch = searchParams.get("q") ?? "";
+
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
-  const [search, setSearch]       = useState("");
+  const [search, setSearch]       = useState(initialSearch);
   const [statusFilter, setStatus] = useState("All");
   const [page, setPage]           = useState(1);
   const [sortField, setSortField] = useState<SortField>("created_at");
@@ -329,14 +345,18 @@ export default function ContractsPage() {
               title={
                 search || statusFilter !== "All"
                   ? "No contracts match your filters"
-                  : "No contracts yet"
+                  : "Your contract library is empty"
               }
               description={
                 search || statusFilter !== "All"
-                  ? "Try adjusting your search or filters."
-                  : "Upload your first contract to get started."
+                  ? "Try clearing your search or selecting a different status filter."
+                  : "Upload a PDF, DOCX, or scanned image to begin AI-powered clause extraction, risk detection, and obligation tracking."
               }
-              action={{ label: "Upload Contract", href: "/upload" }}
+              action={
+                search || statusFilter !== "All"
+                  ? undefined
+                  : { label: "Upload your first contract", href: "/upload" }
+              }
             />
           </GlassCard>
         ) : (
@@ -409,7 +429,7 @@ export default function ContractsPage() {
               >
                 Status <SortIndicator field="status" />
               </button>
-              <span>Embedding</span>
+              <span>Health</span>
               <button
                 style={{
                   display: "flex",
@@ -529,9 +549,21 @@ export default function ContractsPage() {
                     />
                   </div>
 
-                  {/* Embedding */}
-                  <div>
-                    <StatusBadge status={contract.embedding_status} />
+                  {/* Health indicator */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {(() => {
+                      const h = contractHealth(contract.status);
+                      return (
+                        <>
+                          <span style={{
+                            width: "7px", height: "7px", borderRadius: "50%",
+                            background: h.color, flexShrink: 0,
+                            boxShadow: `0 0 6px ${h.glow}`,
+                          }} />
+                          <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{h.label}</span>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Date */}
@@ -680,5 +712,13 @@ export default function ContractsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function ContractsPage() {
+  return (
+    <Suspense>
+      <ContractsContent />
+    </Suspense>
   );
 }

@@ -203,8 +203,11 @@ export default function AskAIPage() {
   useEffect(() => {
     api.contracts()
       .then((items) => {
-        setContracts(items);
-        if (items[0]) setContractId(String(items[0].id));
+        // Only allow querying contracts that have been fully indexed —
+        // unindexed contracts return low-quality or no answers.
+        const indexed = items.filter((c) => c.embedding_status === "completed");
+        setContracts(indexed);
+        if (indexed[0]) setContractId(String(indexed[0].id));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoadingContracts(false));
@@ -321,7 +324,7 @@ export default function AskAIPage() {
               </div>
             ) : contracts.length === 0 ? (
               <p style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.5 }}>
-                No indexed contracts. Upload a contract first.
+                No analyzed contracts yet. Upload and analyze a contract to enable AI Q&amp;A.
               </p>
             ) : (
               <div style={{ position: "relative" }}>

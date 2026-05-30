@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye, EyeOff, Loader2, AlertCircle, CheckCircle2,
-  User, Mail, Lock,
+  Mail, Lock,
 } from "lucide-react";
 import { registerUser } from "@/services/api";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -33,7 +33,7 @@ function passwordStrength(pw: string): number {
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ full_name: "", email: "", password: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", password: "" });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error,   setError]   = useState("");
@@ -46,6 +46,10 @@ export default function SignUpPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.first_name.trim()) {
+      setError("First name is required.");
+      return;
+    }
     if (form.password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -53,7 +57,12 @@ export default function SignUpPage() {
     setLoading(true);
     setError("");
     try {
-      await registerUser(form);
+      await registerUser({
+        first_name: form.first_name.trim(),
+        last_name:  form.last_name.trim() || undefined,
+        email:      form.email,
+        password:   form.password,
+      });
       setMessage("Account created! Check your email for a 6-digit verification code.");
       setTimeout(() => router.push(`/verify?email=${encodeURIComponent(form.email)}`), 2200);
     } catch (err) {
@@ -197,16 +206,26 @@ export default function SignUpPage() {
 
           {/* Form */}
           <form onSubmit={submit} className="space-y-6">
-            <PremiumInput
-              label="Full Name"
-              type="text"
-              value={form.full_name}
-              onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-              required
-              autoComplete="name"
-              placeholder="Jane Smith"
-              icon={<User size={15} />}
-            />
+            {/* First + Last name row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <PremiumInput
+                label="First Name"
+                type="text"
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                required
+                autoComplete="given-name"
+                placeholder="Jane"
+              />
+              <PremiumInput
+                label="Last Name"
+                type="text"
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                autoComplete="family-name"
+                placeholder="Smith"
+              />
+            </div>
 
             <PremiumInput
               label="Work Email"

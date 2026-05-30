@@ -13,8 +13,10 @@ from app.schemas.contract import (
     ClauseResponse,
     ContractCreate,
     ContractDetailResponse,
+    ContractListResponse,
     ContractResponse,
     ObligationResponse,
+    ObligationStatusUpdate,
     RiskResponse,
     SummaryResponse,
 )
@@ -41,7 +43,7 @@ def create_new_contract(
 ):
     return create_contract(db, contract_data, current_user.id)
 
-@router.get("/", response_model=List[ContractResponse])
+@router.get("/", response_model=List[ContractListResponse])
 def read_contracts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -134,6 +136,42 @@ def search_contract(
         "query": query,
         "results": results
     }
+
+
+@router.patch("/{contract_id}/obligations/{obligation_id}", response_model=ObligationResponse)
+def update_obligation_status(
+    contract_id: int,
+    obligation_id: int,
+    body: ObligationStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    obligation = db.query(Obligation).filter(
+        Obligation.id == obligation_id,
+        Obligation.contract_id == contract_id,
+    ).first()
+    if not obligation:
+        raise HTTPException(status_code=404, detail="Obligation not found")
+    obligation.status = body.status
+    db.commit()
+    db.refresh(obligation)
+    return obligation
+
+
+@router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_contract(
+    contract_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contract = get_contract_by_id(db, contract_id, current_user.id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    db.delete(contract)
+    db.commit()
 
 
 @router.post("/{contract_id}/ask", response_model=AskAIResponse)

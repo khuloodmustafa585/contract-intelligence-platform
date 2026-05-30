@@ -20,6 +20,7 @@ from app.models.contract import Contract
 from app.services.analysis_service import analyze_contract
 from app.services.clause_service import create_clauses
 from app.services.embedding_service import upsert_embeddings
+from app.services.metadata_service import save_contract_metadata
 from app.services.parser_service import extract_text
 
 ALLOWED_MIME_TYPES = {
@@ -101,27 +102,46 @@ def process_contract(contract_id: int):
             return
 
         result = extract_text(contract.file_path, contract.file_type)
+        app_logger.info(
+            "parse complete: contract id=%s raw_len=%s cleaned_len=%s ocr_used=%s method=%s",
+            contract.id,
+            len(result.get("raw_text") or ""),
+            len(result.get("cleaned_text") or ""),
+            result.get("ocr_used"),
+            result.get("parse_method"),
+        )
         contract.extracted_text = result["raw_text"]
         contract.cleaned_text = result["cleaned_text"]
         contract.ocr_used = result["ocr_used"]
         contract.parse_method = result["parse_method"]
         contract.status = CONTRACT_STATUS_PARSED
         db.commit()
+        app_logger.info("parse save committed: contract id=%s", contract.id)
+
+        save_contract_metadata(db, contract, contract.cleaned_text or contract.extracted_text or "")
+        app_logger.info("metadata save committed: contract id=%s", contract.id)
 
         create_clauses(contract.id, contract.cleaned_text or "", db)
         contract.status = CONTRACT_STATUS_INDEXING
         db.commit()
+        app_logger.info("clause save committed: contract id=%s", contract.id)
 
         upsert_embeddings(contract.id, db)
         contract.status = CONTRACT_STATUS_ANALYSIS_PENDING
         db.commit()
+        app_logger.info("indexing save committed: contract id=%s", contract.id)
 
         analyze_contract(db, contract.id)
     except Exception as exc:
         app_logger.exception("Contract processing failed for id=%s", contract_id)
         if contract:
             contract.status = CONTRACT_STATUS_FAILED
-            contract.processing_error = "Processing failed. Please retry or contact support."
+            contract.processing_error = f"Processing failed during parser pipeline: {exc}"
             db.commit()
+            app_logger.info(
+                "parser failure committed: contract id=%s error=%s",
+                contract.id,
+                contract.processing_error,
+            )
     finally:
         db.close()
