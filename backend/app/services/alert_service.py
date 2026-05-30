@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+
 from app.services.email_service import send_email
 from app.models.user import User
 from app.models.contract import Contract
@@ -14,6 +15,61 @@ from app.core.constants import (
     ALERT_TYPE_HIGH_RISK,
     ALERT_STATUS_UNREAD,
 )
+
+
+# ── Email content helpers ──────────────────────────────────────────────────────
+
+_SEVERITY = {
+    ALERT_TYPE_HIGH_RISK:     "CRITICAL",
+    ALERT_TYPE_OVERDUE:       "CRITICAL",
+    ALERT_TYPE_EXPIRING_SOON: "HIGH",
+    ALERT_TYPE_DUE_SOON:      "MEDIUM",
+    "renewal_upcoming":       "MEDIUM",
+}
+
+
+def _build_alert_email(
+    alert_type,
+    alert_title,
+    contract_title,
+    description,
+    trigger_date=None,
+):
+    """Return (subject, body) for a minimal notification-only alert email."""
+    severity = _SEVERITY.get(alert_type, "INFO")
+
+    subject = f"[{severity}] {alert_title} — {contract_title}"
+
+    now_str = datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")
+
+    meta_lines = [
+        f"Contract:  {contract_title}",
+        f"Severity:  {severity.title()}",
+    ]
+    if trigger_date:
+        due_str = trigger_date.strftime("%B %d, %Y")
+        meta_lines.append(f"Due date:  {due_str}")
+    meta_block = "\n".join(meta_lines)
+
+    body = (
+        f"Contract Lens\n"
+        f"\n\n"
+        f"{alert_title}\n"
+        f"\n"
+        f"{meta_block}\n"
+        f"\n"
+        f"{description}\n"
+        f"\n\n"
+        f"Detected on {now_str}\n"
+        f"\n"
+        f"─\n"
+        f"You’re receiving this because you own this contract.\n"
+    )
+
+    return subject, body
+
+
+# ── Alert generation ───────────────────────────────────────────────────────────
 
 def generate_expiring_contract_alerts(db: Session):
     today = date.today()
@@ -47,13 +103,18 @@ def generate_expiring_contract_alerts(db: Session):
             db.add(alert)
 
             if contract.owner and contract.owner.email:
+                exp_str = contract.expiration_date.strftime("%B %d, %Y")
+                subject, body = _build_alert_email(
+                    alert_type=ALERT_TYPE_EXPIRING_SOON,
+                    alert_title="Contract Expiring Soon",
+                    contract_title=contract.title,
+                    description=f"This contract expires on {exp_str}.",
+                    trigger_date=contract.expiration_date,
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject="Contract Expiration Alert",
-                    body=(
-                        f"Your contract '{contract.title}' "
-                        f"is expiring on {contract.expiration_date}."
-                    )
+                    subject=subject,
+                    body=body,
                 )
 
     db.commit()
@@ -108,11 +169,24 @@ def generate_obligation_alerts(db: Session):
             ).first()
 
             if contract and contract.owner and contract.owner.email:
+                if alert_type == ALERT_TYPE_OVERDUE:
+                    email_title = f"Overdue: {obligation.title}"
+                    description = f"The '{obligation.title}' obligation has passed its due date."
+                else:
+                    email_title = f"Due Soon: {obligation.title}"
+                    description = f"The '{obligation.title}' obligation is approaching its due date."
 
+                subject, body = _build_alert_email(
+                    alert_type=alert_type,
+                    alert_title=email_title,
+                    contract_title=contract.title,
+                    description=description,
+                    trigger_date=obligation.due_date,
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject=title,
-                    body=message
+                    subject=subject,
+                    body=body,
                 )
 
     db.commit()
@@ -151,15 +225,16 @@ def generate_high_risk_alerts(db: Session):
             ).first()
 
             if contract and contract.owner and contract.owner.email:
-
+                subject, body = _build_alert_email(
+                    alert_type=ALERT_TYPE_HIGH_RISK,
+                    alert_title=f"{risk.title} Detected",
+                    contract_title=contract.title,
+                    description=f"A {risk.title} clause was identified in this contract.",
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject="High Risk Contract Alert",
-                    body=(
-                        f"A high risk was detected in your contract:\n\n"
-                        f"Contract: {contract.title}\n"
-                        f"Risk: {risk.title}"
-                    )
+                    subject=subject,
+                    body=body,
                 )
 
     db.commit()
@@ -182,18 +257,16 @@ def generate_alerts_for_contract(
     if not contract:
         return created
 
-    # Contract expiration alerts
+    # ── Contract expiration ────────────────────────────────────────────────────
     if contract.expiration_date and (
         today <= contract.expiration_date <= limit_date
     ):
-
         existing = db.query(Alert).filter(
             Alert.contract_id == contract_id,
             Alert.alert_type == ALERT_TYPE_EXPIRING_SOON,
         ).first()
 
         if not existing:
-
             alert = Alert(
                 contract_id=contract_id,
                 alert_type=ALERT_TYPE_EXPIRING_SOON,
@@ -209,13 +282,21 @@ def generate_alerts_for_contract(
             created.append(alert)
 
             if contract.owner and contract.owner.email:
-
+                exp_str = contract.expiration_date.strftime("%B %d, %Y")
+                subject, body = _build_alert_email(
+                    alert_type=ALERT_TYPE_EXPIRING_SOON,
+                    alert_title="Contract Expiring Soon",
+                    contract_title=contract.title,
+                    description=f"This contract expires on {exp_str}.",
+                    trigger_date=contract.expiration_date,
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject="Contract Expiration Alert",
-                    body=alert.message
+                    subject=subject,
+                    body=body,
                 )
 
+    # ── Obligations ────────────────────────────────────────────────────────────
     obligations = db.query(Obligation).filter(
         Obligation.contract_id == contract_id
     ).all()
@@ -242,7 +323,6 @@ def generate_alerts_for_contract(
         ).first()
 
         if not existing:
-
             alert = Alert(
                 contract_id=contract_id,
                 obligation_id=obligation.id,
@@ -259,13 +339,27 @@ def generate_alerts_for_contract(
             created.append(alert)
 
             if contract.owner and contract.owner.email:
+                if alert_type == ALERT_TYPE_OVERDUE:
+                    email_title = f"Overdue: {obligation.title}"
+                    description = f"The '{obligation.title}' obligation has passed its due date."
+                else:
+                    email_title = f"Due Soon: {obligation.title}"
+                    description = f"The '{obligation.title}' obligation is approaching its due date."
 
+                subject, body = _build_alert_email(
+                    alert_type=alert_type,
+                    alert_title=email_title,
+                    contract_title=contract.title,
+                    description=description,
+                    trigger_date=obligation.due_date,
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject=title,
-                    body=alert.message
+                    subject=subject,
+                    body=body,
                 )
 
+    # ── High-risk clauses ──────────────────────────────────────────────────────
     risks = db.query(Risk).filter(
         Risk.contract_id == contract_id,
         Risk.severity == "high"
@@ -279,7 +373,6 @@ def generate_alerts_for_contract(
         ).first()
 
         if not existing:
-
             alert = Alert(
                 contract_id=contract_id,
                 risk_id=risk.id,
@@ -292,11 +385,16 @@ def generate_alerts_for_contract(
             created.append(alert)
 
             if contract.owner and contract.owner.email:
-
+                subject, body = _build_alert_email(
+                    alert_type=ALERT_TYPE_HIGH_RISK,
+                    alert_title=f"{risk.title} Detected",
+                    contract_title=contract.title,
+                    description=f"A {risk.title} clause was identified in this contract.",
+                )
                 send_email(
                     to_email=contract.owner.email,
-                    subject="High Risk Contract Alert",
-                    body=alert.message
+                    subject=subject,
+                    body=body,
                 )
 
     for alert in created:

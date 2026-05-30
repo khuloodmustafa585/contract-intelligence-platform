@@ -20,9 +20,13 @@ _memory_points: list[dict] = []
 # Persistent executor — avoids thread-pool creation overhead on every embedding call
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="embed")
 
-# Chunk constants for upsert — smaller chunks give sharper embeddings
-_CHUNK_SIZE = 400      # chars per chunk
-_CHUNK_OVERLAP = 60    # overlap between consecutive chunks
+# Chunk constants for upsert.
+# Larger size (500) keeps more context per chunk; sentence-boundary detection
+# ensures cuts happen between sentences rather than mid-word/mid-clause.
+_CHUNK_SIZE = 500      # chars per chunk
+_CHUNK_OVERLAP = 80    # overlap to preserve cross-sentence context
+# Sentence-boundary separators tried in order when choosing a split point.
+_SENT_BOUNDARIES = [". ", ".\n", "? ", "! ", ";\n", "\n\n"]
 # Chunk point IDs: clause.id * _CHUNK_ID_STRIDE + chunk_index (supports 4095 chunks/clause)
 _CHUNK_ID_STRIDE = 4096
 
@@ -97,7 +101,7 @@ MAX_CHUNKS = 500
 
 
 def _split_into_chunks(text: str) -> list[str]:
-    """Split long clause text into overlapping chunks for sharper embeddings."""
+    """Split long clause text into overlapping chunks, preferring sentence boundaries."""
     if not text:
         return []
     if len(text) <= _CHUNK_SIZE:
@@ -105,26 +109,34 @@ def _split_into_chunks(text: str) -> list[str]:
 
     chunks: list[str] = []
     start = 0
-    while start < len(text):
-        end = min(start + _CHUNK_SIZE, len(text))
-        chunk = text[start:end]
+    text_len = len(text)
 
-        if chunk.strip():
-            chunks.append(chunk.strip())
+    while start < text_len:
+        end = min(start + _CHUNK_SIZE, text_len)
+
+        # Try to snap to a sentence boundary within the back quarter of the window
+        # so we don't cut mid-sentence and destroy embedding quality.
+        if end < text_len:
+            search_from = start + _CHUNK_SIZE // 2
+            for sep in _SENT_BOUNDARIES:
+                pos = text.rfind(sep, search_from, end)
+                if pos != -1:
+                    end = pos + len(sep)
+                    break
+
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
 
         if len(chunks) >= MAX_CHUNKS:
-            app_logger.warning(
-                "Chunk limit exceeded. Text length=%s",
-                len(text)
-            )
+            app_logger.warning("Chunk limit exceeded. Text length=%s", len(text))
             break
 
         next_start = end - _CHUNK_OVERLAP
-
         if next_start <= start:
             break
-
         start = next_start
+
     return chunks
 
 

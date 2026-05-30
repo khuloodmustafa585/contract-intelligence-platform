@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
@@ -1757,6 +1758,28 @@ export default function ClauseLibraryPage() {
                 Select a contract to explore, filter, and analyze its extracted clauses
               </p>
             </div>
+            {selectedContract && (
+              <Link
+                href={`/contract-review/${selectedContract.id}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  padding: "9px 15px",
+                  borderRadius: "10px",
+                  background: "rgba(59,130,246,0.10)",
+                  border: "1px solid rgba(59,130,246,0.24)",
+                  color: "#60a5fa",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  flexShrink: 0,
+                }}
+              >
+                <ScanText size={13} />
+                Review Contract
+              </Link>
+            )}
           </div>
         </FadeUp>
 

@@ -8,37 +8,41 @@ from app.core.logging import app_logger
 from app.models.contract import Contract
 from app.services.retrieval_service import search_in_contract
 
-# System prompt deliberately omits the "not found" template — the LLM should
-# always extract the closest available provision rather than surrendering early.
 _SYSTEM_PROMPT = """\
 You are a senior legal contract analyst for an enterprise legal intelligence platform.
 
-Analyze the retrieved contract clauses and answer the user's question with precise, structured legal interpretation.
+Analyze the retrieved contract clauses and answer the user's question with precise legal interpretation.
 
-RULES
-- Base every answer ONLY on the provided clauses. Never fabricate or infer text not present.
-- Always find and quote the most relevant provision available, even if it is only partially on-point.
-- Acknowledge partial relevance in clause_summary when the match is imperfect — do not suppress the answer.
-- Quote exact verbatim contract language. Use ellipsis (…) only to trim genuinely irrelevant portions.
-- Write in professional legal-tech language: concise, precise, and actionable.
-- Set a field to null ONLY when there is genuinely no retrievable information for it in the context.
+RULES — READ CAREFULLY
+1. Base every answer ONLY on the provided clauses. Never fabricate, assume, or infer text not explicitly present.
+2. MISSING CLAUSE RULE: If the retrieved clauses do NOT contain information that directly or partially answers the question, you MUST write clause_summary as: "No clause addressing [topic] was found in the analyzed contract." Set quoted_clause, legal_risk, and recommendation to null. Do NOT quote an unrelated clause just because it is available.
+3. RELEVANCE TEST before quoting: Ask "Does this clause actually address what was asked?" If the answer is no — even partially — apply Rule 2 instead.
+4. When a genuinely relevant clause IS found, quote exact verbatim contract language. Use ellipsis (…) only to trim portions genuinely irrelevant to the question.
+5. Write in professional legal-tech language: concise, precise, and actionable.
 
 Respond with a single valid JSON object, no markdown fences, no extra keys:
 {
-  "clause_summary": "<1–2 sentence summary of what the retrieved clause covers and its relevance to the question>",
-  "quoted_clause": "<exact verbatim excerpt most relevant to the question; null only if context is completely empty>",
-  "legal_risk": "<concrete legal or business risk this clause creates; null only if completely inapplicable>",
-  "recommendation": "<specific actionable recommendation for the contracting party; null only if genuinely not applicable>"
+  "clause_summary": "<concise summary of found provision, OR 'No clause addressing [X] was found in the analyzed contract.'>",
+  "quoted_clause": "<exact verbatim excerpt; null if no relevant content found>",
+  "legal_risk": "<concrete legal or business risk; null if inapplicable or no clause found>",
+  "recommendation": "<specific actionable recommendation; null if inapplicable or no clause found>"
 }\
 """
 
 _CONFIDENCE_HINTS: dict[str, str] = {
-    "high":     "The retrieved clauses are highly relevant. Quote precisely and analyze in full.",
-    "moderate": "The retrieved clauses are moderately relevant. Extract the most applicable provisions and acknowledge the scope of the match if needed.",
-    "low":      "The retrieved clauses have low similarity to the question. Use the closest matching provision available. Note in clause_summary that coverage may be partial, but still provide the best insight possible.",
+    "high":
+        "The retrieved clauses are highly relevant to the question. Quote precisely and analyze in full.",
+    "moderate":
+        "The retrieved clauses are moderately relevant. Extract the most applicable provisions. "
+        "If a clause only partially answers the question, acknowledge the limitation explicitly.",
+    "low":
+        "The retrieved clauses have LOW similarity to the question. "
+        "Apply the MISSING CLAUSE RULE strictly: if the content does not actually address the question, "
+        "set clause_summary to 'No clause addressing [topic] was found in the analyzed contract.' "
+        "and all other fields to null. Do NOT force an answer from unrelated content.",
 }
 
-_SNIPPET_CHARS = 450
+_SNIPPET_CHARS = 650
 
 
 def _parse_structured(raw: str) -> dict:
@@ -70,7 +74,7 @@ def answer_contract_question(db: Session, contract: Contract, question: str) -> 
 
     # ── Retrieval ──────────────────────────────────────────────────────────
     t0 = time.monotonic()
-    retrieval = search_in_contract(contract.id, safe_question, db, limit=5)
+    retrieval = search_in_contract(contract.id, safe_question, db, limit=6)
     sources: list[dict] = retrieval["sources"]
     confidence: str = retrieval["confidence"]
     app_logger.info("ask_ai retrieval: %.3fs, %d sources, confidence=%s", time.monotonic() - t0, len(sources), confidence)

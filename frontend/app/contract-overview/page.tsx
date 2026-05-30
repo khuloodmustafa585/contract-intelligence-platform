@@ -24,11 +24,6 @@ import {
   Activity,
   Layers,
   RefreshCw,
-  TrendingUp,
-  Scale,
-  Sparkles,
-  Info,
-  Tag,
   Timer,
   Hash,
 } from "lucide-react";
@@ -227,6 +222,46 @@ function nearestFutureDeadline(obligations: Obligation[]): string | null {
   return future[0]?.due_date ?? null;
 }
 
+function nearestFutureObligationDate(obligations: Obligation[], keywords: string[]): string | null {
+  const future = obligations
+    .filter((ob) => {
+      if (!ob.due_date || isOverdue(ob.due_date)) return false;
+      const src = `${ob.title ?? ""} ${ob.description ?? ""} ${ob.source_snippet ?? ""}`.toLowerCase();
+      return keywords.some((keyword) => src.includes(keyword));
+    })
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+  return future[0]?.due_date ?? null;
+}
+
+function dateMinusDays(dateStr: string | null | undefined, days: number | null | undefined): string | null {
+  if (!dateStr || days == null) return null;
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function dateFromTextNearKeywords(text: string, keywords: string[]): string | null {
+  if (!text) return null;
+  const monthDate =
+    "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},?\\s+\\d{4}";
+  const datePattern = `(${monthDate}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{4}-\\d{2}-\\d{2})`;
+
+  for (const keyword of keywords) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const forward = new RegExp(`${escaped}[\\s\\S]{0,120}?${datePattern}`, "i");
+    const backward = new RegExp(`${datePattern}[\\s\\S]{0,120}?${escaped}`, "i");
+    const match = text.match(forward) ?? text.match(backward);
+    const value = match?.find((part) => part && !part.toLowerCase().includes(keyword.toLowerCase()));
+    if (!value) continue;
+    const normalized = value.replace(/(\d{1,2})\/(\d{1,2})\/(\d{2})$/, "$1/$2/20$3");
+    const parsed = new Date(normalized);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
 const CLIENT_KEYWORDS = ["client", "customer", "buyer", "purchaser", "lessee", "licensee"];
 const PROVIDER_KEYWORDS = ["provider", "vendor", "supplier", "seller", "contractor", "lessor", "licensor", "service provider"];
 
@@ -250,11 +285,28 @@ const _PROVIDER_ROLES = [
   "licensor", "lessor", "service provider", "developer", "consultant",
 ];
 
+const ROLE_ONLY_PARTY = /^(?:client|provider|vendor|customer|buyer|seller|contractor|licensor|licensee|supplier|purchaser|subscriber|consultant|service provider|the company|company|party|parties)$/i;
+
 function _classifyRole(label: string): "client" | "provider" | null {
   const l = label.toLowerCase().trim();
   if (_CLIENT_ROLES.some((r) => l.includes(r))) return "client";
   if (_PROVIDER_ROLES.some((r) => l.includes(r))) return "provider";
   return null;
+}
+
+function cleanPartyName(rawName: string): string | null {
+  const name = rawName
+    .replace(/\s+/g, " ")
+    .replace(/^[\s"'“”‘’]+|[\s"'“”‘’.,;:]+$/g, "")
+    .replace(/\s*\((?:the\s+)?["']?[A-Za-z][A-Za-z ]{1,28}["']?\)\s*$/i, "")
+    .replace(/\s*,?\s*(?:a|an)\s+[A-Za-z ]{3,45}\s+(?:company|corporation|entity|limited liability company)\s*$/i, "")
+    .trim();
+
+  if (name.length < 3 || name.length > 100) return null;
+  if (/^(?:this|the|a|an|each|any|all|such|either|both|said)\b/i.test(name)) return null;
+  if (ROLE_ONLY_PARTY.test(name)) return null;
+  if (!/[A-Za-z]/.test(name)) return null;
+  return name;
 }
 
 /**
@@ -272,12 +324,8 @@ function _extractPartiesFromText(text: string): PartyInfo[] {
   const seen = new Set<string>();
 
   function add(rawName: string, roleLabel: string, confidence: PartyInfo["confidence"]) {
-    const name = rawName.trim().replace(/\s+/g, " ");
-    if (name.length < 3 || name.length > 100) return;
-    // Reject names that start with common non-entity words
-    if (/^(?:this|the|a|an|each|any|all|such|either|both|said)\b/i.test(name)) return;
-    // Reject raw role-only strings (offer nothing over the fallback)
-    if (/^(?:client|provider|vendor|customer|buyer|seller|contractor|licensor|licensee)$/i.test(name)) return;
+    const name = cleanPartyName(rawName);
+    if (!name) return;
     const side = _classifyRole(roleLabel);
     if (!side) return;
     const key = name.toLowerCase();
@@ -304,6 +352,16 @@ function _extractPartiesFromText(text: string): PartyInfo[] {
     if (_classifyRole(m[1])) add(m[2], m[1].trim(), "medium");
   }
 
+  // Pattern 5: Client Name: Company / Provider Name: Company
+  const p5 = /^([A-Za-z ]{3,25})\s+name\s*:\s*([A-Z][A-Za-z0-9 &.,'·\-]+?)(?:[,\n]|$)/gim;
+  for (const m of text.matchAll(p5)) {
+    if (_classifyRole(m[1])) add(m[2], m[1].trim(), "medium");
+  }
+
+  // Pattern 6: Client means Company / Vendor is Company
+  const p6 = /\b(client|customer|provider|vendor|supplier|contractor|consultant|licensor|licensee)\b\s+(?:means|is|shall mean)\s+([A-Z][A-Za-z0-9 &.,'·\-]+?)(?:[.;,\n]|$)/gi;
+  for (const m of text.matchAll(p6)) add(m[2], m[1], "medium");
+
   return results;
 }
 
@@ -315,7 +373,9 @@ function _extractPartiesFromText(text: string): PartyInfo[] {
 function extractPartiesFromContract(
   cleanedText: string | null | undefined,
   extractedText: string | null | undefined,
-  obligations: Obligation[]
+  obligations: Obligation[],
+  clauses: Clause[],
+  risks: Risk[]
 ): { client: PartyInfo[]; provider: PartyInfo[]; other: PartyInfo[] } {
   const client: PartyInfo[] = [];
   const provider: PartyInfo[] = [];
@@ -323,7 +383,12 @@ function extractPartiesFromContract(
 
   // ── Layer 1: contract text (most reliable — actual company names) ──
   const text = (cleanedText || extractedText || "").slice(0, 60_000);
-  const fromText = _extractPartiesFromText(text);
+  const analysisText = [
+    ...clauses.slice(0, 30).map((c) => `${c.heading ?? ""}\n${c.text ?? ""}`),
+    ...risks.slice(0, 30).map((r) => `${r.title ?? ""}\n${r.explanation ?? ""}\n${r.source_snippet ?? ""}`),
+    ...obligations.slice(0, 30).map((ob) => `${ob.title ?? ""}\n${ob.description ?? ""}\n${ob.source_snippet ?? ""}`),
+  ].join("\n").slice(0, 40_000);
+  const fromText = _extractPartiesFromText(`${text}\n${analysisText}`);
 
   fromText.forEach((p) => {
     const side = _classifyRole(p.roleLabel);
@@ -337,7 +402,7 @@ function extractPartiesFromContract(
     const seenObl = new Set<string>();
     obligations.forEach((ob) => {
       if (!ob.owner) return;
-      const name = ob.owner.trim();
+      const name = cleanPartyName(ob.owner);
       if (!name || seenObl.has(name.toLowerCase())) return;
       seenObl.add(name.toLowerCase());
       const lp = name.toLowerCase();
@@ -354,28 +419,67 @@ function extractPartiesFromContract(
   return { client, provider, other };
 }
 
-function deriveClauseCategory(heading: string | null | undefined, text: string): string {
-  const src = ((heading ?? "") + " " + text.slice(0, 200)).toLowerCase();
-  if (/terminat|expir|cancell/.test(src))                                    return "Termination";
+function normalizeClauseCategory(category: string | null | undefined): string {
+  const raw = (category ?? "").trim();
+  if (!raw) return "General";
+  const lc = raw.toLowerCase().replace(/[_-]/g, " ");
+  if (/data protection|data processing|privacy|personal data|gdpr|ccpa/.test(lc)) return "Data Protection";
+  if (/confidential|non disclosure|nda/.test(lc)) return "Confidentiality";
+  if (/liability|indemn/.test(lc)) return "Liability";
+  if (/payment|invoice|fee|pricing|compensation/.test(lc)) return "Payment";
+  if (/renew/.test(lc)) return "Renewal";
+  if (/terminat|expir|cancell/.test(lc)) return "Termination";
+  if (/compliance|regulatory|law|policy|security/.test(lc)) return "Compliance";
+  if (/intellectual|ip|copyright|patent|trademark/.test(lc)) return "Intellectual Property";
+  return raw.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function deriveClauseCategory(...sources: Array<string | null | undefined>): string {
+  const src = sources.join(" ").slice(0, 1200).toLowerCase();
+  if (/data protection|data processing|personal data|privacy|gdpr|ccpa|processor|controller/.test(src)) return "Data Protection";
+  if (/terminat|expir|cancell|non[- ]?renew/.test(src))                      return "Termination";
+  if (/renew|extension|successive term|automatic renewal/.test(src))          return "Renewal";
   if (/confidential|non[- ]?disclosure|proprietary/.test(src))               return "Confidentiality";
-  if (/\bindemnif|\bliabilit/.test(src))                                     return "Liability";
-  if (/\bpayment|\binvoice|\bfee\b|compensat|pric/.test(src))                return "Payment";
+  if (/\bindemnif|\bliabilit|limitation on damages/.test(src))               return "Liability";
+  if (/\bpayment|\binvoice|\bfee\b|compensat|pric|late charge/.test(src))     return "Payment";
+  if (/compliance|regulatory|applicable law|security requirement/.test(src))  return "Compliance";
   if (/governing law|jurisdiction|arbitrat|dispute resol/.test(src))         return "Governing Law";
-  if (/intellectual property|\bpatent\b|\bcopyright\b|trademark/.test(src))  return "IP";
-  if (/force majeure/.test(src))                                              return "Force Majeure";
+  if (/intellectual property|\bpatent\b|\bcopyright\b|trademark|\blicense\b/.test(src)) return "Intellectual Property";
+  if (/force majeure/.test(src))                                             return "Force Majeure";
   if (/\bassign\b|\bsubcontract/.test(src))                                  return "Assignment";
-  if (/\bdefini/.test(src))                                                   return "Definitions";
-  if (/represent|warrant|covenant/.test(src))                                 return "Warranties";
-  if (/\bnotice\b|\bnotif/.test(src))                                         return "Notices";
-  if (/limitation of liability|limitation on damages/.test(src))             return "Limitation";
+  if (/\bdefini/.test(src))                                                  return "Definitions";
+  if (/represent|warrant|covenant/.test(src))                                return "Warranties";
+  if (/\bnotice\b|\bnotif/.test(src))                                        return "Notices";
   return "General";
 }
 
-function getClauseCategories(clauses: Clause[]): Record<string, number> {
+function getClauseCategories(clauses: Clause[], risks: Risk[], obligations: Obligation[]): Record<string, number> {
   const cats: Record<string, number> = {};
+  const risksByClause = new Map<number, Risk[]>();
+  const obligationsByClause = new Map<number, Obligation[]>();
+  risks.forEach((risk) => {
+    if (risk.clause_id == null) return;
+    risksByClause.set(risk.clause_id, [...(risksByClause.get(risk.clause_id) ?? []), risk]);
+  });
+  obligations.forEach((obligation) => {
+    if (obligation.clause_id == null) return;
+    obligationsByClause.set(obligation.clause_id, [
+      ...(obligationsByClause.get(obligation.clause_id) ?? []),
+      obligation,
+    ]);
+  });
+
   clauses.forEach((c) => {
-    const raw = c.category || deriveClauseCategory(c.heading, c.text);
-    const normalized = raw.trim().length > 0 ? raw.trim() : "General";
+    const linkedRisks = risksByClause.get(c.id) ?? [];
+    const linkedObligations = obligationsByClause.get(c.id) ?? [];
+    const derived = deriveClauseCategory(
+      c.category,
+      c.heading,
+      c.text,
+      ...linkedRisks.flatMap((r) => [r.risk_type, r.title, r.explanation, r.source_snippet]),
+      ...linkedObligations.flatMap((ob) => [ob.title, ob.description, ob.source_snippet])
+    );
+    const normalized = normalizeClauseCategory(derived);
     cats[normalized] = (cats[normalized] || 0) + 1;
   });
   return cats;
@@ -401,21 +505,54 @@ function getClauseStyle(category: string): { color: string; bg: string } {
   return match ? match[1] : { color: "#818cf8", bg: "rgba(99,102,241,0.08)" };
 }
 
-function inferContractType(title: string): string {
-  if (!title) return "Not detected";
-  const t = title.toLowerCase();
-  if (t.includes("nda") || t.includes("non-disclosure") || t.includes("confidential")) return "Non-Disclosure Agreement";
-  if (t.includes("service") && t.includes("agreement")) return "Service Agreement";
-  if (t.includes("employment")) return "Employment Agreement";
-  if (t.includes("lease") || t.includes("rental")) return "Lease Agreement";
-  if (t.includes("purchase") || t.includes("sale")) return "Purchase Agreement";
-  if (t.includes("license") || t.includes("licence")) return "License Agreement";
-  if (t.includes("partnership")) return "Partnership Agreement";
-  if (t.includes("consulting")) return "Consulting Agreement";
-  if (t.includes("supply") || t.includes("vendor")) return "Vendor Agreement";
-  if (t.includes("maintenance")) return "Maintenance Agreement";
-  if (t.includes("distribution")) return "Distribution Agreement";
-  return "Not detected";
+function inferContractType(
+  detail: ContractDetail | null,
+  clauses: Clause[],
+  risks: Risk[],
+  obligations: Obligation[]
+): string {
+  if (!detail) return "Not Detected";
+
+  const source = [
+    detail.title,
+    detail.file_name,
+    detail.cleaned_text?.slice(0, 30_000),
+    detail.extracted_text?.slice(0, 30_000),
+    ...clauses.slice(0, 40).flatMap((c) => [c.category, c.heading, c.text?.slice(0, 500)]),
+    ...risks.slice(0, 40).flatMap((r) => [r.risk_type, r.title, r.explanation, r.source_snippet]),
+    ...obligations.slice(0, 40).flatMap((ob) => [ob.title, ob.description, ob.source_snippet]),
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .toLowerCase();
+
+  if (!source.trim()) return "Not Detected";
+  if (/\b(data processing agreement|data processing addendum|dpa\b|processor\b[\s\S]{0,80}\bcontroller\b|controller\b[\s\S]{0,80}\bprocessor\b)\b/.test(source)) {
+    return "Data Processing Agreement";
+  }
+  if (/\b(saas|software as a service|subscription services|cloud service|platform access)\b/.test(source)) {
+    return "SaaS Agreement";
+  }
+  if (/\b(nda|non[- ]?disclosure agreement|confidentiality agreement|receiving party|disclosing party)\b/.test(source)) {
+    return "NDA";
+  }
+  if (/\b(employment agreement|employee|employer|job title|salary|employment term)\b/.test(source)) {
+    return "Employment Agreement";
+  }
+  if (/\b(licensing agreement|license agreement|licence agreement|licensor|licensee|software license|intellectual property license)\b/.test(source)) {
+    return "Licensing Agreement";
+  }
+  if (/\b(consulting agreement|consultant|consulting services|professional services)\b/.test(source)) {
+    return "Consulting Agreement";
+  }
+  if (/\b(vendor agreement|supplier agreement|vendor|supplier|purchase order|supply agreement)\b/.test(source)) {
+    return "Vendor Agreement";
+  }
+  if (/\b(service agreement|services agreement|master services agreement|msa\b|statement of work|services provided)\b/.test(source)) {
+    return "Service Agreement";
+  }
+
+  return "Not Detected";
 }
 
 /* ─── Contract Selector (required selection — no "All" option) ───── */
@@ -808,23 +945,35 @@ export default function ContractOverviewPage() {
 
   /* Load contract detail when selection changes */
   useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
-    setDetailLoading(true);
-    setError("");
-    api
-      .contract(selectedId)
-      .then(setDetail)
-      .catch((e) => setError(e.message))
-      .finally(() => setDetailLoading(false));
+    if (!selectedId) return;
+    let active = true;
+
+    Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setDetailLoading(true);
+        setError("");
+        return api.contract(selectedId);
+      })
+      .then((contractDetail) => {
+        if (active && contractDetail) setDetail(contractDetail);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [selectedId]);
 
   /* ── Derived values ── */
-  const risks = detail?.risks ?? [];
-  const obligations = detail?.obligations ?? [];
-  const clauses = detail?.clauses ?? [];
+  const risks = useMemo(() => detail?.risks ?? [], [detail?.risks]);
+  const obligations = useMemo(() => detail?.obligations ?? [], [detail?.obligations]);
+  const clauses = useMemo(() => detail?.clauses ?? [], [detail?.clauses]);
   const cleanedText = detail?.cleaned_text ?? null;
   const extractedText = detail?.extracted_text ?? null;
 
@@ -850,11 +999,30 @@ export default function ContractOverviewPage() {
   const overdueObs = useMemo(() => obligations.filter((ob) => isOverdue(ob.due_date)), [obligations]);
   const upcomingObs = useMemo(() => obligations.filter((ob) => isUpcoming(ob.due_date)), [obligations]);
   const parties = useMemo(
-    () => extractPartiesFromContract(cleanedText, extractedText, obligations),
-    [cleanedText, extractedText, obligations]
+    () => extractPartiesFromContract(cleanedText, extractedText, obligations, clauses, risks),
+    [cleanedText, extractedText, obligations, clauses, risks]
   );
-  const clauseCategories = useMemo(() => getClauseCategories(clauses), [clauses]);
+  const clauseCategories = useMemo(() => getClauseCategories(clauses, risks, obligations), [clauses, risks, obligations]);
   const nearestDeadlineDate = useMemo(() => nearestFutureDeadline(obligations), [obligations]);
+  const renewalDate = useMemo(() => {
+    const text = [
+      cleanedText,
+      extractedText,
+      ...clauses.map((c) => `${c.heading ?? ""} ${c.text ?? ""}`),
+      ...risks.map((r) => `${r.risk_type ?? ""} ${r.title ?? ""} ${r.explanation ?? ""} ${r.source_snippet ?? ""}`),
+    ].join("\n").slice(0, 80_000);
+    return dateFromTextNearKeywords(text, ["renewal date", "renewal term", "renews on", "automatically renew"]);
+  }, [cleanedText, extractedText, clauses, risks]);
+  const terminationNoticeDate = useMemo(
+    () =>
+      nearestFutureObligationDate(obligations, ["termination notice", "non-renewal", "terminate", "termination", "cancel"]) ??
+      dateMinusDays(detail?.expiration_date, detail?.notice_period_days),
+    [detail?.expiration_date, detail?.notice_period_days, obligations]
+  );
+  const paymentDueDate = useMemo(
+    () => nearestFutureObligationDate(obligations, ["payment", "invoice", "fee", "payable"]),
+    [obligations]
+  );
 
   const obsByOwner = useMemo(() => {
     const groups: Record<string, number> = {};
@@ -871,8 +1039,8 @@ export default function ContractOverviewPage() {
   );
 
   const contractType = useMemo(
-    () => (detail ? inferContractType(detail.title) : "Not detected"),
-    [detail]
+    () => inferContractType(detail, clauses, risks, obligations),
+    [detail, clauses, risks, obligations]
   );
 
   const renewalRisk = useMemo(
@@ -1013,33 +1181,54 @@ export default function ContractOverviewPage() {
               loading={contractsLoading}
             />
             {detail && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.62rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  padding: "4px 11px",
-                  borderRadius: "999px",
-                  background: "rgba(59,130,246,0.1)",
-                  border: "1px solid rgba(59,130,246,0.25)",
-                  color: "#60a5fa",
-                }}
-              >
+              <>
                 <span
                   style={{
-                    width: "5px",
-                    height: "5px",
-                    borderRadius: "50%",
-                    background: "#60a5fa",
-                    display: "inline-block",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    padding: "4px 11px",
+                    borderRadius: "999px",
+                    background: "rgba(59,130,246,0.1)",
+                    border: "1px solid rgba(59,130,246,0.25)",
+                    color: "#60a5fa",
                   }}
-                />
-                Contract Analysis
-              </span>
+                >
+                  <span
+                    style={{
+                      width: "5px",
+                      height: "5px",
+                      borderRadius: "50%",
+                      background: "#60a5fa",
+                      display: "inline-block",
+                    }}
+                  />
+                  Contract Analysis
+                </span>
+                <Link
+                  href={`/contract-review/${detail.id}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    background: "rgba(99,102,241,0.10)",
+                    border: "1px solid rgba(99,102,241,0.22)",
+                    color: "#818cf8",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  <FileSearch size={13} />
+                  Review Contract
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -1185,7 +1374,7 @@ export default function ContractOverviewPage() {
                     }}
                   >
                     <InfoRow label="Contract Name" value={detail.title || "—"} />
-                    <InfoRow label="Contract Type" value={contractType} valueColor={contractType !== "Not detected" ? "#a5b4fc" : undefined} />
+                    <InfoRow label="Contract Type" value={contractType} valueColor={contractType !== "Not Detected" ? "#a5b4fc" : undefined} />
                     <InfoRow
                       label="Current Status"
                       value={<StatusBadge status={detail.status} />}
@@ -1815,8 +2004,9 @@ export default function ContractOverviewPage() {
                         {topRisks.map((risk, i) => {
                           const isLast = i === topRisks.length - 1;
                           return (
-                            <div
+                            <Link
                               key={risk.id}
+                              href={selectedId ? `/risks?contract=${selectedId}` : "/risks"}
                               style={{
                                 display: "flex",
                                 alignItems: "flex-start",
@@ -1826,6 +2016,8 @@ export default function ContractOverviewPage() {
                                   ? "none"
                                   : "1px solid rgba(255,255,255,0.04)",
                                 transition: "background 0.12s ease",
+                                textDecoration: "none",
+                                cursor: "pointer",
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLElement).style.background =
@@ -1883,7 +2075,7 @@ export default function ContractOverviewPage() {
                                   {risk.risk_type?.replace(/_/g, " ") || "—"}
                                 </span>
                               </div>
-                            </div>
+                            </Link>
                           );
                         })}
                         {risks.length > 5 && (
@@ -2208,6 +2400,33 @@ export default function ContractOverviewPage() {
                         accent="#fbbf24"
                         tag={nearestDeadlineDate ? "Upcoming Deadline" : undefined}
                       />
+                      {renewalDate && (
+                        <DateRow
+                          icon={RefreshCw}
+                          label="Renewal Date"
+                          date={renewalDate}
+                          accent="#60a5fa"
+                          tag="Renewal"
+                        />
+                      )}
+                      {terminationNoticeDate && (
+                        <DateRow
+                          icon={AlertCircle}
+                          label="Termination Notice Date"
+                          date={terminationNoticeDate}
+                          accent="#f87171"
+                          tag="Notice Deadline"
+                        />
+                      )}
+                      {paymentDueDate && (
+                        <DateRow
+                          icon={CalendarDays}
+                          label="Payment Due Date"
+                          date={paymentDueDate}
+                          accent="#34d399"
+                          tag="Payment"
+                        />
+                      )}
 
                       {/* Contract Duration */}
                       {detail.effective_date && detail.expiration_date && (

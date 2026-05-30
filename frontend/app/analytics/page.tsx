@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
 
   const kpiCards = [
     { label: "Total Contracts",      value: metrics?.total_contracts ?? 0,      icon: FileText,      accent: "indigo"  as const },
-    { label: "High Risk",            value: metrics?.high_risk_contracts ?? 0,  icon: ShieldAlert,   accent: "danger"  as const },
+    { label: "High Risk Clauses",     value: metrics?.high_risk_contracts ?? 0,  icon: ShieldAlert,   accent: "danger"  as const },
     { label: "Expiring Soon",        value: metrics?.expiring_soon ?? 0,        icon: Timer,         accent: "warning" as const },
     { label: "Unread Alerts",        value: metrics?.unread_alerts ?? 0,        icon: Bell,          accent: "cyan"    as const },
     { label: "Overdue Contracts",    value: metrics?.overdue_contracts ?? 0,    icon: AlertCircle,   accent: "danger"  as const },
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
                 <BarChart
                   data={[
                     { label: "Total Contracts",   value: metrics.total_contracts,    color: "#818cf8", max: maxVal },
-                    { label: "High Risk",         value: metrics.high_risk_contracts, color: "#f87171", max: maxVal },
+                    { label: "High Risk Clauses", value: metrics.high_risk_contracts, color: "#f87171", max: maxVal },
                     { label: "Expiring Soon",     value: metrics.expiring_soon,       color: "#fbbf24", max: maxVal },
                     { label: "Overdue Contracts", value: metrics.overdue_contracts,   color: "#f87171", max: maxVal },
                   ]}
@@ -397,7 +397,7 @@ export default function AnalyticsPage() {
                       ? { icon: "📁", text: "Upload your first contract to begin generating portfolio insights.", accent: "#818cf8" }
                       : metrics.high_risk_contracts === 0
                       ? { icon: "✅", text: `All ${metrics.total_contracts} contracts in your portfolio show no high-severity risk exposure.`, accent: "#34d399" }
-                      : { icon: "⚠️", text: `${metrics.high_risk_contracts} of ${metrics.total_contracts} contract${metrics.total_contracts !== 1 ? "s" : ""} (${Math.round((metrics.high_risk_contracts / metrics.total_contracts) * 100)}%) carry high-severity clauses requiring legal review.`, accent: "#f87171" },
+                      : { icon: "⚠️", text: `${metrics.high_risk_contracts} high-risk clause${metrics.high_risk_contracts !== 1 ? "s" : ""} detected across ${metrics.total_contracts} contract${metrics.total_contracts !== 1 ? "s" : ""} — immediate legal review recommended.`, accent: "#f87171" },
                     metrics.expiring_soon > 0
                       ? { icon: "⏱️", text: `${metrics.expiring_soon} contract${metrics.expiring_soon !== 1 ? "s" : ""} expire within the next 30 days — initiate renewal or renegotiation.`, accent: "#fbbf24" }
                       : null,
@@ -484,11 +484,17 @@ export default function AnalyticsPage() {
                   >
                     {metrics.total_contracts === 0
                       ? "—"
-                      : Math.round(
-                          100 -
-                            (metrics.high_risk_contracts /
-                              Math.max(metrics.total_contracts, 1)) *
-                              100
+                      : Math.max(
+                          0,
+                          Math.min(
+                            100,
+                            Math.round(
+                              100 -
+                                (metrics.high_risk_contracts /
+                                  Math.max(metrics.total_contracts, 1)) *
+                                  100
+                            )
+                          )
                         )}
                     {metrics.total_contracts > 0 && (
                       <span

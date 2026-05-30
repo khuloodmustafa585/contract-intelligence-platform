@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: Optional[str] = None
     SMTP_USE_TLS: bool = True
+    FRONTEND_URL: Optional[str] = None
     
     model_config = SettingsConfigDict(
         env_file=".env",

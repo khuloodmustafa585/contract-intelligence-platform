@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   FileText,
+  FileSearch,
   ArrowUpDown,
   ArrowRight,
   Calendar,
@@ -365,7 +366,7 @@ function ContractsContent() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
+                gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.9fr",
                 padding: "13px 28px",
                 borderBottom: "1px solid rgba(99,102,241,0.10)",
                 color: "#64748b",
@@ -456,22 +457,20 @@ function ContractsContent() {
               >
                 Uploaded <SortIndicator field="created_at" />
               </button>
-              <span />
+              <span>Actions</span>
             </div>
 
             {/* Rows */}
             <div>
               {pageRows.map((contract, i) => (
-                <Link
+                <div
                   key={contract.id}
-                  href={`/contracts/${contract.id}`}
                   className="group"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.5fr",
+                    gridTemplateColumns: "2.5fr 1fr 1fr 0.8fr 0.9fr",
                     alignItems: "center",
                     padding: "16px 28px",
-                    textDecoration: "none",
                     transition: "background 0.15s",
                     borderBottom:
                       i < pageRows.length - 1
@@ -487,7 +486,11 @@ function ContractsContent() {
                   }}
                 >
                   {/* Name */}
-                  <div
+                  <Link
+                    href={`/contracts/${contract.id}`}
+                    style={{ textDecoration: "none", minWidth: 0 }}
+                  >
+                    <div
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -539,7 +542,8 @@ function ContractsContent() {
                         </p>
                       )}
                     </div>
-                  </div>
+                    </div>
+                  </Link>
 
                   {/* Status */}
                   <div>
@@ -586,15 +590,49 @@ function ContractsContent() {
                       : "—"}
                   </div>
 
-                  {/* Arrow */}
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <ArrowRight
-                      size={14}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: "#6366f1" }}
-                    />
+                  {/* Actions */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                    <Link
+                      href={`/contract-review/${contract.id}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "7px 11px",
+                        borderRadius: "9px",
+                        background: "rgba(99,102,241,0.10)",
+                        border: "1px solid rgba(99,102,241,0.22)",
+                        color: "#818cf8",
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <FileSearch size={12} />
+                      Review
+                    </Link>
+                    <Link
+                      href={`/contracts/${contract.id}`}
+                      aria-label={`Open ${contract.title}`}
+                      style={{
+                        display: "inline-flex",
+                        width: "30px",
+                        height: "30px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "9px",
+                        border: "1px solid rgba(99,102,241,0.14)",
+                      }}
+                    >
+                      <ArrowRight
+                        size={14}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: "#6366f1" }}
+                      />
+                    </Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 
