@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.constants import (
+    CONTRACT_STATUS_ANALYSIS_FAILED,
     CONTRACT_STATUS_ANALYSIS_PENDING,
-    CONTRACT_STATUS_FAILED,
     CONTRACT_STATUS_INDEXING,
     CONTRACT_STATUS_PARSED,
     CONTRACT_STATUS_PROCESSING,
@@ -96,9 +96,15 @@ async def handle_upload(file: UploadFile, db: Session, user_id: int, background_
 def process_contract(contract_id: int):
     db = SessionLocal()
     contract = None
+
+    # ── Phase 1: parse, index, embed ─────────────────────────────────────────
+    # Any failure here means the file could not be processed at all.
+    # We delete the contract record and the uploaded file so nothing appears
+    # in Recent Contracts or the Contracts page.
     try:
         contract = db.query(Contract).filter(Contract.id == contract_id).first()
         if not contract or not contract.file_path:
+            db.close()
             return
 
         result = extract_text(contract.file_path, contract.file_type)
@@ -131,17 +137,50 @@ def process_contract(contract_id: int):
         db.commit()
         app_logger.info("indexing save committed: contract id=%s", contract.id)
 
-        analyze_contract(db, contract.id)
-    except Exception as exc:
-        app_logger.exception("Contract processing failed for id=%s", contract_id)
+    except Exception:
+        app_logger.exception("Contract processing/parsing failed for id=%s", contract_id)
         if contract:
-            contract.status = CONTRACT_STATUS_FAILED
-            contract.processing_error = f"Processing failed during parser pipeline: {exc}"
-            db.commit()
-            app_logger.info(
-                "parser failure committed: contract id=%s error=%s",
-                contract.id,
-                contract.processing_error,
-            )
+            saved_path = contract.file_path
+            # Remove the contract record — cascades to all child rows.
+            try:
+                db.rollback()
+                db.delete(contract)
+                db.commit()
+                app_logger.info("failed upload contract deleted: id=%s", contract_id)
+            except Exception:
+                app_logger.exception("could not delete failed contract id=%s", contract_id)
+                db.rollback()
+            # Remove the saved file after the DB is clean.
+            if saved_path:
+                try:
+                    if os.path.exists(saved_path):
+                        os.remove(saved_path)
+                        app_logger.info("cleaned up uploaded file: %s", saved_path)
+                except Exception:
+                    app_logger.warning("could not remove file: %s", saved_path)
+        db.close()
+        return
+
+    # ── Phase 2: OpenAI analysis ──────────────────────────────────────────────
+    # Parsing succeeded, so the contract is valid and must be preserved even if
+    # the AI analysis step fails (e.g. OpenAI is temporarily unavailable).
+    try:
+        analyze_contract(db, contract.id)
+    except Exception:
+        app_logger.exception("Analysis step raised unexpectedly for contract id=%s", contract_id)
+        # analyze_contract manages its own status commits; if it raised before
+        # reaching the final commit the contract stays in analysis_pending.
+        # Roll back any partial transaction and leave the status as-is so the
+        # user can trigger a re-analysis manually.
+        try:
+            db.rollback()
+            # Re-fetch to avoid using a stale ORM object after rollback.
+            stale = db.query(Contract).filter(Contract.id == contract_id).first()
+            if stale and stale.status == CONTRACT_STATUS_ANALYSIS_PENDING:
+                stale.status = CONTRACT_STATUS_ANALYSIS_FAILED
+                stale.processing_error = "AI analysis is currently unavailable. Please try again later."
+                db.commit()
+        except Exception:
+            app_logger.exception("could not update status after unexpected analysis failure id=%s", contract_id)
     finally:
         db.close()

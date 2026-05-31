@@ -225,6 +225,26 @@ def upsert_embeddings(contract_id: int, db: Session):
         raise
 
 
+def delete_embeddings_for_contract(contract_id: int) -> None:
+    """Remove all vector points for a contract from the vector store."""
+    global _memory_points
+    qdrant = _load_qdrant()
+    if qdrant:
+        try:
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
+            qdrant.delete(
+                collection_name=COLLECTION_NAME,
+                points_selector=Filter(
+                    must=[FieldCondition(key="contract_id", match=MatchValue(value=contract_id))]
+                ),
+            )
+            app_logger.info("deleted embeddings for contract %d", contract_id)
+        except Exception as exc:
+            app_logger.warning("could not delete embeddings for contract %d: %s", contract_id, exc)
+    else:
+        _memory_points = [p for p in _memory_points if p["payload"]["contract_id"] != contract_id]
+
+
 def search_similar_clauses(query: str, limit: int = 5, contract_id: int | None = None):
     query_vector = generate_embedding(query)
     qdrant = _load_qdrant()

@@ -99,6 +99,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const payload = await response.json().catch(() => null);
     throw new Error(payload?.detail || "Request failed");
   }
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
@@ -180,9 +181,9 @@ export const api = {
       xhr.onload = () => {
         const payload = JSON.parse(xhr.responseText || "{}");
         if (xhr.status >= 200 && xhr.status < 300) resolve(payload);
-        else reject(new Error(payload.detail || "Upload failed"));
+        else reject(new Error("Failed to upload contract. Please try again."));
       };
-      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.onerror = () => reject(new Error("Failed to upload contract. Please try again."));
       xhr.send(form);
     }),
 };

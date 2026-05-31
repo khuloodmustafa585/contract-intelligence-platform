@@ -36,6 +36,10 @@ export default function UploadPage() {
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [successTitle, setSuccessTitle] = useState("");
+  const [successContractId, setSuccessContractId] = useState<number | null>(null);
+  // True once we have observed the recently uploaded contract in at least one poll.
+  // Used to distinguish "list hasn't loaded yet" from "contract was deleted".
+  const [successContractSeen, setSuccessContractSeen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function loadContracts() {
@@ -49,11 +53,26 @@ export default function UploadPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Detect async processing failure: the recently uploaded contract was present
+  // in the list at least once, then disappeared — meaning the background task
+  // deleted it (OCR failure, corrupt file, empty text, etc.).
+  useEffect(() => {
+    if (!successContractId || uploadState !== "success") return;
+    const inList = contracts.some((c) => c.id === successContractId);
+    if (inList) {
+      setSuccessContractSeen(true);
+    } else if (successContractSeen) {
+      setError("Failed to upload contract. Please try again.");
+      setUploadState("error");
+    }
+  }, [contracts, successContractId, successContractSeen, uploadState]);
+
   async function handleFile(file: File | undefined) {
     if (!file) return;
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
     if (!ACCEPTED_TYPES.includes(ext) && !ACCEPTED_MIME.includes(file.type)) {
-      setError(`Unsupported file type. Accepted: ${ACCEPTED_TYPES.join(", ")}`);
+      setError("Failed to upload contract. Please try again.");
+      setUploadState("error");
       return;
     }
     setSelectedFile(file);
@@ -63,10 +82,11 @@ export default function UploadPage() {
     try {
       const result = await api.upload(file, setProgress);
       setSuccessTitle(result.title);
+      setSuccessContractId(result.id);
       setUploadState("success");
       await loadContracts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Failed to upload contract. Please try again.");
       setUploadState("error");
     }
   }
@@ -84,8 +104,14 @@ export default function UploadPage() {
     setSelectedFile(null);
     setProgress(0);
     setError("");
+    setSuccessContractId(null);
+    setSuccessContractSeen(false);
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  const analysisWarning =
+    successContractId !== null &&
+    contracts.some((c) => c.id === successContractId && c.status === "analysis_failed");
 
   return (
     <AppShell>
@@ -294,9 +320,22 @@ export default function UploadPage() {
                     <p className="text-base font-semibold mb-1" style={{ color: "#34d399" }}>
                       Upload Successful
                     </p>
-                    <p className="text-sm mb-4" style={{ color: "#64748b" }}>
-                      {successTitle} — AI analysis in progress
-                    </p>
+                    {analysisWarning ? (
+                      <div
+                        className="mb-4 rounded-xl px-4 py-3 text-sm text-center w-full max-w-sm"
+                        style={{
+                          background: "rgba(245,158,11,0.08)",
+                          border: "1px solid rgba(245,158,11,0.22)",
+                          color: "#fbbf24",
+                        }}
+                      >
+                        Contract uploaded successfully. Analysis is currently unavailable. Please try again later.
+                      </div>
+                    ) : (
+                      <p className="text-sm mb-4" style={{ color: "#64748b" }}>
+                        {successTitle} — AI analysis in progress
+                      </p>
+                    )}
                     <div className="flex gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); reset(); }}

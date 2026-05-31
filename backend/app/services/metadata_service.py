@@ -165,38 +165,49 @@ def extract_contract_metadata(contract_text: str) -> dict:
         app_logger.info("metadata extraction: OPENAI_API_KEY missing, using fallback")
         return _fallback_metadata(safe_text)
 
+    # Metadata extraction runs inside Phase 1 (parsing pipeline).  Any OpenAI
+    # error here must NOT propagate — it would cause Phase 1 to delete the
+    # contract entirely.  Fall back to regex extraction instead so the contract
+    # is always preserved.
     app_logger.info("metadata extraction: calling OpenAI with %s chars", len(safe_text))
-    client = get_openai_client()
-    response = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        timeout=settings.OPENAI_TIMEOUT_SECONDS,
-        max_tokens=min(settings.AI_MAX_OUTPUT_TOKENS, 500),
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": METADATA_SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": (
-                    "Extract metadata from this contract and return one JSON object only.\n\n"
-                    f"Contract text:\n{safe_text}"
-                ),
-            },
-        ],
-    )
-    raw_content = response.choices[0].message.content or "{}"
-    app_logger.info("metadata extraction: raw OpenAI response=%s", raw_content[:1000])
     try:
-        metadata = _normalize_metadata(_safe_json_loads(raw_content), source="ai")
-        app_logger.info("metadata extraction: normalized metadata=%s", metadata)
-        return metadata
-    except (JSONDecodeError, ValueError, TypeError):
-        app_logger.exception("metadata extraction: OpenAI returned malformed JSON, using fallback")
-        fallback = _fallback_metadata(safe_text)
-        app_logger.info("metadata extraction: fallback after malformed AI JSON=%s", fallback)
-        return fallback
+        client = get_openai_client()
+        response = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            timeout=settings.OPENAI_TIMEOUT_SECONDS,
+            max_tokens=min(settings.AI_MAX_OUTPUT_TOKENS, 500),
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": METADATA_SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "Extract metadata from this contract and return one JSON object only.\n\n"
+                        f"Contract text:\n{safe_text}"
+                    ),
+                },
+            ],
+        )
+        raw_content = response.choices[0].message.content or "{}"
+        app_logger.info("metadata extraction: raw OpenAI response=%s", raw_content[:1000])
+        try:
+            metadata = _normalize_metadata(_safe_json_loads(raw_content), source="ai")
+            app_logger.info("metadata extraction: normalized metadata=%s", metadata)
+            return metadata
+        except (JSONDecodeError, ValueError, TypeError):
+            app_logger.exception("metadata extraction: OpenAI returned malformed JSON, using fallback")
+            fallback = _fallback_metadata(safe_text)
+            app_logger.info("metadata extraction: fallback after malformed AI JSON=%s", fallback)
+            return fallback
+    except Exception as exc:
+        app_logger.warning(
+            "metadata extraction: OpenAI call failed (%s) — using regex fallback so contract is preserved",
+            type(exc).__name__,
+        )
+        return _fallback_metadata(safe_text)
 
 
 def save_contract_metadata(db: Session, contract: Contract, contract_text: str) -> dict:

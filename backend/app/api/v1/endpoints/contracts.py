@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
@@ -29,6 +31,7 @@ from app.models.risk import Risk
 from app.models.summary import Summary
 from app.models.obligation import Obligation
 from app.services.analysis_service import analyze_contract_task
+from app.services.embedding_service import delete_embeddings_for_contract
 from app.services.qa_service import answer_contract_question
 from app.core.rate_limit import rate_limit
 
@@ -170,8 +173,23 @@ def delete_contract(
     contract = get_contract_by_id(db, contract_id, current_user.id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+
+    file_path = contract.file_path
+
+    # Purge vector embeddings before removing the DB record.
+    delete_embeddings_for_contract(contract_id)
+
+    # Delete DB record — cascade removes clauses, risks, summaries, obligations, alerts.
     db.delete(contract)
     db.commit()
+
+    # Remove the uploaded file from disk after the DB transaction succeeds.
+    if file_path:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception:
+            pass
 
 
 @router.post("/{contract_id}/ask", response_model=AskAIResponse)

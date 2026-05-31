@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
@@ -26,7 +27,16 @@ import { api, Contract } from "@/services/api";
 
 const PAGE_SIZE = 15;
 
-const STATUS_OPTIONS = ["All", "completed", "processing", "uploaded", "analysis_pending", "failed"];
+const STATUS_OPTIONS = ["All", "completed", "processing", "uploaded", "analysis_pending", "analysis_failed"];
+
+const STATUS_LABELS: Record<string, string> = {
+  All: "All",
+  completed: "Completed",
+  processing: "Processing",
+  uploaded: "Uploaded",
+  analysis_pending: "Analysis Pending",
+  analysis_failed: "Analysis Unavailable",
+};
 
 type SortField = "title" | "status" | "created_at";
 type SortDir   = "asc" | "desc";
@@ -34,11 +44,11 @@ type SortDir   = "asc" | "desc";
 /** Returns a health colour and label derived from a contract's processing status. */
 function contractHealth(status: string): { color: string; glow: string; label: string } {
   const s = status?.toLowerCase() ?? "";
-  if (s === "completed")            return { color: "#10b981", glow: "rgba(16,185,129,0.5)",  label: "Analyzed"    };
-  if (s === "failed")               return { color: "#ef4444", glow: "rgba(239,68,68,0.5)",   label: "Failed"      };
+  if (s === "completed")            return { color: "#10b981", glow: "rgba(16,185,129,0.5)",  label: "Analyzed"             };
+  if (s === "analysis_failed")      return { color: "#f59e0b", glow: "rgba(245,158,11,0.5)",  label: "Analysis Unavailable" };
   if (s === "processing" || s === "ocr_processing" || s === "indexing" || s === "analysis_pending" || s === "parsed")
-                                    return { color: "#f59e0b", glow: "rgba(245,158,11,0.5)",  label: "Processing"  };
-  if (s === "uploaded")             return { color: "#3b82f6", glow: "rgba(59,130,246,0.5)",  label: "Uploaded"    };
+                                    return { color: "#f59e0b", glow: "rgba(245,158,11,0.5)",  label: "Processing"           };
+  if (s === "uploaded")             return { color: "#3b82f6", glow: "rgba(59,130,246,0.5)",  label: "Uploaded"             };
   return                                   { color: "#64748b", glow: "rgba(100,116,139,0.4)", label: "Unknown"     };
 }
 
@@ -54,6 +64,9 @@ function ContractsContent() {
   const [page, setPage]           = useState(1);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir]     = useState<SortDir>("desc");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading]     = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     api.contracts()
@@ -66,6 +79,22 @@ function ContractsContent() {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortField(field); setSortDir("asc"); }
     setPage(1);
+  }
+
+  async function handleDelete(id: number) {
+    setDeleteLoading(true);
+    try {
+      await api.deleteContract(id);
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+      setConfirmDeleteId(null);
+      setPage(1);
+      setToast({ type: "success", message: "Contract deleted successfully." });
+    } catch {
+      setToast({ type: "error", message: "Failed to delete contract. Please try again." });
+    } finally {
+      setDeleteLoading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -308,7 +337,6 @@ function ContractsContent() {
                   borderRadius: "999px",
                   fontSize: "0.73rem",
                   fontWeight: 500,
-                  textTransform: "capitalize",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                   background:
@@ -330,7 +358,7 @@ function ContractsContent() {
                     (e.currentTarget as HTMLElement).style.color = "#64748b";
                 }}
               >
-                {s}
+                {STATUS_LABELS[s] ?? s}
               </button>
             ))}
           </div>
@@ -631,6 +659,32 @@ function ContractsContent() {
                         style={{ color: "#6366f1" }}
                       />
                     </Link>
+                    <button
+                      onClick={() => setConfirmDeleteId(contract.id)}
+                      aria-label={`Delete ${contract.title}`}
+                      style={{
+                        display: "inline-flex",
+                        width: "30px",
+                        height: "30px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "9px",
+                        border: "1px solid rgba(239,68,68,0.18)",
+                        background: "transparent",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)";
+                        (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.38)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                        (e.currentTarget as HTMLElement).style.borderColor = "rgba(239,68,68,0.18)";
+                      }}
+                    >
+                      <Trash2 size={13} style={{ color: "#ef4444", opacity: 0.75 }} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -749,6 +803,120 @@ function ContractsContent() {
           </GlassCard>
         )}
       </div>
+      {/* ── Delete confirmation modal ─────────────────────────────── */}
+      {confirmDeleteId !== null && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(13,17,34,0.98)",
+              border: "1px solid rgba(99,102,241,0.20)",
+              borderRadius: "18px",
+              padding: "32px",
+              maxWidth: "420px",
+              width: "90%",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "1.05rem",
+                fontWeight: 700,
+                color: "#dae2fd",
+                marginBottom: "10px",
+              }}
+            >
+              Delete Contract
+            </h2>
+            <p
+              style={{
+                fontSize: "0.84rem",
+                color: "#64748b",
+                lineHeight: 1.65,
+                marginBottom: "28px",
+              }}
+            >
+              Are you sure you want to delete this contract? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 20px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(99,102,241,0.20)",
+                  background: "transparent",
+                  color: "#94a3b8",
+                  fontSize: "0.83rem",
+                  fontWeight: 500,
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  opacity: deleteLoading ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDeleteId)}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 20px",
+                  borderRadius: "10px",
+                  background: "#ef4444",
+                  border: "none",
+                  color: "#ffffff",
+                  fontSize: "0.83rem",
+                  fontWeight: 600,
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  opacity: deleteLoading ? 0.65 : 1,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                {deleteLoading ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast notification ────────────────────────────────────── */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "28px",
+            right: "28px",
+            zIndex: 60,
+            padding: "13px 18px",
+            borderRadius: "12px",
+            fontSize: "0.83rem",
+            fontWeight: 500,
+            background:
+              toast.type === "success"
+                ? "rgba(16,185,129,0.12)"
+                : "rgba(239,68,68,0.12)",
+            border: `1px solid ${
+              toast.type === "success"
+                ? "rgba(16,185,129,0.28)"
+                : "rgba(239,68,68,0.28)"
+            }`,
+            color: toast.type === "success" ? "#34d399" : "#f87171",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
     </AppShell>
   );
 }

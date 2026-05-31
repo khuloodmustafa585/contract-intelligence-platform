@@ -20,8 +20,9 @@ const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label:
   processing:       { bg: "rgba(245,158,11,0.12)",  text: "#fcd34d", dot: "#f59e0b", label: "Processing"       },
   ocr_processing:   { bg: "rgba(245,158,11,0.10)",  text: "#fcd34d", dot: "#f59e0b", label: "OCR Processing"   },
   uploaded:         { bg: "rgba(59,130,246,0.12)",  text: "#93c5fd", dot: "#3b82f6", label: "Uploaded"         },
-  pending:          { bg: "rgba(100,116,139,0.12)", text: "#94a3b8", dot: "#64748b", label: "Pending"          },
-  failed:           { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", dot: "#ef4444", label: "Failed"           },
+  pending:          { bg: "rgba(100,116,139,0.12)", text: "#94a3b8", dot: "#64748b", label: "Pending"             },
+  failed:           { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", dot: "#ef4444", label: "Failed"              },
+  analysis_failed:  { bg: "rgba(245,158,11,0.12)",  text: "#fcd34d", dot: "#f59e0b", label: "Analysis Unavailable" },
   overdue:          { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", dot: "#ef4444", label: "Overdue"          },
 };
 
