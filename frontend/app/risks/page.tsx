@@ -1288,9 +1288,14 @@ function DetectedRisksTable({
                                     <Percent size={10} style={{ color: "#475569" }} />
                                     <span style={{ fontSize: "0.67rem", color: "#475569" }}>AI Detection Confidence</span>
                                   </div>
-                                  <span style={{ fontSize: "0.67rem", color: confColor, fontWeight: 600 }}>
-                                    {confLevel}
-                                  </span>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                                    <div style={{ width: "48px", height: "3px", borderRadius: "999px", background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                                      <div style={{ height: "100%", borderRadius: "999px", width: `${confidence}%`, background: confColor, transition: "width 0.6s ease" }} />
+                                    </div>
+                                    <span style={{ fontSize: "0.67rem", color: confColor, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                                      {confidence}% <span style={{ fontWeight: 400, color: "#475569" }}>· {confLevel}</span>
+                                    </span>
+                                  </div>
                                 </div>
 
                                 {/* Clause reference */}
@@ -1553,7 +1558,7 @@ function AIRiskSummaryPanel({
             <Sparkles size={13} style={{ color: "#a78bfa" }} />
           </div>
           <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-            Contract Overview
+            Risk Summary
           </span>
           <div
             style={{

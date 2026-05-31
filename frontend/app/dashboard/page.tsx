@@ -16,8 +16,6 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
-  Circle,
-  BarChart2,
   ChevronDown,
   X,
   Search,
@@ -61,12 +59,12 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
 /* ─── Filter option constants ────────────────────────────────────── */
 const STATUS_OPTIONS = [
-  { value: "",                label: "All Statuses"     },
-  { value: "completed",       label: "Completed"        },
-  { value: "processing",      label: "Processing"       },
-  { value: "analysis_pending",label: "Analysis Pending" },
-  { value: "uploaded",        label: "Uploaded"         },
-  { value: "failed",          label: "Failed"           },
+  { value: "",                 label: "All Statuses"        },
+  { value: "completed",        label: "Completed"           },
+  { value: "processing",       label: "Processing"          },
+  { value: "analysis_pending", label: "Analysis Pending"    },
+  { value: "analysis_failed",  label: "Analysis Unavailable"},
+  { value: "uploaded",         label: "Uploaded"            },
 ];
 
 const TYPE_OPTIONS = [
@@ -90,10 +88,10 @@ const SORT_OPTIONS = [
 ];
 
 const CONTRACT_TABS = [
-  { id: "all",     label: "All"          },
-  { id: "recent",  label: "Recent"       },
-  { id: "flagged", label: "Flagged"      },
-  { id: "review",  label: "Needs Review" },
+  { id: "all",     label: "All"            },
+  { id: "recent",  label: "Recent"         },
+  { id: "flagged", label: "Needs Attention"},
+  { id: "review",  label: "Needs Review"   },
 ];
 
 /* ─── Fade animation ─────────────────────────────────────────────── */
@@ -483,7 +481,7 @@ function ContractsSection({
     return {
       all:     uploads.length,
       recent:  uploads.filter((u) => new Date(u.created_at).getTime() > now - SEVEN_DAYS).length,
-      flagged: uploads.filter((u) => u.status === "failed").length,
+      flagged: uploads.filter((u) => u.status === "analysis_failed").length,
       review:  uploads.filter((u) => ["uploaded", "analysis_pending", "indexing", "parsed"].includes(u.status)).length,
     };
   }, [uploads]);
@@ -495,7 +493,7 @@ function ContractsSection({
     if (activeTab === "recent")
       result = result.filter((u) => new Date(u.created_at).getTime() > now - SEVEN_DAYS);
     else if (activeTab === "flagged")
-      result = result.filter((u) => u.status === "failed");
+      result = result.filter((u) => u.status === "analysis_failed");
     else if (activeTab === "review")
       result = result.filter((u) => ["uploaded", "analysis_pending", "indexing", "parsed"].includes(u.status));
 
@@ -877,188 +875,6 @@ function ContractsSection({
   );
 }
 
-/* ─── AI Insights ────────────────────────────────────────────────── */
-function AIInsightsCard({
-  metrics,
-  loading,
-}: {
-  metrics: Metrics | null;
-  loading: boolean;
-}) {
-  const high     = metrics?.high_risk_contracts  ?? 0;
-  const expiring = metrics?.expiring_soon        ?? 0;
-  const overdue  = metrics?.overdue_obligations  ?? 0;
-  const total    = metrics?.total_contracts      ?? 0;
-
-  const insights = [
-    {
-      type:  "risk",
-      badge: "HIGH RISK CLAUSES",
-      text:
-        high === 0
-          ? "No high-risk clauses detected across your current portfolio."
-          : `${high} high-risk clause${high !== 1 ? "s" : ""} require immediate legal review.`,
-    },
-    {
-      type:  "renewal",
-      badge: "EXPIRING",
-      text:
-        expiring === 0
-          ? "No upcoming contract expirations were detected."
-          : `${expiring} contract${expiring !== 1 ? "s" : ""} will expire within the next 30 days and may require renewal.`,
-    },
-    {
-      type:  "compliance",
-      badge: "OBLIGATIONS",
-      text:
-        overdue === 0
-          ? total === 0
-            ? "Upload contracts to begin AI-powered obligation tracking."
-            : "All tracked obligations are on schedule."
-          : `${overdue} overdue obligation${overdue !== 1 ? "s" : ""} require follow-up and owner assignment.`,
-    },
-  ];
-
-  const badgeStyle = (type: string): React.CSSProperties => {
-    if (type === "risk")
-      return { background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.18)" };
-    if (type === "renewal")
-      return { background: "rgba(245,158,11,0.1)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.18)" };
-    return { background: "rgba(34,211,238,0.1)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.18)" };
-  };
-
-  const rowBg = (type: string): string => {
-    if (type === "risk") return "rgba(239,68,68,0.03)";
-    if (type === "renewal") return "rgba(245,158,11,0.025)";
-    return "var(--th-subtle-bg)";
-  };
-
-  return (
-    <div style={CARD}>
-      {/* Gradient header */}
-      <div
-        style={{
-          padding: "18px 24px 14px",
-          background: "var(--th-insights-header-bg)",
-          borderBottom: "1px solid var(--th-divider)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-          <div
-            style={{
-              width: "28px",
-              height: "28px",
-              borderRadius: "9px",
-              background: "rgba(139,92,246,0.15)",
-              border: "1px solid rgba(139,92,246,0.22)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Sparkles size={13} style={{ color: "#a78bfa" }} />
-          </div>
-          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
-            AI Insights
-          </span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              padding: "3px 10px",
-              borderRadius: "999px",
-              background: "rgba(139,92,246,0.1)",
-              border: "1px solid rgba(139,92,246,0.18)",
-            }}
-          >
-            <div
-              className="animate-pulse"
-              style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#a78bfa" }}
-            />
-            <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: 500 }}>Live</span>
-          </div>
-        </div>
-        <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)" }}>AI-generated contract intelligence</p>
-      </div>
-
-      {/* Insight items */}
-      <div style={{ padding: "14px 18px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {loading
-            ? [1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{ padding: "10px 14px", borderRadius: "11px", background: "var(--th-subtle-bg)", border: "1px solid var(--th-tag-border)" }}
-                >
-                  <div className="skeleton h-4 w-16 rounded-full mb-2" />
-                  <div className="skeleton h-3 w-full rounded mb-1" />
-                  <div className="skeleton h-3 w-4/5 rounded" />
-                </div>
-              ))
-            : insights.map((insight, i) => (
-            <div
-              key={i}
-              style={{
-                padding: "10px 14px",
-                borderRadius: "11px",
-                background: rowBg(insight.type),
-                border: "1px solid var(--th-tag-border)",
-              }}
-            >
-              <span
-                style={{
-                  display: "inline-flex",
-                  fontSize: "0.64rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  padding: "2px 7px",
-                  borderRadius: "999px",
-                  marginBottom: "6px",
-                  ...badgeStyle(insight.type),
-                }}
-              >
-                {insight.badge}
-              </span>
-              <p style={{ fontSize: "0.75rem", color: "var(--th-text-2)", lineHeight: 1.6 }}>
-                {insight.text}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <Link
-          href="/ask-ai"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "7px",
-            marginTop: "10px",
-            padding: "9px",
-            borderRadius: "11px",
-            background: "rgba(139,92,246,0.07)",
-            border: "1px solid rgba(139,92,246,0.17)",
-            color: "#a78bfa",
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            textDecoration: "none",
-            transition: "opacity 0.15s",
-          }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.7")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-        >
-          <Sparkles size={11} />
-          Ask AI about your contracts
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Risk Distribution ──────────────────────────────────────────── */
 /* ─── Quick Actions ──────────────────────────────────────────────── */
 function QuickActionsCard() {
   const actions = [
@@ -1244,152 +1060,6 @@ function RiskDistributionCard({
               : `${high} high-risk clause${high !== 1 ? "s" : ""} require review`)}
         </p>
       </div>
-    </div>
-  );
-}
-
-/* ─── Activity Timeline ──────────────────────────────────────────── */
-function ActivityTimelineCard({
-  uploads,
-  loading,
-}: {
-  uploads: Metrics["recent_uploads"];
-  loading: boolean;
-}) {
-  const EVENT: Record<
-    string,
-    {
-      label: string;
-      sublabel: string;
-      icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
-      bg: string;
-      color: string;
-    }
-  > = {
-    completed:        { label: "Analysis complete",   sublabel: "Risks, summary & obligations extracted", icon: CheckCircle2, bg: "rgba(16,185,129,0.1)",   color: "#34d399" },
-    analyzed:         { label: "Analysis complete",   sublabel: "Risks, summary & obligations extracted", icon: CheckCircle2, bg: "rgba(16,185,129,0.1)",   color: "#34d399" },
-    analysis_pending: { label: "Analysing clauses",   sublabel: "AI is extracting risks and summaries",   icon: Activity,     bg: "rgba(139,92,246,0.1)",   color: "#a78bfa" },
-    indexing:         { label: "Indexing clauses",    sublabel: "Building vector embeddings for Ask AI",  icon: Activity,     bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
-    parsed:           { label: "Text extracted",      sublabel: "Ready for clause segmentation",          icon: CheckCircle2, bg: "rgba(34,211,238,0.1)",   color: "#22d3ee" },
-    processing:       { label: "Processing document", sublabel: "Extracting and cleaning text",           icon: Activity,     bg: "rgba(59,130,246,0.1)",   color: "#60a5fa" },
-    ocr_processing:   { label: "Running OCR",         sublabel: "Scanned document text extraction",       icon: Activity,     bg: "rgba(59,130,246,0.1)",   color: "#60a5fa" },
-    uploaded:         { label: "Contract uploaded",   sublabel: "Queued for AI processing",               icon: Upload,       bg: "rgba(99,102,241,0.1)",   color: "#818cf8" },
-    failed:           { label: "Processing failed",   sublabel: "Check file format or retry analysis",    icon: AlertCircle,  bg: "rgba(239,68,68,0.1)",    color: "#f87171" },
-    pending:          { label: "Awaiting processing", sublabel: "Queued for analysis",                    icon: Circle,       bg: "rgba(100,116,139,0.08)", color: "var(--th-text-3)" },
-  };
-
-  return (
-    <div style={CARD}>
-      <CardHeader
-        title="Contract Activity"
-        icon={Activity}
-        iconBg="rgba(16,185,129,0.1)"
-        iconColor="#34d399"
-        action={{ label: "View contracts", href: "/contracts" }}
-      />
-
-      {loading ? (
-        <div style={{ padding: "14px 20px" }}>
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "10px",
-                marginBottom: "16px",
-              }}
-            >
-              <div className="skeleton h-7 w-7 rounded-xl shrink-0 mt-0.5" />
-              <div style={{ flex: 1 }}>
-                <div className="skeleton h-3 w-48 rounded mb-2" />
-                <div className="skeleton h-2.5 w-24 rounded" />
-              </div>
-              <div className="skeleton h-2.5 w-14 rounded shrink-0" />
-            </div>
-          ))}
-        </div>
-      ) : uploads.length === 0 ? (
-        <PremiumEmptyState
-          icon={Activity}
-          title="No activity yet"
-          message="Activity events appear here as contracts are uploaded and analyzed."
-          compact
-        />
-      ) : (
-        <div style={{ padding: "8px 16px" }}>
-          {uploads.slice(0, 3).map((u, i, arr) => {
-            const ev = EVENT[u.status?.toLowerCase()] ?? EVENT.pending;
-            const Icon = ev.icon;
-            return (
-              <Link
-                key={u.id}
-                href={`/contracts/${u.id}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 8px",
-                  borderRadius: "10px",
-                  borderBottom:
-                    i < arr.length - 1 ? "1px solid var(--th-row-divider)" : "none",
-                  textDecoration: "none",
-                  transition: "background 0.12s ease",
-                }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "var(--th-row-hover)")
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "transparent")
-                }
-              >
-                <div
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    borderRadius: "9px",
-                    background: ev.bg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon size={12} style={{ color: ev.color }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 500,
-                      color: "var(--th-text-1)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {u.title}
-                  </p>
-                  <p style={{ fontSize: "0.72rem", color: ev.color, marginTop: "2px", fontWeight: 500 }}>
-                    {ev.label}
-                  </p>
-                  <p style={{ fontSize: "0.65rem", color: "var(--th-text-4)", marginTop: "1px" }}>
-                    {ev.sublabel}
-                  </p>
-                </div>
-                <span style={{ fontSize: "0.71rem", color: "var(--th-text-3)", flexShrink: 0 }}>
-                  {u.created_at
-                    ? new Date(u.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day:   "numeric",
-                      })
-                    : "—"}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -1589,12 +1259,13 @@ function ComplianceScoreCard({
                 {scoreLabel}
               </p>
               <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginBottom: "14px" }}>
-                Based on portfolio risk profile
+                Risk severity · overdue obligations · contract expiry
               </p>
               {/* Mini breakdown bars */}
               {[
-                { label: "Risk score",    pct: Math.max(0, 100 - Math.min(high * 12, 40)),   color: high > 0 ? "#ef4444" : "#10b981" },
-                { label: "Obligations",   pct: Math.max(0, 100 - Math.min(overdue * 8, 30)), color: overdue > 0 ? "#f59e0b" : "#10b981" },
+                { label: "Risk score",      pct: Math.max(0, 100 - Math.min(high * 12, 40)),     color: high > 0     ? "#ef4444" : "#10b981" },
+                { label: "Obligations",     pct: Math.max(0, 100 - Math.min(overdue * 8, 30)),   color: overdue > 0  ? "#f59e0b" : "#10b981" },
+                { label: "Contract expiry", pct: Math.max(0, 100 - Math.min(expiring * 4, 20)),  color: expiring > 0 ? "#f59e0b" : "#10b981" },
               ].map(({ label, pct, color }) => (
                 <div key={label} style={{ marginBottom: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
@@ -1614,118 +1285,9 @@ function ComplianceScoreCard({
   );
 }
 
-/* ─── Status Chart ───────────────────────────────────────────────── */
-function StatusChartCard({
-  uploads,
-  loading,
-}: {
-  uploads: Metrics["recent_uploads"];
-  loading: boolean;
-}) {
-  const counts = uploads.reduce(
-    (acc, u) => {
-      const key = u.status?.toLowerCase() ?? "pending";
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  const total = uploads.length || 1;
-  const bars = [
-    { label: "Completed",        value: counts.completed        || 0, color: "#10b981" },
-    { label: "Uploaded",         value: counts.uploaded         || 0, color: "#3b82f6" },
-    { label: "Processing",       value: counts.processing       || 0, color: "#f59e0b" },
-    { label: "Analysis Pending", value: counts.analysis_pending || 0, color: "#a78bfa" },
-    { label: "Failed",           value: counts.failed           || 0, color: "#ef4444" },
-  ].filter((b) => b.value > 0);
-
-  return (
-    <div style={CARD}>
-      <CardHeader
-        title="Contracts by Status"
-        icon={BarChart2}
-        iconBg="rgba(59,130,246,0.1)"
-        iconColor="#60a5fa"
-      />
-      <div style={{ padding: "18px 24px" }}>
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "7px" }}>
-                  <div className="skeleton h-3 w-20 rounded" />
-                  <div className="skeleton h-3 w-10 rounded" />
-                </div>
-                <div className="skeleton h-1.5 w-full rounded-full" />
-              </div>
-            ))}
-          </div>
-        ) : bars.length === 0 ? (
-          <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", textAlign: "center", padding: "20px 0" }}>
-            Upload contracts to see status breakdown
-          </p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-            {bars.map(({ label, value, color }) => {
-              const pct = Math.round((value / total) * 100);
-              return (
-                <div key={label}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "7px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                      <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color }} />
-                      <span style={{ fontSize: "0.79rem", color: "var(--th-text-2)" }}>{label}</span>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "0.79rem",
-                        fontWeight: 500,
-                        color: "var(--th-text-1)",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {value}{" "}
-                      <span style={{ color: "var(--th-text-3)", fontWeight: 400 }}>({pct}%)</span>
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      height: "6px",
-                      borderRadius: "999px",
-                      background: "var(--th-subtle-bg)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        borderRadius: "999px",
-                        width: `${Math.max(pct, value > 0 ? 3 : 0)}%`,
-                        background: `linear-gradient(90deg, ${color}bb, ${color})`,
-                        transition: "width 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Dashboard Page ────────────────────────────────────────── */
 export default function DashboardPage() {
-  const [metrics,    setMetrics]    = useState<Metrics | null>(null);
+  const [metrics,      setMetrics]      = useState<Metrics | null>(null);
   const [contracts,  setContracts]  = useState<Metrics["recent_uploads"]>([]);
   const [riskCounts, setRiskCounts] = useState({ high: 0, medium: 0, low: 0 });
   const [error,      setError]      = useState("");
@@ -1763,8 +1325,6 @@ export default function DashboardPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
-
-  const uploads = contracts;
 
   const kpiCards = [
     {
@@ -1868,8 +1428,6 @@ export default function DashboardPage() {
               gap: "20px",
             }}
           >
-            <AIInsightsCard metrics={metrics} loading={loading} />
-
             <QuickActionsCard />
 
             <RiskDistributionCard
@@ -1880,23 +1438,8 @@ export default function DashboardPage() {
         </div>
       </FadeUp>
 
-        {/* Activity row: timeline (left 2fr) + obligations (right 1fr) */}
+        {/* Analytics row: obligations · compliance */}
         <FadeUp delay={0.14}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr",
-              gap: "20px",
-              marginBottom: "20px",
-            }}
-          >
-            <ActivityTimelineCard uploads={uploads} loading={loading} />
-            <UpcomingObligationsCard metrics={metrics} loading={loading} />
-          </div>
-        </FadeUp>
-
-        {/* Analytics row: status chart + compliance score */}
-        <FadeUp delay={0.18}>
           <div
             style={{
               display: "grid",
@@ -1905,7 +1448,7 @@ export default function DashboardPage() {
               marginBottom: "32px",
             }}
           >
-            <StatusChartCard  uploads={uploads} loading={loading} />
+            <UpcomingObligationsCard metrics={metrics} loading={loading} />
             <ComplianceScoreCard metrics={metrics} loading={loading} />
           </div>
         </FadeUp>
