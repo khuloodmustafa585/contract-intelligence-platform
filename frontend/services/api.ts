@@ -160,12 +160,13 @@ export const api = {
     request<Obligation>(`/contracts/${contractId}/obligations/${obligationId}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   analyze: (id: number) => request(`/contracts/${id}/analyze`, { method: "POST" }),
   ask: (id: number | string, question: string) => request<{
-    clause_summary: string;
-    quoted_clause: string | null;
+    answer: string;
+    supporting_clause: string | null;
     legal_risk: string | null;
     recommendation: string | null;
     confidence: string;
     sources: unknown[];
+    message_type: string;
   }>(`/contracts/${id}/ask`, { method: "POST", body: JSON.stringify({ question }) }),
   upload: (file: File, onProgress?: (progress: number) => void) =>
     new Promise<{ id: number; title: string; status: string; message: string }>((resolve, reject) => {

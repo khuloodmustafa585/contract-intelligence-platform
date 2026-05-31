@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     OPENAI_TIMEOUT_SECONDS: int = 30
     AI_MAX_INPUT_CHARS: int = 18000
     AI_MAX_QUESTION_CHARS: int = 1000

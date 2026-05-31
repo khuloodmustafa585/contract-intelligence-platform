@@ -7,33 +7,24 @@ import {
   LayoutGrid,
   FileText,
   Users,
-  ShieldAlert,
-  ClipboardList,
-  BookOpen,
   CalendarDays,
   ChevronDown,
   AlertCircle,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
   Building2,
   UserCheck,
   Calendar,
   Upload,
   FileSearch,
-  Activity,
   Layers,
   RefreshCw,
   Timer,
-  Hash,
+  Brain,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
-import MetricCard from "@/components/ui/MetricCard";
-import RiskBadge from "@/components/ui/RiskBadge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { api, Contract, ContractDetail, Risk, Obligation, Clause } from "@/services/api";
 
-/* ─── Shared card style (matches risks page) ─────────────────────── */
+/* ─── Shared card style ──────────────────────────────────────────── */
 const CARD: React.CSSProperties = {
   background: "rgba(10, 20, 38, 0.65)",
   border: "1px solid rgba(255,255,255,0.06)",
@@ -48,19 +39,17 @@ const DIVIDER: React.CSSProperties = {
   borderBottom: "1px solid rgba(255,255,255,0.05)",
 };
 
-/* ─── Section header inside a card ──────────────────────────────────── */
+/* ─── Section header inside a card ──────────────────────────────── */
 function CardHeader({
   icon: Icon,
   title,
   iconColor,
   iconBg,
-  count,
 }: {
   icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
   title: string;
   iconColor: string;
   iconBg: string;
-  count?: number | string;
 }) {
   return (
     <div
@@ -90,21 +79,6 @@ function CardHeader({
       <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
         {title}
       </span>
-      {count !== undefined && (
-        <span
-          style={{
-            fontSize: "0.72rem",
-            fontWeight: 500,
-            color: "#475569",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: "999px",
-            padding: "2px 10px",
-          }}
-        >
-          {count}
-        </span>
-      )}
     </div>
   );
 }
@@ -189,58 +163,6 @@ function getDaysUntil(dateStr: string | null | undefined): number | null {
   }
 }
 
-function calculateRiskScore(risks: Risk[]): number {
-  if (risks.length === 0) return 0;
-  const weights: Record<string, number> = { critical: 100, high: 75, medium: 45, moderate: 45, low: 15 };
-  const total = risks.reduce((sum, r) => sum + (weights[r.severity?.toLowerCase()] ?? 30), 0);
-  return Math.min(100, Math.round(total / risks.length));
-}
-
-function riskScoreLabel(score: number): { label: string; color: string; bg: string; border: string } {
-  if (score >= 70) return { label: "High Risk", color: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)" };
-  if (score >= 40) return { label: "Moderate Risk", color: "#fbbf24", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.25)" };
-  return { label: "Low Risk", color: "#34d399", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.25)" };
-}
-
-function isOverdue(dueDate: string | null | undefined): boolean {
-  if (!dueDate) return false;
-  return new Date(dueDate) < new Date();
-}
-
-function isUpcoming(dueDate: string | null | undefined): boolean {
-  if (!dueDate) return false;
-  const d = new Date(dueDate);
-  const now = new Date();
-  const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  return d > now && d <= in30;
-}
-
-function nearestFutureDeadline(obligations: Obligation[]): string | null {
-  const future = obligations
-    .filter((ob) => ob.due_date && !isOverdue(ob.due_date))
-    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
-  return future[0]?.due_date ?? null;
-}
-
-function nearestFutureObligationDate(obligations: Obligation[], keywords: string[]): string | null {
-  const future = obligations
-    .filter((ob) => {
-      if (!ob.due_date || isOverdue(ob.due_date)) return false;
-      const src = `${ob.title ?? ""} ${ob.description ?? ""} ${ob.source_snippet ?? ""}`.toLowerCase();
-      return keywords.some((keyword) => src.includes(keyword));
-    })
-    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
-  return future[0]?.due_date ?? null;
-}
-
-function dateMinusDays(dateStr: string | null | undefined, days: number | null | undefined): string | null {
-  if (!dateStr || days == null) return null;
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-}
-
 function dateFromTextNearKeywords(text: string, keywords: string[]): string | null {
   if (!text) return null;
   const monthDate =
@@ -258,24 +180,19 @@ function dateFromTextNearKeywords(text: string, keywords: string[]): string | nu
     const parsed = new Date(normalized);
     if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
   }
-
   return null;
 }
 
 const CLIENT_KEYWORDS = ["client", "customer", "buyer", "purchaser", "lessee", "licensee"];
 const PROVIDER_KEYWORDS = ["provider", "vendor", "supplier", "seller", "contractor", "lessor", "licensor", "service provider"];
 
-/* ─── Party extraction from contract text ──────────────────────────
- * PartyInfo carries the actual company name (extracted from text) alongside
- * the role label found in the contract and a confidence level.
- * ────────────────────────────────────────────────────────────────── */
+/* ─── Party extraction ──────────────────────────────────────────── */
 type PartyInfo = {
   name: string;
   roleLabel: string;
   confidence: "high" | "medium" | "low";
 };
 
-/* Sets used ONLY inside text-extraction logic (not for obligation counts). */
 const _CLIENT_ROLES = [
   "client", "customer", "buyer", "purchaser", "subscriber",
   "licensee", "lessee", "end user",
@@ -297,7 +214,7 @@ function _classifyRole(label: string): "client" | "provider" | null {
 function cleanPartyName(rawName: string): string | null {
   const name = rawName
     .replace(/\s+/g, " ")
-    .replace(/^[\s"'“”‘’]+|[\s"'“”‘’.,;:]+$/g, "")
+    .replace(/^[\s"'""'']+|[\s"'""''.,;:]+$/g, "")
     .replace(/\s*\((?:the\s+)?["']?[A-Za-z][A-Za-z ]{1,28}["']?\)\s*$/i, "")
     .replace(/\s*,?\s*(?:a|an)\s+[A-Za-z ]{3,45}\s+(?:company|corporation|entity|limited liability company)\s*$/i, "")
     .trim();
@@ -310,12 +227,14 @@ function cleanPartyName(rawName: string): string | null {
 }
 
 /**
- * Extract actual party names from contract text using four progressive patterns.
+ * Extract actual party names from contract text using six progressive patterns.
  *
- * Pattern 1 (high):   CompanyName ("Role") / CompanyName (the "Role")
- * Pattern 2 (high):   CompanyName, hereinafter referred to as "Role"
- * Pattern 3 (high):   CompanyName (hereinafter "Role") / (hereinafter the "Role")
- * Pattern 4 (medium): Role: CompanyName  — table / schedule format
+ * Pattern 1 (high): CompanyName ("Role") / CompanyName (the "Role")
+ * Pattern 2 (high): CompanyName, hereinafter referred to as "Role"
+ * Pattern 3 (high): CompanyName (hereinafter "Role") / (hereinafter the "Role")
+ * Pattern 4 (medium): Role: CompanyName — table / schedule format
+ * Pattern 5 (medium): Client Name: Company / Provider Name: Company
+ * Pattern 6 (medium): Client means Company / Vendor is Company
  */
 function _extractPartiesFromText(text: string): PartyInfo[] {
   if (!text || text.length < 20) return [];
@@ -334,42 +253,31 @@ function _extractPartiesFromText(text: string): PartyInfo[] {
     results.push({ name, roleLabel: roleLabel.trim(), confidence });
   }
 
-  // Pattern 1: Name ("Role") or Name (the "Role") — most common in commercial contracts
   const p1 = /([A-Z][A-Za-z0-9 &.,'·\-]*?)\s*\(\s*(?:the\s+)?["']([A-Za-z][A-Za-z ]{1,28})["']\s*\)/g;
   for (const m of text.matchAll(p1)) add(m[1], m[2], "high");
 
-  // Pattern 2: Name, hereinafter referred to as "Role"
   const p2 = /([A-Z][A-Za-z0-9 &.,'·\-]+?)\s*,\s*hereinafter\s+(?:referred\s+to\s+as|called|known\s+as)\s+["']([A-Za-z][A-Za-z ]{1,28})["']/gi;
   for (const m of text.matchAll(p2)) add(m[1], m[2], "high");
 
-  // Pattern 3: Name (hereinafter "Role") or (hereinafter the "Role")
   const p3 = /([A-Z][A-Za-z0-9 &.,'·\-]+?)\s*\(\s*hereinafter\s+(?:the\s+)?["']([A-Za-z][A-Za-z ]{1,28})["']\s*\)/gi;
   for (const m of text.matchAll(p3)) add(m[1], m[2], "high");
 
-  // Pattern 4: Role: CompanyName  (party schedule / table format, start of line)
   const p4 = /^([A-Za-z ]{3,25})\s*:\s*([A-Z][A-Za-z0-9 &.,'·\-]+?)(?:[,\n]|$)/gm;
   for (const m of text.matchAll(p4)) {
     if (_classifyRole(m[1])) add(m[2], m[1].trim(), "medium");
   }
 
-  // Pattern 5: Client Name: Company / Provider Name: Company
   const p5 = /^([A-Za-z ]{3,25})\s+name\s*:\s*([A-Z][A-Za-z0-9 &.,'·\-]+?)(?:[,\n]|$)/gim;
   for (const m of text.matchAll(p5)) {
     if (_classifyRole(m[1])) add(m[2], m[1].trim(), "medium");
   }
 
-  // Pattern 6: Client means Company / Vendor is Company
   const p6 = /\b(client|customer|provider|vendor|supplier|contractor|consultant|licensor|licensee)\b\s+(?:means|is|shall mean)\s+([A-Z][A-Za-z0-9 &.,'·\-]+?)(?:[.;,\n]|$)/gi;
   for (const m of text.matchAll(p6)) add(m[2], m[1], "medium");
 
   return results;
 }
 
-/**
- * Primary party detection: parse actual company names from contract text.
- * Falls back to obligation owner labels when the text extraction yields nothing
- * (e.g., contract is not yet analyzed or text is unavailable).
- */
 function extractPartiesFromContract(
   cleanedText: string | null | undefined,
   extractedText: string | null | undefined,
@@ -381,7 +289,6 @@ function extractPartiesFromContract(
   const provider: PartyInfo[] = [];
   const other: PartyInfo[] = [];
 
-  // ── Layer 1: contract text (most reliable — actual company names) ──
   const text = (cleanedText || extractedText || "").slice(0, 60_000);
   const analysisText = [
     ...clauses.slice(0, 30).map((c) => `${c.heading ?? ""}\n${c.text ?? ""}`),
@@ -396,8 +303,7 @@ function extractPartiesFromContract(
     else if (side === "provider") provider.push(p);
   });
 
-  // ── Layer 2: obligation owners (fallback — used only when text extraction
-  //            finds nothing, which happens when a contract hasn't been analyzed) ──
+  // Fallback: if text extraction found nothing, infer from obligation owners
   if (client.length === 0 && provider.length === 0) {
     const seenObl = new Set<string>();
     obligations.forEach((ob) => {
@@ -417,92 +323,6 @@ function extractPartiesFromContract(
   }
 
   return { client, provider, other };
-}
-
-function normalizeClauseCategory(category: string | null | undefined): string {
-  const raw = (category ?? "").trim();
-  if (!raw) return "General";
-  const lc = raw.toLowerCase().replace(/[_-]/g, " ");
-  if (/data protection|data processing|privacy|personal data|gdpr|ccpa/.test(lc)) return "Data Protection";
-  if (/confidential|non disclosure|nda/.test(lc)) return "Confidentiality";
-  if (/liability|indemn/.test(lc)) return "Liability";
-  if (/payment|invoice|fee|pricing|compensation/.test(lc)) return "Payment";
-  if (/renew/.test(lc)) return "Renewal";
-  if (/terminat|expir|cancell/.test(lc)) return "Termination";
-  if (/compliance|regulatory|law|policy|security/.test(lc)) return "Compliance";
-  if (/intellectual|ip|copyright|patent|trademark/.test(lc)) return "Intellectual Property";
-  return raw.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function deriveClauseCategory(...sources: Array<string | null | undefined>): string {
-  const src = sources.join(" ").slice(0, 1200).toLowerCase();
-  if (/data protection|data processing|personal data|privacy|gdpr|ccpa|processor|controller/.test(src)) return "Data Protection";
-  if (/terminat|expir|cancell|non[- ]?renew/.test(src))                      return "Termination";
-  if (/renew|extension|successive term|automatic renewal/.test(src))          return "Renewal";
-  if (/confidential|non[- ]?disclosure|proprietary/.test(src))               return "Confidentiality";
-  if (/\bindemnif|\bliabilit|limitation on damages/.test(src))               return "Liability";
-  if (/\bpayment|\binvoice|\bfee\b|compensat|pric|late charge/.test(src))     return "Payment";
-  if (/compliance|regulatory|applicable law|security requirement/.test(src))  return "Compliance";
-  if (/governing law|jurisdiction|arbitrat|dispute resol/.test(src))         return "Governing Law";
-  if (/intellectual property|\bpatent\b|\bcopyright\b|trademark|\blicense\b/.test(src)) return "Intellectual Property";
-  if (/force majeure/.test(src))                                             return "Force Majeure";
-  if (/\bassign\b|\bsubcontract/.test(src))                                  return "Assignment";
-  if (/\bdefini/.test(src))                                                  return "Definitions";
-  if (/represent|warrant|covenant/.test(src))                                return "Warranties";
-  if (/\bnotice\b|\bnotif/.test(src))                                        return "Notices";
-  return "General";
-}
-
-function getClauseCategories(clauses: Clause[], risks: Risk[], obligations: Obligation[]): Record<string, number> {
-  const cats: Record<string, number> = {};
-  const risksByClause = new Map<number, Risk[]>();
-  const obligationsByClause = new Map<number, Obligation[]>();
-  risks.forEach((risk) => {
-    if (risk.clause_id == null) return;
-    risksByClause.set(risk.clause_id, [...(risksByClause.get(risk.clause_id) ?? []), risk]);
-  });
-  obligations.forEach((obligation) => {
-    if (obligation.clause_id == null) return;
-    obligationsByClause.set(obligation.clause_id, [
-      ...(obligationsByClause.get(obligation.clause_id) ?? []),
-      obligation,
-    ]);
-  });
-
-  clauses.forEach((c) => {
-    const linkedRisks = risksByClause.get(c.id) ?? [];
-    const linkedObligations = obligationsByClause.get(c.id) ?? [];
-    const derived = deriveClauseCategory(
-      c.category,
-      c.heading,
-      c.text,
-      ...linkedRisks.flatMap((r) => [r.risk_type, r.title, r.explanation, r.source_snippet]),
-      ...linkedObligations.flatMap((ob) => [ob.title, ob.description, ob.source_snippet])
-    );
-    const normalized = normalizeClauseCategory(derived);
-    cats[normalized] = (cats[normalized] || 0) + 1;
-  });
-  return cats;
-}
-
-const CLAUSE_STYLE_MAP: Record<string, { color: string; bg: string }> = {
-  liability:             { color: "#f87171", bg: "rgba(239,68,68,0.10)" },
-  confidentiality:       { color: "#a78bfa", bg: "rgba(139,92,246,0.10)" },
-  termination:           { color: "#fbbf24", bg: "rgba(245,158,11,0.10)" },
-  payment:               { color: "#34d399", bg: "rgba(16,185,129,0.10)" },
-  renewal:               { color: "#60a5fa", bg: "rgba(59,130,246,0.10)" },
-  compliance:            { color: "#fb923c", bg: "rgba(249,115,22,0.10)" },
-  data:                  { color: "#22d3ee", bg: "rgba(34,211,238,0.10)" },
-  intellectual:          { color: "#e879f9", bg: "rgba(232,121,249,0.10)" },
-  indemnification:       { color: "#f87171", bg: "rgba(239,68,68,0.08)" },
-  dispute:               { color: "#94a3b8", bg: "rgba(148,163,184,0.10)" },
-  general:               { color: "#818cf8", bg: "rgba(99,102,241,0.10)" },
-};
-
-function getClauseStyle(category: string): { color: string; bg: string } {
-  const lc = category.toLowerCase();
-  const match = Object.entries(CLAUSE_STYLE_MAP).find(([k]) => lc.includes(k));
-  return match ? match[1] : { color: "#818cf8", bg: "rgba(99,102,241,0.08)" };
 }
 
 function inferContractType(
@@ -527,35 +347,18 @@ function inferContractType(
     .toLowerCase();
 
   if (!source.trim()) return "Not Detected";
-  if (/\b(data processing agreement|data processing addendum|dpa\b|processor\b[\s\S]{0,80}\bcontroller\b|controller\b[\s\S]{0,80}\bprocessor\b)\b/.test(source)) {
-    return "Data Processing Agreement";
-  }
-  if (/\b(saas|software as a service|subscription services|cloud service|platform access)\b/.test(source)) {
-    return "SaaS Agreement";
-  }
-  if (/\b(nda|non[- ]?disclosure agreement|confidentiality agreement|receiving party|disclosing party)\b/.test(source)) {
-    return "NDA";
-  }
-  if (/\b(employment agreement|employee|employer|job title|salary|employment term)\b/.test(source)) {
-    return "Employment Agreement";
-  }
-  if (/\b(licensing agreement|license agreement|licence agreement|licensor|licensee|software license|intellectual property license)\b/.test(source)) {
-    return "Licensing Agreement";
-  }
-  if (/\b(consulting agreement|consultant|consulting services|professional services)\b/.test(source)) {
-    return "Consulting Agreement";
-  }
-  if (/\b(vendor agreement|supplier agreement|vendor|supplier|purchase order|supply agreement)\b/.test(source)) {
-    return "Vendor Agreement";
-  }
-  if (/\b(service agreement|services agreement|master services agreement|msa\b|statement of work|services provided)\b/.test(source)) {
-    return "Service Agreement";
-  }
-
+  if (/\b(data processing agreement|data processing addendum|dpa\b|processor\b[\s\S]{0,80}\bcontroller\b|controller\b[\s\S]{0,80}\bprocessor\b)\b/.test(source)) return "Data Processing Agreement";
+  if (/\b(saas|software as a service|subscription services|cloud service|platform access)\b/.test(source)) return "SaaS Agreement";
+  if (/\b(nda|non[- ]?disclosure agreement|confidentiality agreement|receiving party|disclosing party)\b/.test(source)) return "NDA";
+  if (/\b(employment agreement|employee|employer|job title|salary|employment term)\b/.test(source)) return "Employment Agreement";
+  if (/\b(licensing agreement|license agreement|licence agreement|licensor|licensee|software license|intellectual property license)\b/.test(source)) return "Licensing Agreement";
+  if (/\b(consulting agreement|consultant|consulting services|professional services)\b/.test(source)) return "Consulting Agreement";
+  if (/\b(vendor agreement|supplier agreement|vendor|supplier|purchase order|supply agreement)\b/.test(source)) return "Vendor Agreement";
+  if (/\b(service agreement|services agreement|master services agreement|msa\b|statement of work|services provided)\b/.test(source)) return "Service Agreement";
   return "Not Detected";
 }
 
-/* ─── Contract Selector (required selection — no "All" option) ───── */
+/* ─── Contract Selector ──────────────────────────────────────────── */
 function ContractSelector({
   contracts,
   selectedId,
@@ -644,14 +447,7 @@ function ContractSelector({
           >
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
               {contracts.length === 0 ? (
-                <p
-                  style={{
-                    padding: "20px 16px",
-                    fontSize: "0.76rem",
-                    color: "#334155",
-                    textAlign: "center",
-                  }}
-                >
+                <p style={{ padding: "20px 16px", fontSize: "0.76rem", color: "#334155", textAlign: "center" }}>
                   No contracts available
                 </p>
               ) : (
@@ -660,10 +456,7 @@ function ContractSelector({
                   return (
                     <button
                       key={c.id}
-                      onClick={() => {
-                        onChange(c.id);
-                        setOpen(false);
-                      }}
+                      onClick={() => { onChange(c.id); setOpen(false); }}
                       style={{
                         display: "flex",
                         alignItems: "flex-start",
@@ -679,45 +472,15 @@ function ContractSelector({
                         textAlign: "left",
                         transition: "background 0.12s ease",
                       }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected)
-                          (e.currentTarget as HTMLElement).style.background =
-                            "rgba(255,255,255,0.03)";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected)
-                          (e.currentTarget as HTMLElement).style.background = "transparent";
-                      }}
+                      onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                      onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                     >
-                      <div
-                        style={{
-                          width: "7px",
-                          height: "7px",
-                          borderRadius: "50%",
-                          background: isSelected ? "#60a5fa" : "#334155",
-                          flexShrink: 0,
-                          marginTop: "5px",
-                        }}
-                      />
+                      <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isSelected ? "#60a5fa" : "#334155", flexShrink: 0, marginTop: "5px" }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p
-                          style={{
-                            fontWeight: 500,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            marginBottom: "2px",
-                          }}
-                        >
+                        <p style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
                           {contractDisplayName(c)}
                         </p>
-                        <p
-                          style={{
-                            fontSize: "0.67rem",
-                            color: "#334155",
-                            fontFamily: "var(--font-mono,monospace)",
-                          }}
-                        >
+                        <p style={{ fontSize: "0.67rem", color: "#334155", fontFamily: "var(--font-mono,monospace)" }}>
                           CTR-{String(c.id).padStart(4, "0")} · {c.status}
                         </p>
                       </div>
@@ -802,136 +565,119 @@ function InfoRow({
   );
 }
 
-/* ─── Date card ──────────────────────────────────────────────────── */
-function DateRow({
+/* ─── Date card (horizontal compact layout) ──────────────────────── */
+function DateCard({
   icon: Icon,
   label,
   date,
   accent,
-  tag,
+  staticValue,
 }: {
   icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
   label: string;
-  date: string | null | undefined;
+  date?: string | null;
   accent: string;
-  tag?: string;
+  /** Override the displayed value with a pre-computed string (e.g. duration). */
+  staticValue?: string;
 }) {
-  const daysUntil = getDaysUntil(date);
-  const expired = daysUntil !== null && daysUntil < 0;
-  const urgent = daysUntil !== null && daysUntil >= 0 && daysUntil <= 30;
+  const daysUntil = date ? getDaysUntil(date) : null;
+  const expired   = daysUntil !== null && daysUntil < 0;
+  const urgent    = daysUntil !== null && daysUntil >= 0 && daysUntil <= 30;
 
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "12px",
-        padding: "14px 16px",
-        borderRadius: "12px",
+        padding: "18px 20px",
+        borderRadius: "14px",
         background: urgent
           ? "rgba(245,158,11,0.05)"
           : expired
           ? "rgba(239,68,68,0.04)"
           : "rgba(255,255,255,0.025)",
         border: urgent
-          ? "1px solid rgba(245,158,11,0.14)"
+          ? "1px solid rgba(245,158,11,0.16)"
           : expired
-          ? "1px solid rgba(239,68,68,0.14)"
-          : "1px solid rgba(255,255,255,0.05)",
+          ? "1px solid rgba(239,68,68,0.16)"
+          : "1px solid rgba(255,255,255,0.06)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
       }}
     >
-      <div
-        style={{
-          width: "28px",
-          height: "28px",
-          borderRadius: "9px",
-          background: `${accent}15`,
-          border: `1px solid ${accent}30`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          marginTop: "1px",
-        }}
-      >
-        <Icon size={12} style={{ color: accent }} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Icon + label row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            borderRadius: "9px",
+            background: `${accent}15`,
+            border: `1px solid ${accent}30`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Icon size={12} style={{ color: accent }} />
+        </div>
         <p
           style={{
-            fontSize: "0.62rem",
+            fontSize: "0.6rem",
             fontWeight: 700,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
             color: "#475569",
-            marginBottom: "3px",
           }}
         >
           {label}
         </p>
-        {date ? (
+      </div>
+
+      {/* Value area */}
+      {staticValue !== undefined ? (
+        <p style={{ fontSize: "1rem", fontWeight: 600, color: "#a5f3fc", lineHeight: 1.3 }}>
+          {staticValue}
+        </p>
+      ) : date ? (
+        <div>
           <p
             style={{
-              fontSize: "0.82rem",
-              fontWeight: 500,
+              fontSize: "0.9rem",
+              fontWeight: 600,
               color: expired ? "#f87171" : urgent ? "#fbbf24" : "#e2e8f0",
+              lineHeight: 1.3,
+              marginBottom: "3px",
             }}
           >
             {formatDateShort(date)}
           </p>
-        ) : (
-          <p style={{ fontSize: "0.82rem", color: "#334155", fontStyle: "italic" }}>
-            Not detected
-          </p>
-        )}
-        {daysUntil !== null && date && (
-          <p
-            style={{
-              fontSize: "0.67rem",
-              color: expired ? "#f87171" : urgent ? "#fbbf24" : "#475569",
-              marginTop: "2px",
-            }}
-          >
-            {expired
-              ? `${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? "s" : ""} ago`
-              : daysUntil === 0
-              ? "Today"
-              : `In ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}
-          </p>
-        )}
-        {tag && (
-          <span
-            style={{
-              display: "inline-block",
-              marginTop: "4px",
-              fontSize: "0.6rem",
-              fontWeight: 600,
-              color: accent,
-              background: `${accent}12`,
-              border: `1px solid ${accent}25`,
-              borderRadius: "5px",
-              padding: "1px 7px",
-              letterSpacing: "0.06em",
-            }}
-          >
-            {tag}
-          </span>
-        )}
-      </div>
+          {daysUntil !== null && (
+            <p style={{ fontSize: "0.7rem", color: expired ? "#f87171" : urgent ? "#fbbf24" : "#475569" }}>
+              {expired
+                ? `${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? "s" : ""} ago`
+                : daysUntil === 0
+                ? "Today"
+                : `In ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p style={{ fontSize: "0.85rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
+      )}
     </div>
   );
 }
 
 /* ─── Main page ──────────────────────────────────────────────────── */
 export default function ContractOverviewPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [detail, setDetail] = useState<ContractDetail | null>(null);
+  const [contracts, setContracts]             = useState<Contract[]>([]);
+  const [selectedId, setSelectedId]           = useState<number | null>(null);
+  const [detail, setDetail]                   = useState<ContractDetail | null>(null);
   const [contractsLoading, setContractsLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [detailLoading, setDetailLoading]     = useState(false);
+  const [error, setError]                     = useState("");
 
-  /* Load contracts list on mount */
   useEffect(() => {
     api
       .contracts()
@@ -943,67 +689,40 @@ export default function ContractOverviewPage() {
       .finally(() => setContractsLoading(false));
   }, []);
 
-  /* Load contract detail when selection changes */
   useEffect(() => {
     if (!selectedId) return;
     let active = true;
-
     Promise.resolve()
-      .then(() => {
-        if (!active) return null;
-        setDetailLoading(true);
-        setError("");
-        return api.contract(selectedId);
-      })
-      .then((contractDetail) => {
-        if (active && contractDetail) setDetail(contractDetail);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      })
-      .finally(() => {
-        if (active) setDetailLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+      .then(() => { if (!active) return null; setDetailLoading(true); setError(""); return api.contract(selectedId); })
+      .then((d) => { if (active && d) setDetail(d); })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setDetailLoading(false); });
+    return () => { active = false; };
   }, [selectedId]);
 
   /* ── Derived values ── */
-  const risks = useMemo(() => detail?.risks ?? [], [detail?.risks]);
+  const risks       = useMemo(() => detail?.risks ?? [],       [detail?.risks]);
   const obligations = useMemo(() => detail?.obligations ?? [], [detail?.obligations]);
-  const clauses = useMemo(() => detail?.clauses ?? [], [detail?.clauses]);
-  const cleanedText = detail?.cleaned_text ?? null;
+  const clauses     = useMemo(() => detail?.clauses ?? [],     [detail?.clauses]);
+  const summaries   = useMemo(() => detail?.summaries ?? [],   [detail?.summaries]);
+  const cleanedText  = detail?.cleaned_text ?? null;
   const extractedText = detail?.extracted_text ?? null;
 
-  const riskScore = useMemo(() => calculateRiskScore(risks), [risks]);
-  const riskScoreInfo = useMemo(() => riskScoreLabel(riskScore), [riskScore]);
-
-  const highRisks = useMemo(
-    () => risks.filter((r) => ["high", "critical"].includes(r.severity?.toLowerCase())),
-    [risks]
-  );
-
-  const topRisks = useMemo(
-    () =>
-      [...risks]
-        .sort((a, b) => {
-          const ord: Record<string, number> = { critical: 0, high: 1, medium: 2, moderate: 2, low: 3 };
-          return (ord[a.severity?.toLowerCase()] ?? 3) - (ord[b.severity?.toLowerCase()] ?? 3);
-        })
-        .slice(0, 5),
-    [risks]
-  );
-
-  const overdueObs = useMemo(() => obligations.filter((ob) => isOverdue(ob.due_date)), [obligations]);
-  const upcomingObs = useMemo(() => obligations.filter((ob) => isUpcoming(ob.due_date)), [obligations]);
   const parties = useMemo(
     () => extractPartiesFromContract(cleanedText, extractedText, obligations, clauses, risks),
     [cleanedText, extractedText, obligations, clauses, risks]
   );
-  const clauseCategories = useMemo(() => getClauseCategories(clauses, risks, obligations), [clauses, risks, obligations]);
-  const nearestDeadlineDate = useMemo(() => nearestFutureDeadline(obligations), [obligations]);
+
+  const contractType = useMemo(
+    () => inferContractType(detail, clauses, risks, obligations),
+    [detail, clauses, risks, obligations]
+  );
+
+  const hasRenewalRisk = useMemo(
+    () => risks.some((r) => r.risk_type?.toLowerCase().includes("renewal")),
+    [risks]
+  );
+
   const renewalDate = useMemo(() => {
     const text = [
       cleanedText,
@@ -1013,77 +732,10 @@ export default function ContractOverviewPage() {
     ].join("\n").slice(0, 80_000);
     return dateFromTextNearKeywords(text, ["renewal date", "renewal term", "renews on", "automatically renew"]);
   }, [cleanedText, extractedText, clauses, risks]);
-  const terminationNoticeDate = useMemo(
-    () =>
-      nearestFutureObligationDate(obligations, ["termination notice", "non-renewal", "terminate", "termination", "cancel"]) ??
-      dateMinusDays(detail?.expiration_date, detail?.notice_period_days),
-    [detail?.expiration_date, detail?.notice_period_days, obligations]
-  );
-  const paymentDueDate = useMemo(
-    () => nearestFutureObligationDate(obligations, ["payment", "invoice", "fee", "payable"]),
-    [obligations]
-  );
 
-  const obsByOwner = useMemo(() => {
-    const groups: Record<string, number> = {};
-    obligations.forEach((ob) => {
-      const key = ob.owner?.trim() || "Unassigned";
-      groups[key] = (groups[key] || 0) + 1;
-    });
-    return groups;
-  }, [obligations]);
-
-  const hasRenewalRisk = useMemo(
-    () => risks.some((r) => r.risk_type?.toLowerCase().includes("renewal")),
-    [risks]
-  );
-
-  const contractType = useMemo(
-    () => inferContractType(detail, clauses, risks, obligations),
-    [detail, clauses, risks, obligations]
-  );
-
-  const renewalRisk = useMemo(
-    () => risks.find((r) => r.risk_type?.toLowerCase().includes("renewal")),
-    [risks]
-  );
-
-  const sortedClauseCategories = useMemo(
-    () =>
-      Object.entries(clauseCategories)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12),
-    [clauseCategories]
-  );
-
-  /* ── Obligation party breakdown ── */
-  const clientObsCount = useMemo(
-    () =>
-      obligations.filter((ob) => {
-        const lp = (ob.owner ?? "").toLowerCase();
-        return CLIENT_KEYWORDS.some((k) => lp.includes(k));
-      }).length,
-    [obligations]
-  );
-  const providerObsCount = useMemo(
-    () =>
-      obligations.filter((ob) => {
-        const lp = (ob.owner ?? "").toLowerCase();
-        return PROVIDER_KEYWORDS.some((k) => lp.includes(k));
-      }).length,
-    [obligations]
-  );
-  const sharedObsCount = useMemo(
-    () =>
-      obligations.filter((ob) => {
-        const lp = (ob.owner ?? "").toLowerCase();
-        return lp.includes("both") || lp.includes("mutual") || lp.includes("shared") || lp.includes("parties");
-      }).length,
-    [obligations]
-  );
-  const unassignedObsCount = useMemo(
-    () => obligations.filter((ob) => !ob.owner || ob.owner.trim() === "").length,
-    [obligations]
+  const generalSummary = useMemo(
+    () => summaries.find((s) => s.summary_type === "general") ?? summaries[0] ?? null,
+    [summaries]
   );
 
   return (
@@ -1096,8 +748,7 @@ export default function ContractOverviewPage() {
           right: 0,
           width: "800px",
           height: "600px",
-          background:
-            "radial-gradient(ellipse at 70% -10%, rgba(59,130,246,0.07) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 70% -10%, rgba(59,130,246,0.07) 0%, transparent 60%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -1114,14 +765,7 @@ export default function ContractOverviewPage() {
       >
         {/* ── Page Header ── */}
         <div style={{ marginBottom: "40px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "12px",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
             <div
               style={{
                 width: "20px",
@@ -1144,14 +788,7 @@ export default function ContractOverviewPage() {
             </span>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              marginBottom: "8px",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "8px" }}>
             <h1
               style={{
                 fontSize: "2rem",
@@ -1168,8 +805,7 @@ export default function ContractOverviewPage() {
           </div>
 
           <p style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "24px", lineHeight: 1.6 }}>
-            Centralized executive summary — every critical detail about the selected contract in one
-            place.
+            Executive briefing — parties, dates, and summary for the selected contract.
           </p>
 
           {/* Contract selector row */}
@@ -1198,15 +834,7 @@ export default function ContractOverviewPage() {
                     color: "#60a5fa",
                   }}
                 >
-                  <span
-                    style={{
-                      width: "5px",
-                      height: "5px",
-                      borderRadius: "50%",
-                      background: "#60a5fa",
-                      display: "inline-block",
-                    }}
-                  />
+                  <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#60a5fa", display: "inline-block" }} />
                   Contract Analysis
                 </span>
                 <Link
@@ -1254,7 +882,7 @@ export default function ContractOverviewPage() {
           </div>
         )}
 
-        {/* ── No contracts uploaded ── */}
+        {/* ── No contracts ── */}
         {!contractsLoading && contracts.length === 0 && (
           <FadeUp>
             <div
@@ -1283,25 +911,11 @@ export default function ContractOverviewPage() {
                 <LayoutGrid size={26} style={{ color: "#60a5fa", opacity: 0.7 }} />
               </div>
               <div>
-                <p
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    color: "#64748b",
-                    marginBottom: "8px",
-                  }}
-                >
+                <p style={{ fontSize: "1rem", fontWeight: 600, color: "#64748b", marginBottom: "8px" }}>
                   No Contracts Found
                 </p>
-                <p
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "#334155",
-                    lineHeight: 1.65,
-                    maxWidth: "340px",
-                  }}
-                >
-                  Upload and analyze a contract to see its complete executive overview here.
+                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, maxWidth: "340px" }}>
+                  Upload and analyze a contract to see its executive overview here.
                 </p>
               </div>
               <Link
@@ -1330,23 +944,10 @@ export default function ContractOverviewPage() {
         {/* ── Loading skeleton ── */}
         {detailLoading && selectedId && (
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+            <SkeletonCard height={260} />
+            <SkeletonCard height={200} />
+            <SkeletonCard height={180} />
             <SkeletonCard height={220} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <SkeletonCard key={i} height={140} />
-              ))}
-            </div>
-            <SkeletonCard height={160} />
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                <SkeletonCard height={260} />
-                <SkeletonCard height={220} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                <SkeletonCard height={240} />
-                <SkeletonCard height={200} />
-              </div>
-            </div>
           </div>
         )}
 
@@ -1374,11 +975,12 @@ export default function ContractOverviewPage() {
                     }}
                   >
                     <InfoRow label="Contract Name" value={detail.title || "—"} />
-                    <InfoRow label="Contract Type" value={contractType} valueColor={contractType !== "Not Detected" ? "#a5b4fc" : undefined} />
                     <InfoRow
-                      label="Current Status"
-                      value={<StatusBadge status={detail.status} />}
+                      label="Contract Type"
+                      value={contractType}
+                      valueColor={contractType !== "Not Detected" ? "#a5b4fc" : undefined}
                     />
+                    <InfoRow label="Current Status" value={<StatusBadge status={detail.status} />} />
                     <InfoRow
                       label="Effective Date"
                       value={formatDate(detail.effective_date)}
@@ -1392,9 +994,7 @@ export default function ContractOverviewPage() {
                     <InfoRow
                       label="Contract Duration"
                       value={getContractDuration(detail.effective_date, detail.expiration_date)}
-                      valueColor={
-                        detail.effective_date && detail.expiration_date ? "#a5f3fc" : undefined
-                      }
+                      valueColor={detail.effective_date && detail.expiration_date ? "#a5f3fc" : undefined}
                     />
                     <InfoRow
                       label="Notice Period"
@@ -1408,15 +1008,7 @@ export default function ContractOverviewPage() {
                       label="Auto Renewal"
                       value={
                         hasRenewalRisk ? (
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              fontSize: "0.82rem",
-                              color: "#fbbf24",
-                            }}
-                          >
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: "#fbbf24" }}>
                             <AlertCircle size={13} />
                             Detected — Review Required
                           </span>
@@ -1429,9 +1021,7 @@ export default function ContractOverviewPage() {
                   </div>
 
                   {/* Parties inline summary */}
-                  {(parties.client.length > 0 ||
-                    parties.provider.length > 0 ||
-                    parties.other.length > 0) && (
+                  {(parties.client.length > 0 || parties.provider.length > 0 || parties.other.length > 0) && (
                     <div
                       style={{
                         marginTop: "12px",
@@ -1445,23 +1035,9 @@ export default function ContractOverviewPage() {
                         flexWrap: "wrap",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <Users size={12} style={{ color: "#818cf8" }} />
-                        <span
-                          style={{
-                            fontSize: "0.62rem",
-                            fontWeight: 700,
-                            color: "#818cf8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.1em",
-                          }}
-                        >
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                           Parties Detected
                         </span>
                       </div>
@@ -1469,19 +1045,7 @@ export default function ContractOverviewPage() {
                         {parties.client.map((p) => (
                           <span
                             key={p.name}
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "#60a5fa",
-                              background: "rgba(59,130,246,0.08)",
-                              border: "1px solid rgba(59,130,246,0.18)",
-                              borderRadius: "6px",
-                              padding: "3px 10px",
-                              fontWeight: 500,
-                              maxWidth: "300px",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
+                            style={{ fontSize: "0.72rem", color: "#60a5fa", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.18)", borderRadius: "6px", padding: "3px 10px", fontWeight: 500, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                           >
                             <span style={{ color: "#3b82f699", marginRight: "4px" }}>{p.roleLabel}:</span>
                             {p.name}
@@ -1490,19 +1054,7 @@ export default function ContractOverviewPage() {
                         {parties.provider.map((p) => (
                           <span
                             key={p.name}
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "#34d399",
-                              background: "rgba(16,185,129,0.08)",
-                              border: "1px solid rgba(16,185,129,0.18)",
-                              borderRadius: "6px",
-                              padding: "3px 10px",
-                              fontWeight: 500,
-                              maxWidth: "300px",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
+                            style={{ fontSize: "0.72rem", color: "#34d399", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: "6px", padding: "3px 10px", fontWeight: 500, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                           >
                             <span style={{ color: "#10b98199", marginRight: "4px" }}>{p.roleLabel}:</span>
                             {p.name}
@@ -1511,15 +1063,7 @@ export default function ContractOverviewPage() {
                         {parties.other.map((p) => (
                           <span
                             key={p.name}
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "#94a3b8",
-                              background: "rgba(148,163,184,0.08)",
-                              border: "1px solid rgba(148,163,184,0.14)",
-                              borderRadius: "6px",
-                              padding: "3px 10px",
-                              fontWeight: 500,
-                            }}
+                            style={{ fontSize: "0.72rem", color: "#94a3b8", background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: "6px", padding: "3px 10px", fontWeight: 500 }}
                           >
                             {p.name}
                           </span>
@@ -1532,160 +1076,9 @@ export default function ContractOverviewPage() {
             </FadeUp>
 
             {/* ════════════════════════════════════════════════════════
-                SECTION 2 — Contract Health Summary (KPI cards)
+                SECTION 2 — Parties Overview
             ════════════════════════════════════════════════════════ */}
             <FadeUp delay={0.05}>
-              <div>
-                <p
-                  style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    color: "#475569",
-                    marginBottom: "14px",
-                  }}
-                >
-                  Contract Health Summary
-                </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                    gap: "16px",
-                  }}
-                >
-                  {/* Risk Score card (custom — not a numeric count) */}
-                  <div
-                    style={{
-                      padding: "20px 22px",
-                      background: "var(--th-card-bg)",
-                      border: `1px solid ${riskScoreInfo.border}`,
-                      borderRadius: "20px",
-                      backdropFilter: "blur(20px)",
-                      WebkitBackdropFilter: "blur(20px)",
-                      boxShadow: "var(--th-card-shadow)",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "-24px",
-                        right: "-24px",
-                        width: "130px",
-                        height: "130px",
-                        borderRadius: "50%",
-                        background: riskScoreInfo.bg,
-                        filter: "blur(45px)",
-                        pointerEvents: "none",
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: "38px",
-                        height: "38px",
-                        borderRadius: "12px",
-                        background: riskScoreInfo.bg,
-                        border: `1px solid ${riskScoreInfo.border}`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: "14px",
-                      }}
-                    >
-                      <Activity size={17} style={{ color: riskScoreInfo.color }} />
-                    </div>
-                    <p
-                      style={{
-                        fontSize: "0.65rem",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.12em",
-                        color: "var(--th-text-2)",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      Risk Score
-                    </p>
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
-                      <span
-                        style={{
-                          fontSize: "2rem",
-                          fontWeight: 700,
-                          color: riskScoreInfo.color,
-                          lineHeight: 1,
-                          fontVariantNumeric: "tabular-nums",
-                        }}
-                      >
-                        {riskScore}
-                      </span>
-                      <span
-                        style={{
-                          marginBottom: "3px",
-                          fontSize: "0.65rem",
-                          color: "var(--th-text-3)",
-                        }}
-                      >
-                        / 100
-                      </span>
-                    </div>
-                    <p
-                      style={{
-                        marginTop: "6px",
-                        fontSize: "0.72rem",
-                        color: riskScoreInfo.color,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {riskScoreInfo.label}
-                    </p>
-                  </div>
-
-                  <MetricCard
-                    label="Total Risks"
-                    value={risks.length}
-                    icon={ShieldAlert}
-                    accent="danger"
-                    subtitle={`${highRisks.length} high priority`}
-                  />
-                  <MetricCard
-                    label="High Priority"
-                    value={highRisks.length}
-                    icon={AlertCircle}
-                    accent={highRisks.length > 0 ? "danger" : "success"}
-                    subtitle={highRisks.length === 0 ? "No critical risks" : "Needs attention"}
-                  />
-                  <MetricCard
-                    label="Total Obligations"
-                    value={obligations.length}
-                    icon={ClipboardList}
-                    accent="indigo"
-                    subtitle={`${overdueObs.length} overdue`}
-                  />
-                  <MetricCard
-                    label="Overdue"
-                    value={overdueObs.length}
-                    icon={AlertCircle}
-                    accent={overdueObs.length > 0 ? "danger" : "success"}
-                    subtitle={overdueObs.length === 0 ? "All on track" : "Requires action"}
-                  />
-                  <MetricCard
-                    label="Upcoming (30d)"
-                    value={upcomingObs.length}
-                    icon={Clock}
-                    accent="warning"
-                    subtitle="Due within 30 days"
-                  />
-                </div>
-              </div>
-            </FadeUp>
-
-            {/* ════════════════════════════════════════════════════════
-                SECTION 3 — Parties Overview
-            ════════════════════════════════════════════════════════ */}
-            <FadeUp delay={0.1}>
               <div style={CARD}>
                 <CardHeader
                   icon={Users}
@@ -1694,51 +1087,20 @@ export default function ContractOverviewPage() {
                   iconBg="rgba(139,92,246,0.12)"
                 />
                 <div style={{ padding: "20px 24px" }}>
-                  {parties.client.length === 0 &&
-                  parties.provider.length === 0 &&
-                  parties.other.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "32px",
-                        textAlign: "center",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "12px",
-                      }}
-                    >
+                  {parties.client.length === 0 && parties.provider.length === 0 && parties.other.length === 0 ? (
+                    <div style={{ padding: "32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       <Users size={28} style={{ color: "#334155" }} />
                       <div>
-                        <p
-                          style={{
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
-                            color: "#475569",
-                            marginBottom: "6px",
-                          }}
-                        >
+                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>
                           No Parties Detected
                         </p>
-                        <p
-                          style={{
-                            fontSize: "0.76rem",
-                            color: "#334155",
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          Party names are extracted directly from the contract text. Ensure
-                          the contract has been analyzed to enable party detection.
+                        <p style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.6 }}>
+                          Party names are extracted directly from the contract text. Ensure the contract has been analyzed to enable party detection.
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "20px",
-                      }}
-                    >
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                       {/* Client / Customer */}
                       <div
                         style={{
@@ -1748,73 +1110,29 @@ export default function ContractOverviewPage() {
                           border: "1px solid rgba(59,130,246,0.18)",
                         }}
                       >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "14px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "10px",
-                              background: "rgba(59,130,246,0.15)",
-                              border: "1px solid rgba(59,130,246,0.25)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                          <div style={{ width: "30px", height: "30px", borderRadius: "10px", background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <UserCheck size={13} style={{ color: "#60a5fa" }} />
                           </div>
                           <div>
-                            <p
-                              style={{
-                                fontSize: "0.78rem",
-                                fontWeight: 600,
-                                color: "#60a5fa",
-                                marginBottom: "1px",
-                              }}
-                            >
-                              Client / Customer
-                            </p>
-                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>
-                              Receiving party
-                            </p>
+                            <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#60a5fa", marginBottom: "1px" }}>Client / Customer</p>
+                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>Receiving party</p>
                           </div>
                         </div>
                         {parties.client.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                             {parties.client.map((p) => (
-                              <div
-                                key={p.name}
-                                style={{
-                                  padding: "10px 14px",
-                                  borderRadius: "10px",
-                                  background: "rgba(59,130,246,0.08)",
-                                  border: "1px solid rgba(59,130,246,0.15)",
-                                }}
-                              >
-                                <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#93c5fd", marginBottom: "3px", lineHeight: 1.3 }}>
-                                  {p.name}
-                                </p>
+                              <div key={p.name} style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.15)" }}>
+                                <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#93c5fd", marginBottom: "3px", lineHeight: 1.3 }}>{p.name}</p>
                                 <p style={{ fontSize: "0.62rem", color: "#3b82f680", display: "flex", alignItems: "center", gap: "5px" }}>
                                   <span>{p.roleLabel}</span>
-                                  {p.confidence === "low" && (
-                                    <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>
-                                  )}
+                                  {p.confidence === "low" && <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>}
                                 </p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>
-                            Not detected
-                          </p>
+                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
                         )}
                       </div>
 
@@ -1827,113 +1145,41 @@ export default function ContractOverviewPage() {
                           border: "1px solid rgba(16,185,129,0.18)",
                         }}
                       >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "14px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "30px",
-                              height: "30px",
-                              borderRadius: "10px",
-                              background: "rgba(16,185,129,0.15)",
-                              border: "1px solid rgba(16,185,129,0.25)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+                          <div style={{ width: "30px", height: "30px", borderRadius: "10px", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Building2 size={13} style={{ color: "#34d399" }} />
                           </div>
                           <div>
-                            <p
-                              style={{
-                                fontSize: "0.78rem",
-                                fontWeight: 600,
-                                color: "#34d399",
-                                marginBottom: "1px",
-                              }}
-                            >
-                              Provider / Vendor
-                            </p>
-                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>
-                              Delivering party
-                            </p>
+                            <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#34d399", marginBottom: "1px" }}>Provider / Vendor</p>
+                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>Delivering party</p>
                           </div>
                         </div>
                         {parties.provider.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                             {parties.provider.map((p) => (
-                              <div
-                                key={p.name}
-                                style={{
-                                  padding: "10px 14px",
-                                  borderRadius: "10px",
-                                  background: "rgba(16,185,129,0.08)",
-                                  border: "1px solid rgba(16,185,129,0.15)",
-                                }}
-                              >
-                                <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#6ee7b7", marginBottom: "3px", lineHeight: 1.3 }}>
-                                  {p.name}
-                                </p>
+                              <div key={p.name} style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.15)" }}>
+                                <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#6ee7b7", marginBottom: "3px", lineHeight: 1.3 }}>{p.name}</p>
                                 <p style={{ fontSize: "0.62rem", color: "#10b98180", display: "flex", alignItems: "center", gap: "5px" }}>
                                   <span>{p.roleLabel}</span>
-                                  {p.confidence === "low" && (
-                                    <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>
-                                  )}
+                                  {p.confidence === "low" && <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>}
                                 </p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>
-                            Not detected
-                          </p>
+                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
                         )}
                       </div>
 
-                      {/* Other parties if any */}
+                      {/* Other parties */}
                       {parties.other.length > 0 && (
-                        <div
-                          style={{
-                            gridColumn: "1 / -1",
-                            padding: "16px 20px",
-                            borderRadius: "12px",
-                            background: "rgba(148,163,184,0.05)",
-                            border: "1px solid rgba(148,163,184,0.12)",
-                          }}
-                        >
-                          <p
-                            style={{
-                              fontSize: "0.62rem",
-                              fontWeight: 700,
-                              color: "#64748b",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.1em",
-                              marginBottom: "10px",
-                            }}
-                          >
+                        <div style={{ gridColumn: "1 / -1", padding: "16px 20px", borderRadius: "12px", background: "rgba(148,163,184,0.05)", border: "1px solid rgba(148,163,184,0.12)" }}>
+                          <p style={{ fontSize: "0.62rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>
                             Additional Parties
                           </p>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                             {parties.other.map((p) => (
-                              <span
-                                key={p.name}
-                                style={{
-                                  fontSize: "0.76rem",
-                                  color: "#94a3b8",
-                                  background: "rgba(148,163,184,0.08)",
-                                  border: "1px solid rgba(148,163,184,0.14)",
-                                  borderRadius: "8px",
-                                  padding: "5px 12px",
-                                  fontWeight: 500,
-                                }}
-                              >
+                              <span key={p.name} style={{ fontSize: "0.76rem", color: "#94a3b8", background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: "8px", padding: "5px 12px", fontWeight: 500 }}>
                                 {p.name}
                               </span>
                             ))}
@@ -1947,804 +1193,137 @@ export default function ContractOverviewPage() {
             </FadeUp>
 
             {/* ════════════════════════════════════════════════════════
-                TWO-COLUMN SECTION — Risk + Obligations | Dates + Clauses
+                SECTION 3 — Important Dates (horizontal cards)
+            ════════════════════════════════════════════════════════ */}
+            <FadeUp delay={0.1}>
+              <div style={CARD}>
+                <CardHeader
+                  icon={CalendarDays}
+                  title="Important Dates"
+                  iconColor="#22d3ee"
+                  iconBg="rgba(34,211,238,0.12)"
+                />
+                <div style={{ padding: "20px 24px" }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                      gap: "14px",
+                    }}
+                  >
+                    <DateCard
+                      icon={Calendar}
+                      label="Contract Start"
+                      date={detail.effective_date}
+                      accent="#60a5fa"
+                    />
+                    <DateCard
+                      icon={Timer}
+                      label="Expiration Date"
+                      date={detail.expiration_date}
+                      accent="#f87171"
+                    />
+                    <DateCard
+                      icon={RefreshCw}
+                      label="Renewal Date"
+                      date={renewalDate}
+                      accent="#22d3ee"
+                    />
+                    <DateCard
+                      icon={Layers}
+                      label="Contract Duration"
+                      accent="#a78bfa"
+                      staticValue={getContractDuration(detail.effective_date, detail.expiration_date)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </FadeUp>
+
+            {/* ════════════════════════════════════════════════════════
+                SECTION 4 — Contract Summary
             ════════════════════════════════════════════════════════ */}
             <FadeUp delay={0.15}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr",
-                  gap: "24px",
-                  alignItems: "start",
-                }}
-              >
-                {/* LEFT COLUMN */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div style={CARD}>
+                <CardHeader
+                  icon={Brain}
+                  title="Contract Summary"
+                  iconColor="#818cf8"
+                  iconBg="rgba(99,102,241,0.12)"
+                />
 
-                  {/* ── SECTION 4: Risk Snapshot ── */}
-                  <div style={CARD}>
-                    <CardHeader
-                      icon={ShieldAlert}
-                      title="Risk Snapshot"
-                      iconColor="#f87171"
-                      iconBg="rgba(239,68,68,0.12)"
-                      count={`${risks.length} risk${risks.length !== 1 ? "s" : ""}`}
-                    />
-
-                    {risks.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "40px 24px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <CheckCircle2 size={28} style={{ color: "#22c55e", opacity: 0.7 }} />
-                        <div>
-                          <p
-                            style={{
-                              fontSize: "0.85rem",
-                              fontWeight: 600,
-                              color: "#475569",
-                              marginBottom: "5px",
-                            }}
-                          >
-                            No Risks Detected
-                          </p>
-                          <p style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.6 }}>
-                            No risk clauses were identified in this contract.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {topRisks.map((risk, i) => {
-                          const isLast = i === topRisks.length - 1;
-                          return (
-                            <Link
-                              key={risk.id}
-                              href={selectedId ? `/risks?contract=${selectedId}` : "/risks"}
-                              style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "12px",
-                                padding: "14px 24px",
-                                borderBottom: isLast
-                                  ? "none"
-                                  : "1px solid rgba(255,255,255,0.04)",
-                                transition: "background 0.12s ease",
-                                textDecoration: "none",
-                                cursor: "pointer",
-                              }}
-                              onMouseEnter={(e) => {
-                                (e.currentTarget as HTMLElement).style.background =
-                                  "rgba(239,68,68,0.03)";
-                              }}
-                              onMouseLeave={(e) => {
-                                (e.currentTarget as HTMLElement).style.background = "transparent";
-                              }}
-                            >
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <p
-                                  style={{
-                                    fontSize: "0.82rem",
-                                    fontWeight: 500,
-                                    color: "#e2e8f0",
-                                    marginBottom: "5px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {risk.title}
-                                </p>
-                                <p
-                                  style={{
-                                    fontSize: "0.7rem",
-                                    color: "#475569",
-                                    lineHeight: 1.5,
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"],
-                                    overflow: "hidden",
-                                  }}
-                                >
-                                  {risk.explanation || "—"}
-                                </p>
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "flex-end",
-                                  gap: "5px",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <RiskBadge level={risk.severity} />
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    color: "#334155",
-                                    fontFamily: "var(--font-mono,monospace)",
-                                  }}
-                                >
-                                  {risk.risk_type?.replace(/_/g, " ") || "—"}
-                                </span>
-                              </div>
-                            </Link>
-                          );
-                        })}
-                        {risks.length > 5 && (
-                          <div
-                            style={{
-                              padding: "10px 24px",
-                              borderTop: "1px solid rgba(255,255,255,0.04)",
-                              textAlign: "center",
-                            }}
-                          >
-                            <span style={{ fontSize: "0.72rem", color: "#334155" }}>
-                              +{risks.length - 5} more risk
-                              {risks.length - 5 !== 1 ? "s" : ""} not shown
-                            </span>
-                          </div>
-                        )}
-                        <div
-                          style={{
-                            padding: "14px 24px",
-                            borderTop: "1px solid rgba(255,255,255,0.05)",
-                          }}
-                        >
-                          <Link
-                            href={selectedId ? `/risks?contract=${selectedId}` : "/risks"}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              padding: "8px 18px",
-                              borderRadius: "10px",
-                              background:
-                                "linear-gradient(135deg, rgba(239,68,68,0.14), rgba(220,38,38,0.10))",
-                              border: "1px solid rgba(239,68,68,0.26)",
-                              color: "#f87171",
-                              fontSize: "0.78rem",
-                              fontWeight: 500,
-                              textDecoration: "none",
-                              transition: "all 0.15s ease",
-                            }}
-                            onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLElement).style.background =
-                                "linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.16))";
-                            }}
-                            onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLElement).style.background =
-                                "linear-gradient(135deg, rgba(239,68,68,0.14), rgba(220,38,38,0.10))";
-                            }}
-                          >
-                            View Full Risk Analysis
-                            <ArrowRight size={12} />
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ── SECTION 5: Obligations Snapshot ── */}
-                  <div style={CARD}>
-                    <CardHeader
-                      icon={ClipboardList}
-                      title="Obligations Snapshot"
-                      iconColor="#fbbf24"
-                      iconBg="rgba(245,158,11,0.12)"
-                      count={`${obligations.length} total`}
-                    />
-
-                    {obligations.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "40px 24px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <ClipboardList
-                          size={28}
-                          style={{ color: "#475569", opacity: 0.6 }}
-                        />
-                        <p
-                          style={{
-                            fontSize: "0.82rem",
-                            fontWeight: 600,
-                            color: "#475569",
-                          }}
-                        >
-                          No obligations extracted yet
-                        </p>
-                      </div>
-                    ) : (
-                      <div style={{ padding: "20px 24px" }}>
-                        {/* Stats grid */}
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
-                            gap: "10px",
-                            marginBottom: "16px",
-                          }}
-                        >
-                          {[
-                            {
-                              label: "Client",
-                              value: clientObsCount,
-                              color: "#60a5fa",
-                              bg: "rgba(59,130,246,0.08)",
-                              border: "rgba(59,130,246,0.15)",
-                            },
-                            {
-                              label: "Provider",
-                              value: providerObsCount,
-                              color: "#34d399",
-                              bg: "rgba(16,185,129,0.08)",
-                              border: "rgba(16,185,129,0.15)",
-                            },
-                            {
-                              label: "Shared",
-                              value: sharedObsCount,
-                              color: "#a78bfa",
-                              bg: "rgba(139,92,246,0.08)",
-                              border: "rgba(139,92,246,0.15)",
-                            },
-                            {
-                              label: "Overdue",
-                              value: overdueObs.length,
-                              color: "#f87171",
-                              bg: "rgba(239,68,68,0.08)",
-                              border: "rgba(239,68,68,0.15)",
-                            },
-                            {
-                              label: "Upcoming",
-                              value: upcomingObs.length,
-                              color: "#fbbf24",
-                              bg: "rgba(245,158,11,0.08)",
-                              border: "rgba(245,158,11,0.15)",
-                            },
-                            {
-                              label: "Unassigned",
-                              value: unassignedObsCount,
-                              color: "#94a3b8",
-                              bg: "rgba(148,163,184,0.06)",
-                              border: "rgba(148,163,184,0.12)",
-                            },
-                          ].map(({ label, value, color, bg, border }) => (
-                            <div
-                              key={label}
-                              style={{
-                                padding: "12px 14px",
-                                borderRadius: "11px",
-                                background: bg,
-                                border: `1px solid ${border}`,
-                                textAlign: "center",
-                              }}
-                            >
-                              <p
-                                style={{
-                                  fontSize: "1.4rem",
-                                  fontWeight: 700,
-                                  color,
-                                  lineHeight: 1,
-                                  fontVariantNumeric: "tabular-nums",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {value}
-                              </p>
-                              <p
-                                style={{
-                                  fontSize: "0.6rem",
-                                  fontWeight: 600,
-                                  color,
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.09em",
-                                  opacity: 0.8,
-                                }}
-                              >
-                                {label}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Per-owner breakdown if non-standard parties detected */}
-                        {Object.keys(obsByOwner).length > 0 &&
-                          Object.keys(obsByOwner).some(
-                            (k) =>
-                              k !== "Unassigned" &&
-                              !CLIENT_KEYWORDS.some((ck) => k.toLowerCase().includes(ck)) &&
-                              !PROVIDER_KEYWORDS.some((pk) => k.toLowerCase().includes(pk))
-                          ) && (
-                            <div
-                              style={{
-                                marginBottom: "14px",
-                                padding: "12px 14px",
-                                borderRadius: "10px",
-                                background: "rgba(255,255,255,0.02)",
-                                border: "1px solid rgba(255,255,255,0.05)",
-                              }}
-                            >
-                              <p
-                                style={{
-                                  fontSize: "0.6rem",
-                                  fontWeight: 700,
-                                  color: "#475569",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.1em",
-                                  marginBottom: "8px",
-                                }}
-                              >
-                                By Party
-                              </p>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: "6px",
-                                }}
-                              >
-                                {Object.entries(obsByOwner)
-                                  .sort((a, b) => b[1] - a[1])
-                                  .slice(0, 6)
-                                  .map(([owner, count]) => (
-                                    <span
-                                      key={owner}
-                                      style={{
-                                        fontSize: "0.7rem",
-                                        color: "#64748b",
-                                        background: "rgba(255,255,255,0.04)",
-                                        border: "1px solid rgba(255,255,255,0.07)",
-                                        borderRadius: "6px",
-                                        padding: "3px 9px",
-                                      }}
-                                    >
-                                      {owner}{" "}
-                                      <span style={{ color: "#94a3b8", fontWeight: 600 }}>
-                                        {count}
-                                      </span>
-                                    </span>
-                                  ))}
-                              </div>
-                            </div>
-                          )}
-
-                        <Link
-                          href={selectedId ? `/obligations?contract=${selectedId}` : "/obligations"}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 18px",
-                            borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.07))",
-                            border: "1px solid rgba(245,158,11,0.24)",
-                            color: "#fbbf24",
-                            fontSize: "0.78rem",
-                            fontWeight: 500,
-                            textDecoration: "none",
-                            transition: "all 0.15s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "linear-gradient(135deg, rgba(245,158,11,0.20), rgba(245,158,11,0.12))";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.07))";
-                          }}
-                        >
-                          View All Obligations
-                          <ArrowRight size={12} />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* RIGHT COLUMN */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-
-                  {/* ── SECTION 7: Important Dates ── */}
-                  <div style={CARD}>
-                    <CardHeader
-                      icon={CalendarDays}
-                      title="Important Dates"
-                      iconColor="#22d3ee"
-                      iconBg="rgba(34,211,238,0.12)"
-                    />
+                {generalSummary === null ? (
+                  <div
+                    style={{
+                      padding: "48px 28px",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "12px",
+                    }}
+                  >
                     <div
                       style={{
-                        padding: "16px 20px",
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "14px",
+                        background: "rgba(99,102,241,0.08)",
+                        border: "1px solid rgba(99,102,241,0.16)",
                         display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <DateRow
-                        icon={Calendar}
-                        label="Effective Date"
-                        date={detail.effective_date}
-                        accent="#60a5fa"
-                        tag="Contract Start"
-                      />
-                      <DateRow
-                        icon={Timer}
-                        label="Expiration Date"
-                        date={detail.expiration_date}
-                        accent="#f87171"
-                        tag={
-                          getDaysUntil(detail.expiration_date) !== null &&
-                          getDaysUntil(detail.expiration_date)! < 0
-                            ? "Expired"
-                            : "Contract End"
-                        }
-                      />
-                      <DateRow
-                        icon={Clock}
-                        label="Nearest Obligation Due"
-                        date={nearestDeadlineDate}
-                        accent="#fbbf24"
-                        tag={nearestDeadlineDate ? "Upcoming Deadline" : undefined}
-                      />
-                      {renewalDate && (
-                        <DateRow
-                          icon={RefreshCw}
-                          label="Renewal Date"
-                          date={renewalDate}
-                          accent="#60a5fa"
-                          tag="Renewal"
-                        />
-                      )}
-                      {terminationNoticeDate && (
-                        <DateRow
-                          icon={AlertCircle}
-                          label="Termination Notice Date"
-                          date={terminationNoticeDate}
-                          accent="#f87171"
-                          tag="Notice Deadline"
-                        />
-                      )}
-                      {paymentDueDate && (
-                        <DateRow
-                          icon={CalendarDays}
-                          label="Payment Due Date"
-                          date={paymentDueDate}
-                          accent="#34d399"
-                          tag="Payment"
-                        />
-                      )}
-
-                      {/* Contract Duration */}
-                      {detail.effective_date && detail.expiration_date && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "11px 14px",
-                            borderRadius: "10px",
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.05)",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "24px",
-                              height: "24px",
-                              borderRadius: "8px",
-                              background: "rgba(34,211,238,0.10)",
-                              border: "1px solid rgba(34,211,238,0.20)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <Layers size={10} style={{ color: "#22d3ee" }} />
-                          </div>
-                          <div>
-                            <p style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#475569", marginBottom: "2px" }}>
-                              Contract Duration
-                            </p>
-                            <p style={{ fontSize: "0.8rem", fontWeight: 500, color: "#a5f3fc" }}>
-                              {getContractDuration(detail.effective_date, detail.expiration_date)}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Notice Period */}
-                      {detail.notice_period_days != null && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "11px 14px",
-                            borderRadius: "10px",
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.05)",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "24px",
-                              height: "24px",
-                              borderRadius: "8px",
-                              background: "rgba(99,102,241,0.10)",
-                              border: "1px solid rgba(99,102,241,0.20)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <Hash size={10} style={{ color: "#818cf8" }} />
-                          </div>
-                          <div>
-                            <p style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#475569", marginBottom: "2px" }}>
-                              Notice Period
-                            </p>
-                            <p style={{ fontSize: "0.8rem", fontWeight: 500, color: "#e2e8f0" }}>
-                              {detail.notice_period_days} day{detail.notice_period_days !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {renewalRisk && (
-                        <div
-                          style={{
-                            padding: "14px 16px",
-                            borderRadius: "12px",
-                            background: "rgba(245,158,11,0.06)",
-                            border: "1px solid rgba(245,158,11,0.18)",
-                            display: "flex",
-                            gap: "10px",
-                            alignItems: "flex-start",
-                          }}
-                        >
-                          <RefreshCw
-                            size={14}
-                            style={{ color: "#fbbf24", flexShrink: 0, marginTop: "2px" }}
-                          />
-                          <div>
-                            <p
-                              style={{
-                                fontSize: "0.62rem",
-                                fontWeight: 700,
-                                color: "#fbbf24",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.1em",
-                                marginBottom: "3px",
-                              }}
-                            >
-                              Auto Renewal Detected
-                            </p>
-                            <p
-                              style={{
-                                fontSize: "0.76rem",
-                                color: "#94a3b8",
-                                lineHeight: 1.55,
-                              }}
-                            >
-                              {renewalRisk.explanation
-                                ? renewalRisk.explanation.slice(0, 120) +
-                                  (renewalRisk.explanation.length > 120 ? "…" : "")
-                                : "This contract may renew automatically. Review the renewal clause before the opt-out window closes."}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      <Brain size={20} style={{ color: "#6366f1", opacity: 0.5 }} />
                     </div>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                      Summary Not Generated Yet
+                    </p>
+                    <p style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.65, maxWidth: "360px" }}>
+                      Run AI analysis on this contract to generate a plain-language executive summary.
+                    </p>
                   </div>
-
-                  {/* ── SECTION 6: Clause Coverage ── */}
-                  <div style={CARD}>
-                    <CardHeader
-                      icon={BookOpen}
-                      title="Clause Coverage"
-                      iconColor="#818cf8"
-                      iconBg="rgba(99,102,241,0.12)"
-                      count={`${clauses.length} clause${clauses.length !== 1 ? "s" : ""}`}
-                    />
-
-                    {clauses.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "32px 20px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "10px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <BookOpen size={24} style={{ color: "#334155" }} />
-                        <p style={{ fontSize: "0.82rem", color: "#475569", fontWeight: 600 }}>
-                          No clauses extracted
-                        </p>
-                        <p style={{ fontSize: "0.74rem", color: "#334155", lineHeight: 1.6 }}>
-                          Analyze the contract to extract and categorize its clauses.
-                        </p>
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          padding: "16px 20px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "14px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "8px",
-                          }}
-                        >
-                          {sortedClauseCategories.map(([cat, count]) => {
-                            const style = getClauseStyle(cat);
-                            return (
-                              <div
-                                key={cat}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  padding: "5px 12px 5px 8px",
-                                  borderRadius: "8px",
-                                  background: style.bg,
-                                  border: `1px solid ${style.color}22`,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: "6px",
-                                    height: "6px",
-                                    borderRadius: "50%",
-                                    background: style.color,
-                                    flexShrink: 0,
-                                  }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize: "0.72rem",
-                                    fontWeight: 500,
-                                    color: style.color,
-                                    lineHeight: 1,
-                                  }}
-                                >
-                                  {cat}
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.62rem",
-                                    color: style.color,
-                                    opacity: 0.65,
-                                    fontFamily: "var(--font-mono,monospace)",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {count}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Visual bar distribution */}
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {sortedClauseCategories.slice(0, 5).map(([cat, count]) => {
-                            const style = getClauseStyle(cat);
-                            const pct =
-                              clauses.length > 0
-                                ? Math.round((count / clauses.length) * 100)
-                                : 0;
-                            return (
-                              <div key={`bar-${cat}`}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <span
-                                    style={{ fontSize: "0.7rem", color: "#64748b" }}
-                                  >
-                                    {cat}
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: "0.68rem",
-                                      color: style.color,
-                                      fontFamily: "var(--font-mono,monospace)",
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {count}
-                                  </span>
-                                </div>
-                                <div
-                                  style={{
-                                    height: "5px",
-                                    borderRadius: "999px",
-                                    overflow: "hidden",
-                                    background: "rgba(255,255,255,0.05)",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      height: "100%",
-                                      borderRadius: "999px",
-                                      width: `${pct}%`,
-                                      background: style.color,
-                                      boxShadow: `0 0 8px ${style.color}60`,
-                                      transition: "width 0.6s ease",
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <Link
-                          href="/clause-library"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 16px",
-                            borderRadius: "10px",
-                            background: "rgba(99,102,241,0.10)",
-                            border: "1px solid rgba(99,102,241,0.22)",
-                            color: "#818cf8",
-                            fontSize: "0.78rem",
-                            fontWeight: 500,
-                            textDecoration: "none",
-                            transition: "all 0.15s ease",
-                            marginTop: "4px",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "rgba(99,102,241,0.18)";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background =
-                              "rgba(99,102,241,0.10)";
-                          }}
-                        >
-                          View Clause Library
-                          <ArrowRight size={12} />
-                        </Link>
-                      </div>
-                    )}
+                ) : (
+                  <div style={{ padding: "28px 32px" }}>
+                    {(() => {
+                      // Split the summary into a headline sentence and the remaining body.
+                      // Same approach used in contracts/[id]/page.tsx summary tab.
+                      const sentences = generalSummary.summary_text
+                        .replace(/\n/g, " ")
+                        .split(/(?<=[.!?])\s+/)
+                        .filter(Boolean);
+                      const headline = sentences[0] ?? generalSummary.summary_text;
+                      const body     = sentences.slice(1).join(" ");
+                      return (
+                        <>
+                          <p
+                            style={{
+                              fontSize: "1rem",
+                              fontWeight: 600,
+                              color: "#dae2fd",
+                              lineHeight: 1.7,
+                              marginBottom: body ? "16px" : 0,
+                            }}
+                          >
+                            {headline}
+                          </p>
+                          {body && (
+                            <p
+                              style={{
+                                fontSize: "0.875rem",
+                                color: "#64748b",
+                                lineHeight: 1.9,
+                              }}
+                            >
+                              {body}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
-                </div>
+                )}
               </div>
             </FadeUp>
 

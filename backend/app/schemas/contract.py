@@ -114,9 +114,10 @@ class AskAIRequest(BaseModel):
 
 
 class AskAIResponse(BaseModel):
-    clause_summary: str
-    quoted_clause: str | None = None
+    answer: str
+    supporting_clause: str | None = None
     legal_risk: str | None = None
     recommendation: str | None = None
     confidence: str = "low"
     sources: list[dict] = Field(default_factory=list)
+    message_type: str = "answer"

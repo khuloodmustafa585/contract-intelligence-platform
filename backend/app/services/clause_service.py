@@ -1,6 +1,5 @@
 import re
 from sqlalchemy.orm import Session
-
 from app.models.clause import Clause
 from app.utils.chunking import split_into_clauses
 

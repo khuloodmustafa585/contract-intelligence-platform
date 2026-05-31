@@ -11,35 +11,52 @@ from app.core.logging import app_logger
 from app.models.clause import Clause
 from app.models.contract import Contract
 
-VECTOR_SIZE = 384
+# ── Embedding model selection ─────────────────────────────────────────────
+#
+# Priority order:
+#   1. OpenAI text-embedding-3-small  (best quality, requires OPENAI_API_KEY)
+#      Vector size: 1536
+#   2. SentenceTransformer all-MiniLM-L6-v2  (local, no API cost)
+#      Vector size: 384
+#   3. Deterministic hash fallback  (always available, poor semantic quality)
+#      Vector size: matches whichever model is active
+#
+# IMPORTANT: VECTOR_SIZE must be consistent between indexing and querying.
+# If OpenAI is configured at indexing time, it MUST also be used at query time
+# (or vice-versa).  A mismatch causes Qdrant to reject the query outright.
+# The logic below ensures both paths always invoke the same model.
+#
+# When OpenAI fails mid-query (transient network error), generate_embedding()
+# returns a fallback vector of the correct VECTOR_SIZE so Qdrant accepts the
+# query — but the scores will be near-zero for everything, causing retrieval to
+# fall through to the SQL keyword fallback in retrieval_service.py.
+
+VECTOR_SIZE: int = 1536 if settings.OPENAI_API_KEY else 384
 COLLECTION_NAME = settings.QDRANT_COLLECTION
 
 _model = None
 _qdrant = None
 _memory_points: list[dict] = []
-# Persistent executor — avoids thread-pool creation overhead on every embedding call
+# Used only for local SentenceTransformer (fallback path)
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="embed")
 
-# Chunk constants for upsert.
-# Larger size (500) keeps more context per chunk; sentence-boundary detection
-# ensures cuts happen between sentences rather than mid-word/mid-clause.
-_CHUNK_SIZE = 500      # chars per chunk
-_CHUNK_OVERLAP = 80    # overlap to preserve cross-sentence context
-# Sentence-boundary separators tried in order when choosing a split point.
+_CHUNK_SIZE = 500
+_CHUNK_OVERLAP = 80
 _SENT_BOUNDARIES = [". ", ".\n", "? ", "! ", ";\n", "\n\n"]
-# Chunk point IDs: clause.id * _CHUNK_ID_STRIDE + chunk_index (supports 4095 chunks/clause)
 _CHUNK_ID_STRIDE = 4096
 
 
 def _load_model():
+    """Load SentenceTransformer.  Only used when OPENAI_API_KEY is not set."""
     global _model
     if _model is not None:
         return _model
     try:
         from sentence_transformers import SentenceTransformer
         _model = SentenceTransformer("all-MiniLM-L6-v2")
+        app_logger.info("SentenceTransformer all-MiniLM-L6-v2 loaded (fallback path)")
     except Exception as exc:
-        app_logger.warning("SentenceTransformer unavailable, using deterministic fallback: %s", exc)
+        app_logger.warning("SentenceTransformer unavailable, using hash fallback: %s", exc)
         _model = False
     return _model
 
@@ -56,10 +73,31 @@ def _load_qdrant():
             url=settings.QDRANT_URL,
             api_key=settings.QDRANT_API_KEY,
         ) if settings.QDRANT_URL else QdrantClient(":memory:")
+
+        if _qdrant.collection_exists(COLLECTION_NAME):
+            # Recreate collection if the stored vector size doesn't match the
+            # current model (e.g. after switching from MiniLM→OpenAI or back).
+            try:
+                info = _qdrant.get_collection(COLLECTION_NAME)
+                existing_size = info.config.params.vectors.size
+                if existing_size != VECTOR_SIZE:
+                    app_logger.warning(
+                        "Qdrant collection '%s' has vector size %d but current model "
+                        "needs %d — deleting and recreating (contracts will be re-indexed "
+                        "automatically on next Ask AI call)",
+                        COLLECTION_NAME, existing_size, VECTOR_SIZE,
+                    )
+                    _qdrant.delete_collection(COLLECTION_NAME)
+            except Exception as exc:
+                app_logger.warning("could not inspect collection size: %s", exc)
+
         if not _qdrant.collection_exists(COLLECTION_NAME):
             _qdrant.create_collection(
                 collection_name=COLLECTION_NAME,
                 vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+            )
+            app_logger.info(
+                "Qdrant collection '%s' created (vector_size=%d)", COLLECTION_NAME, VECTOR_SIZE
             )
     except Exception as exc:
         app_logger.warning("Qdrant unavailable, using process-local vector store: %s", exc)
@@ -68,6 +106,15 @@ def _load_qdrant():
 
 
 def _fallback_embedding(text: str) -> list[float]:
+    """
+    Deterministic hash-based embedding.  VECTOR_SIZE dimensions so it is always
+    compatible with whatever is stored in Qdrant.
+
+    Quality note: cosine similarity scores between a hash query vector and
+    OpenAI-indexed vectors will be ~0 for everything — retrieval falls through
+    to the SQL keyword fallback in retrieval_service.py.  This is intentional:
+    wrong-model vectors must NOT produce confident-looking scores.
+    """
     vector = [0.0] * VECTOR_SIZE
     for token in (text or "").lower().split():
         digest = hashlib.sha256(token.encode("utf-8")).digest()
@@ -77,7 +124,50 @@ def _fallback_embedding(text: str) -> list[float]:
     return [v / norm for v in vector]
 
 
+def _generate_openai_embedding(text: str) -> list[float]:
+    """
+    Call OpenAI text-embedding-3-small.
+
+    Returns a VECTOR_SIZE-dimensional embedding.  Raises on any failure so the
+    caller can decide whether to fall back or propagate the error.
+    """
+    from openai import OpenAI as _OpenAI
+    client = _OpenAI(api_key=settings.OPENAI_API_KEY)
+    response = client.embeddings.create(
+        model=settings.OPENAI_EMBEDDING_MODEL,
+        input=text or " ",
+        dimensions=VECTOR_SIZE,
+    )
+    return response.data[0].embedding
+
+
 def generate_embedding(text: str, timeout_seconds: int = 10) -> list[float]:
+    """
+    Generate a semantic embedding for `text`.
+
+    Model selection:
+      1. OpenAI text-embedding-3-small (when OPENAI_API_KEY is set) — best quality
+      2. SentenceTransformer all-MiniLM-L6-v2 (when OpenAI unavailable) — local
+      3. Hash fallback (last resort) — correct dimensions, no semantic quality
+
+    The `timeout_seconds` parameter is kept for backward compatibility but is
+    only applied to the local SentenceTransformer path.
+    """
+    if settings.OPENAI_API_KEY:
+        t0 = time.monotonic()
+        try:
+            vec = _generate_openai_embedding(text)
+            app_logger.debug("OpenAI embedding generated in %.3fs", time.monotonic() - t0)
+            return vec
+        except Exception as exc:
+            app_logger.warning(
+                "OpenAI embedding failed (%s) — using hash fallback "
+                "(vector search will return low scores; SQL keyword fallback will handle query)",
+                exc,
+            )
+            return _fallback_embedding(text)
+
+    # OpenAI not configured — use local SentenceTransformer
     model = _load_model()
     if not model:
         return _fallback_embedding(text)
@@ -86,10 +176,10 @@ def generate_embedding(text: str, timeout_seconds: int = 10) -> list[float]:
     future = _executor.submit(model.encode, text or "")
     try:
         result = future.result(timeout=timeout_seconds)
-        app_logger.debug("embedding generated in %.3fs", time.monotonic() - t0)
+        app_logger.debug("SentenceTransformer embedding generated in %.3fs", time.monotonic() - t0)
         return result.tolist()
     except FutureTimeout:
-        app_logger.warning("embedding timed out after %ds, using fallback", timeout_seconds)
+        app_logger.warning("SentenceTransformer embedding timed out after %ds, using hash fallback", timeout_seconds)
         return _fallback_embedding(text)
 
 
@@ -243,6 +333,33 @@ def delete_embeddings_for_contract(contract_id: int) -> None:
             app_logger.warning("could not delete embeddings for contract %d: %s", contract_id, exc)
     else:
         _memory_points = [p for p in _memory_points if p["payload"]["contract_id"] != contract_id]
+
+
+def is_contract_indexed_in_qdrant(contract_id: int) -> bool:
+    """
+    Return True if the active vector store has at least one point for this contract.
+
+    Used by retrieval_service to detect when an in-memory Qdrant was wiped by a
+    server restart so it can auto-reindex before answering questions.
+    """
+    qdrant = _load_qdrant()
+    if qdrant is False:
+        # Qdrant unavailable — fall back to in-process list
+        return any(p["payload"]["contract_id"] == contract_id for p in _memory_points)
+    try:
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+        result = qdrant.count(
+            collection_name=COLLECTION_NAME,
+            count_filter=Filter(
+                must=[FieldCondition(key="contract_id", match=MatchValue(value=contract_id))]
+            ),
+        )
+        return result.count > 0
+    except Exception as exc:
+        app_logger.warning(
+            "is_contract_indexed_in_qdrant contract_id=%d check failed: %s", contract_id, exc
+        )
+        return False
 
 
 def search_similar_clauses(query: str, limit: int = 5, contract_id: int | None = None):

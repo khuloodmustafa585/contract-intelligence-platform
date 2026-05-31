@@ -251,8 +251,8 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
     try {
       const result = await api.ask(id, question);
       const parts: string[] = [];
-      if (result.clause_summary) parts.push(result.clause_summary);
-      if (result.quoted_clause) parts.push(`\n\nKey Provision: "${result.quoted_clause}"`);
+      if (result.answer) parts.push(result.answer);
+      if (result.supporting_clause) parts.push(`\n\n"${result.supporting_clause}"`);
       if (result.legal_risk) parts.push(`\n\nRisk: ${result.legal_risk}`);
       if (result.recommendation) parts.push(`\n\nRecommendation: ${result.recommendation}`);
       setAnswer(parts.join("") || "No relevant information found in this contract.");
