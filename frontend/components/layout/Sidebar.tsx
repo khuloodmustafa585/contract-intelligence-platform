@@ -56,7 +56,7 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
           fontWeight: 600,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: "var(--th-text-5)",
+          color: "var(--th-text-3)",
           padding: "0 10px",
           marginBottom: "5px",
         }}
@@ -168,7 +168,7 @@ export default function Sidebar() {
           <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--th-text-1)", lineHeight: 1.2 }}>
             Contract Lens
           </p>
-          <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)", lineHeight: 1.2, marginTop: "2px" }}>
+          <p style={{ fontSize: "0.67rem", color: "var(--th-text-3)", lineHeight: 1.2, marginTop: "2px" }}>
             Legal Intelligence
           </p>
         </div>
@@ -243,7 +243,7 @@ export default function Sidebar() {
             >
               {displayName}
             </p>
-            <p style={{ fontSize: "0.67rem", color: "var(--th-text-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userSubtitle}</p>
+            <p style={{ fontSize: "0.67rem", color: "var(--th-text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userSubtitle}</p>
           </div>
         </Link>
       </div>

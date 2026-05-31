@@ -407,7 +407,7 @@ function ContractSelector({
                       <p style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
                         {contractDisplayName(c)}
                       </p>
-                      <p style={{ fontSize: "0.67rem", color: "#334155", fontFamily: "var(--font-mono,monospace)" }}>
+                      <p style={{ fontSize: "0.67rem", color: "#64748b", fontFamily: "var(--font-mono,monospace)" }}>
                         CTR-{String(c.id).padStart(4, "0")} · {c.status}
                       </p>
                     </div>
@@ -415,7 +415,7 @@ function ContractSelector({
                 );
               })}
               {contracts.length === 0 && (
-                <p style={{ padding: "16px", fontSize: "0.76rem", color: "#334155", textAlign: "center" }}>
+                <p style={{ padding: "16px", fontSize: "0.76rem", color: "#64748b", textAlign: "center" }}>
                   No contracts available
                 </p>
               )}
@@ -896,7 +896,7 @@ function DetectedRisksTable({
             {["Contract / Risk", "Clause Type", "Severity", "AI Explanation", "Status", "Date", ""].map((h) => (
               <span
                 key={h}
-                style={{ fontSize: "0.58rem", fontWeight: 600, color: "#334155", textTransform: "uppercase", letterSpacing: "0.1em" }}
+                style={{ fontSize: "0.58rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}
               >
                 {h}
               </span>
@@ -944,7 +944,7 @@ function DetectedRisksTable({
               <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#64748b", marginBottom: "6px" }}>
                 No risks detected
               </p>
-              <p style={{ fontSize: "0.78rem", color: "#334155", lineHeight: 1.6, maxWidth: "280px" }}>
+              <p style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.6, maxWidth: "280px" }}>
                 Upload and analyze contracts to discover risk clauses and compliance issues across your portfolio.
               </p>
             </div>
@@ -1068,7 +1068,7 @@ function DetectedRisksTable({
                     </span>
 
                     {/* Date */}
-                    <span style={{ fontSize: "0.7rem", color: "#334155" }}>
+                    <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
                       {risk.created_at
                         ? new Date(risk.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
                         : "—"}
@@ -1079,7 +1079,7 @@ function DetectedRisksTable({
                       <motion.div
                         animate={{ rotate: isExpanded ? 180 : 0 }}
                         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                        style={{ color: isExpanded ? "#f87171" : "#334155", lineHeight: 0 }}
+                        style={{ color: isExpanded ? "#f87171" : "#475569", lineHeight: 0 }}
                       >
                         <ChevronDown size={14} />
                       </motion.div>
@@ -1148,7 +1148,7 @@ function DetectedRisksTable({
                                     border: "1px solid rgba(255,255,255,0.06)",
                                   }}
                                 >
-                                  <p style={{ fontSize: "0.74rem", color: "#334155", fontStyle: "italic" }}>
+                                  <p style={{ fontSize: "0.74rem", color: "#64748b", fontStyle: "italic" }}>
                                     No exact clause text captured for this risk.
                                   </p>
                                 </div>
@@ -1640,7 +1640,7 @@ function AIRiskSummaryPanel({
               <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>
                 No Risk Data Available
               </p>
-              <p style={{ fontSize: "0.72rem", color: "#334155", lineHeight: 1.65 }}>
+              <p style={{ fontSize: "0.72rem", color: "#64748b", lineHeight: 1.65 }}>
                 Analyze a contract to generate AI-powered risk assessments and legal insights.
               </p>
             </div>
@@ -1908,7 +1908,7 @@ function RiskDistributionCard({
               style={{
                 fontSize: "1rem",
                 fontWeight: 700,
-                color: total > 0 ? "#f1f5f9" : "#334155",
+                color: total > 0 ? "#f1f5f9" : "#475569",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -1959,7 +1959,7 @@ function RiskDistributionCard({
                       style={{
                         fontSize: "0.82rem",
                         fontWeight: 600,
-                        color: value > 0 ? color : "#1e293b",
+                        color: value > 0 ? color : "#3d4a5a",
                         fontVariantNumeric: "tabular-nums",
                         minWidth: "16px",
                         textAlign: "right",
@@ -1994,7 +1994,7 @@ function RiskDistributionCard({
         })}
 
         {!loading && total === 0 && (
-          <p style={{ fontSize: "0.75rem", color: "#334155", textAlign: "center", paddingTop: "8px" }}>
+          <p style={{ fontSize: "0.75rem", color: "#64748b", textAlign: "center", paddingTop: "8px" }}>
             No risks detected in your portfolio
           </p>
         )}
@@ -2080,9 +2080,9 @@ function TopClauseIssuesCard({
               textAlign: "center",
             }}
           >
-            <Flag size={24} style={{ color: "#334155" }} />
-            <p style={{ fontSize: "0.78rem", color: "#334155" }}>No clause data available</p>
-            <p style={{ fontSize: "0.7rem", color: "#1e293b", lineHeight: 1.5 }}>
+            <Flag size={24} style={{ color: "#64748b" }} />
+            <p style={{ fontSize: "0.78rem", color: "#64748b" }}>No clause data available</p>
+            <p style={{ fontSize: "0.7rem", color: "#475569", lineHeight: 1.5 }}>
               Analyze contracts to see common risk patterns.
             </p>
           </div>
@@ -2312,7 +2312,7 @@ function ComplianceScoreCard({
               <p style={{ fontSize: "0.82rem", fontWeight: 600, color: scoreColor }}>
                 {scoreLabel}
               </p>
-              <p style={{ fontSize: "0.68rem", color: "#334155", marginTop: "3px" }}>
+              <p style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "3px" }}>
                 Based on risk severity profile
               </p>
             </div>
@@ -2332,7 +2332,7 @@ function ComplianceScoreCard({
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
-                  color: "#334155",
+                  color: "#64748b",
                   marginBottom: "10px",
                 }}
               >
@@ -2606,7 +2606,7 @@ export default function RisksPage() {
                 key={b}
                 style={{
                   fontSize: "0.62rem",
-                  color: "#334155",
+                  color: "#64748b",
                   letterSpacing: "0.07em",
                   fontWeight: 500,
                   textTransform: "uppercase",
@@ -2616,7 +2616,7 @@ export default function RisksPage() {
               </span>
             ))}
           </div>
-          <span style={{ fontSize: "0.7rem", color: "#1e293b" }}>
+          <span style={{ fontSize: "0.7rem", color: "#475569" }}>
             Contract Lens · {new Date().getFullYear()}
           </span>
         </div>

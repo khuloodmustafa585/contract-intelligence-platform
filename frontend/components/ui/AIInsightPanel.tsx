@@ -51,7 +51,7 @@ export default function AIInsightPanel({
           style={{ background: v.accent }}
         />
       </div>
-      <div className="text-sm leading-relaxed" style={{ color: "#94a3b8" }}>
+      <div className="text-sm leading-relaxed" style={{ color: "var(--th-text-2)" }}>
         {children}
       </div>
     </div>

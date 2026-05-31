@@ -112,13 +112,13 @@ export default function MetricCard({
         {label}
       </p>
 
-      {/* Value + trend */}
+      {/* Value + trend — colorize by semantic accent for quick scanning */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
         <span
           style={{
             fontSize: "2rem",
             fontWeight: 700,
-            color: "var(--th-text-1)",
+            color: accent === "indigo" ? "var(--th-text-1)" : colors.iconColor,
             lineHeight: 1,
             fontVariantNumeric: "tabular-nums",
           }}

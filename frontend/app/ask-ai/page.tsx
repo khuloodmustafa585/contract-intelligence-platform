@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -163,7 +163,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
         <p
           style={{
             fontSize: "0.7rem",
-            color: "#334155",
+            color: "#64748b",
             margin: 0,
             fontStyle: "italic",
           }}
@@ -598,7 +598,7 @@ export default function AskAIPage() {
                 <p style={{ fontSize: "0.92rem", fontWeight: 600, color: "#94a3b8" }}>
                   Contract AI
                 </p>
-                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, maxWidth: "340px" }}>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.65, maxWidth: "340px" }}>
                   Ask a question about the selected contract. Answers are grounded in the exact contract text.
                 </p>
               </div>
@@ -698,7 +698,7 @@ export default function AskAIPage() {
                   <span
                     style={{
                       fontSize: "0.65rem",
-                      color:    "#1e293b",
+                      color:    "#475569",
                       padding:  "0 2px",
                     }}
                   >
@@ -795,7 +795,7 @@ export default function AskAIPage() {
                     style={{
                       marginRight: "12px",
                       fontSize:    "0.68rem",
-                      color:       "#1e293b",
+                      color:       "#475569",
                       fontFamily:  "var(--font-mono, monospace)",
                       whiteSpace:  "nowrap",
                     }}

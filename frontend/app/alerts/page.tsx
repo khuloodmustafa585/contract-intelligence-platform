@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
@@ -521,7 +521,7 @@ export default function AlertsPage() {
                           fontWeight: 600,
                           letterSpacing: "0.1em",
                           textTransform: "uppercase",
-                          color: "#3a4560",
+                          color: "#64748b",
                           flexShrink: 0,
                         }}
                       >
@@ -670,7 +670,7 @@ export default function AlertsPage() {
                                   {alert.trigger_date && (
                                     <>
                                       {contract && (
-                                        <span style={{ color: "#1e293b", fontSize: "0.7rem", userSelect: "none" }}>·</span>
+                                        <span style={{ color: "#475569", fontSize: "0.7rem", userSelect: "none" }}>·</span>
                                       )}
                                       <span style={{ fontSize: "0.71rem", color: "#f59e0b" }}>
                                         Due{" "}

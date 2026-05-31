@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -452,7 +452,7 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                     <p style={{ fontSize: "0.62rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "4px", fontFamily: "var(--font-mono,monospace)" }}>
                       Contract Document
                     </p>
-                    <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", lineHeight: 1.3 }}>
+                    <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#475569", lineHeight: 1.3 }}>
                       {contract.title}
                     </h2>
                     {riskByClauseId.size > 0 && (
@@ -796,7 +796,7 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
                                     <motion.div
                                       animate={{ rotate: isExpanded ? 180 : 0 }}
                                       transition={{ duration: 0.2 }}
-                                      style={{ color: isSelected ? tok.text : "#334155", lineHeight: 0 }}
+                                      style={{ color: isSelected ? tok.text : "#475569", lineHeight: 0 }}
                                     >
                                       <ChevronDown size={13} />
                                     </motion.div>
@@ -821,8 +821,8 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
 
                                 {/* Review CTA */}
                                 <div className="flex items-center gap-1 mt-2">
-                                  <FileSearch size={9} style={{ color: isSelected ? tok.text : "#334155" }} />
-                                  <span style={{ fontSize: "0.65rem", color: isSelected ? tok.text : "#334155", fontWeight: 500 }}>
+                                  <FileSearch size={9} style={{ color: isSelected ? tok.text : "#475569" }} />
+                                  <span style={{ fontSize: "0.65rem", color: isSelected ? tok.text : "#475569", fontWeight: 500 }}>
                                     {isSelected ? "Viewing in document" : "Click to locate in document"}
                                   </span>
                                 </div>
@@ -1041,9 +1041,9 @@ export default function ContractViewPage({ params }: { params: Promise<{ id: str
 
                   return events.length === 0 ? (
                     <div className="py-12 text-center">
-                      <Calendar size={24} style={{ color: "#334155", margin: "0 auto 10px" }} />
+                      <Calendar size={24} style={{ color: "#64748b", margin: "0 auto 10px" }} />
                       <p className="text-sm font-medium" style={{ color: "#475569" }}>No dates extracted yet</p>
-                      <p className="text-xs mt-1" style={{ color: "#334155" }}>Dates populate after AI analysis completes.</p>
+                      <p className="text-xs mt-1" style={{ color: "#64748b" }}>Dates populate after AI analysis completes.</p>
                     </div>
                   ) : (
                     <div style={{ position: "relative", paddingLeft: "20px" }}>

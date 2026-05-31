@@ -94,8 +94,8 @@ export default function TopNavbar() {
     >
       {/* Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
-        <span style={{ fontSize: "0.72rem", color: "var(--th-text-5)" }}>Contract Lens</span>
-        <ChevronRight size={11} style={{ color: "var(--th-text-5)" }} />
+        <span style={{ fontSize: "0.72rem", color: "var(--th-text-4)" }}>Contract Lens</span>
+        <ChevronRight size={11} style={{ color: "var(--th-text-4)" }} />
         <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--th-text-2)" }}>{pageLabel}</span>
       </div>
 
@@ -144,7 +144,7 @@ export default function TopNavbar() {
         <kbd
           style={{
             fontSize: "0.58rem",
-            color: "var(--th-text-5)",
+            color: "var(--th-text-4)",
             background: "var(--th-tag-bg)",
             border: "1px solid var(--th-tag-border)",
             borderRadius: "4px",

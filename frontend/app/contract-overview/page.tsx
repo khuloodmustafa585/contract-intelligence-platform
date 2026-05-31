@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
@@ -19,6 +19,9 @@ import {
   RefreshCw,
   Timer,
   Brain,
+  Loader2,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -93,6 +96,175 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
     >
       {children}
     </motion.div>
+  );
+}
+
+/* ─── Inline markdown renderer ──────────────────────────────────── */
+// Converts **bold** and *italic* markers to JSX without any external deps.
+function renderInlineNodes(text: string): React.ReactNode {
+  if (!text) return null;
+  const parts: React.ReactNode[] = [];
+  // Split alternately on **bold** → odd indices are bold text
+  const boldSplit = text.split(/\*\*([^*]+)\*\*/);
+  boldSplit.forEach((seg, i) => {
+    if (i % 2 === 1) {
+      parts.push(
+        <strong key={`b${i}`} style={{ color: "#e2e8f0", fontWeight: 600 }}>
+          {seg}
+        </strong>,
+      );
+    } else {
+      // Handle *italic* within non-bold segments
+      const italicSplit = seg.split(/\*([^*\n]+)\*/);
+      italicSplit.forEach((ip, j) => {
+        if (j % 2 === 1) {
+          parts.push(<em key={`i${i}-${j}`} style={{ color: "#b8c5d8", fontStyle: "italic" }}>{ip}</em>);
+        } else if (ip) {
+          parts.push(ip);
+        }
+      });
+    }
+  });
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
+
+/* ─── Block markdown parser ──────────────────────────────────────── */
+type MdBlock =
+  | { kind: "heading"; text: string }
+  | { kind: "para";    text: string }
+  | { kind: "list";    items: string[] };
+
+function parseMdBlocks(raw: string): MdBlock[] {
+  const result: MdBlock[] = [];
+  const chunks = raw.split(/\n{2,}/);
+
+  for (const chunk of chunks) {
+    const lines = chunk.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+
+    const isListLine = (l: string) => /^[-*•]\s+/.test(l);
+    const stripList  = (l: string) => l.replace(/^[-*•]\s+/, "");
+    const headingRe  = /^#{1,3}\s+(.+)/;
+
+    // Heading on first line
+    const hm = lines[0].match(headingRe);
+    if (hm) {
+      result.push({ kind: "heading", text: hm[1] });
+      const rest = lines.slice(1);
+      if (rest.length) {
+        if (rest.every(isListLine)) {
+          result.push({ kind: "list", items: rest.map(stripList) });
+        } else {
+          result.push({ kind: "para", text: rest.join(" ") });
+        }
+      }
+      continue;
+    }
+
+    // Pure list
+    if (lines.every(isListLine)) {
+      result.push({ kind: "list", items: lines.map(stripList) });
+      continue;
+    }
+
+    // Mixed paragraph + list items → split into sub-blocks
+    if (lines.some(isListLine)) {
+      let textBuf: string[] = [];
+      let listBuf: string[] = [];
+      const flush = () => {
+        if (textBuf.length) { result.push({ kind: "para", text: textBuf.join(" ") }); textBuf = []; }
+        if (listBuf.length) { result.push({ kind: "list", items: listBuf }); listBuf = []; }
+      };
+      for (const line of lines) {
+        if (isListLine(line)) { if (textBuf.length) { result.push({ kind: "para", text: textBuf.join(" ") }); textBuf = []; } listBuf.push(stripList(line)); }
+        else                  { if (listBuf.length) { result.push({ kind: "list", items: listBuf }); listBuf = []; } textBuf.push(line); }
+      }
+      flush();
+      continue;
+    }
+
+    // Plain paragraph
+    result.push({ kind: "para", text: lines.join(" ") });
+  }
+
+  return result;
+}
+
+/* ─── Summary markdown renderer ─────────────────────────────────── */
+function SummaryMarkdown({ text }: { text: string }) {
+  const blocks = parseMdBlocks(text);
+  const hasSections = blocks.some((b) => b.kind === "heading");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {blocks.map((block, i) => {
+        if (block.kind === "heading") {
+          return (
+            <div key={i} style={{ marginTop: i > 0 ? "6px" : 0, display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "3px",
+                  height: "15px",
+                  borderRadius: "2px",
+                  background: "linear-gradient(180deg, #6366f1, #818cf8)",
+                  flexShrink: 0,
+                }}
+              />
+              <p
+                style={{
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "#dae2fd",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {renderInlineNodes(block.text)}
+              </p>
+            </div>
+          );
+        }
+
+        if (block.kind === "list") {
+          return (
+            <ul key={i} style={{ display: "flex", flexDirection: "column", gap: "5px", listStyle: "none", margin: 0, padding: 0 }}>
+              {block.items.map((item, j) => (
+                <li key={j} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      marginTop: "9px",
+                      width: "4px",
+                      height: "4px",
+                      borderRadius: "50%",
+                      background: "rgba(99,102,241,0.6)",
+                    }}
+                  />
+                  <span style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.75 }}>
+                    {renderInlineNodes(item)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        // Paragraph
+        const isLead = !hasSections && i === 0;
+        return (
+          <p
+            key={i}
+            style={{
+              fontSize: isLead ? "0.925rem" : "0.875rem",
+              color: isLead ? "#b0bfd0" : "#94a3b8",
+              lineHeight: 1.85,
+            }}
+          >
+            {renderInlineNodes(block.text)}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 
@@ -447,7 +619,7 @@ function ContractSelector({
           >
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
               {contracts.length === 0 ? (
-                <p style={{ padding: "20px 16px", fontSize: "0.76rem", color: "#334155", textAlign: "center" }}>
+                <p style={{ padding: "20px 16px", fontSize: "0.76rem", color: "#64748b", textAlign: "center" }}>
                   No contracts available
                 </p>
               ) : (
@@ -475,12 +647,12 @@ function ContractSelector({
                       onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
                       onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                     >
-                      <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isSelected ? "#60a5fa" : "#334155", flexShrink: 0, marginTop: "5px" }} />
+                      <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isSelected ? "#60a5fa" : "#3d4a5a", flexShrink: 0, marginTop: "5px" }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
                           {contractDisplayName(c)}
                         </p>
-                        <p style={{ fontSize: "0.67rem", color: "#334155", fontFamily: "var(--font-mono,monospace)" }}>
+                        <p style={{ fontSize: "0.67rem", color: "#64748b", fontFamily: "var(--font-mono,monospace)" }}>
                           CTR-{String(c.id).padStart(4, "0")} · {c.status}
                         </p>
                       </div>
@@ -663,7 +835,7 @@ function DateCard({
           )}
         </div>
       ) : (
-        <p style={{ fontSize: "0.85rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
+        <p style={{ fontSize: "0.85rem", color: "#64748b", fontStyle: "italic" }}>Not detected</p>
       )}
     </div>
   );
@@ -677,6 +849,9 @@ export default function ContractOverviewPage() {
   const [contractsLoading, setContractsLoading] = useState(true);
   const [detailLoading, setDetailLoading]     = useState(false);
   const [error, setError]                     = useState("");
+  const [analyzing, setAnalyzing]             = useState(false);
+  const [confirmOpen, setConfirmOpen]         = useState(false);
+  const [analyzeSuccess, setAnalyzeSuccess]   = useState(false);
 
   useEffect(() => {
     api
@@ -699,6 +874,31 @@ export default function ContractOverviewPage() {
       .finally(() => { if (active) setDetailLoading(false); });
     return () => { active = false; };
   }, [selectedId]);
+
+  // Auto-clear success banner after 5 seconds
+  useEffect(() => {
+    if (!analyzeSuccess) return;
+    const t = setTimeout(() => setAnalyzeSuccess(false), 5000);
+    return () => clearTimeout(t);
+  }, [analyzeSuccess]);
+
+  async function reanalyze() {
+    if (!detail || analyzing) return;
+    setConfirmOpen(false);
+    setAnalyzing(true);
+    setError("");
+    setAnalyzeSuccess(false);
+    try {
+      await api.analyze(detail.id);
+      const updated = await api.contract(detail.id);
+      setDetail(updated);
+      setAnalyzeSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Re-analysis failed. Please try again.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   /* ── Derived values ── */
   const risks       = useMemo(() => detail?.risks ?? [],       [detail?.risks]);
@@ -740,6 +940,191 @@ export default function ContractOverviewPage() {
 
   return (
     <AppShell>
+      {/* ── Confirmation modal ── */}
+      <AnimatePresence>
+        {confirmOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 200,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              background: "rgba(2,6,15,0.72)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+            }}
+            onClick={() => setConfirmOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "rgba(8, 16, 32, 0.97)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: "20px",
+                padding: "32px",
+                maxWidth: "460px",
+                width: "100%",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04) inset",
+              }}
+            >
+              {/* Modal header */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      borderRadius: "12px",
+                      background: "rgba(245,158,11,0.12)",
+                      border: "1px solid rgba(245,158,11,0.28)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <RefreshCw size={16} style={{ color: "#fbbf24" }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: "1rem", fontWeight: 700, color: "#f1f5f9", lineHeight: 1.3 }}>
+                      Re-analyze Contract
+                    </p>
+                    <p style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+                      Full AI re-analysis
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "8px",
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "#64748b",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                    (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color = "#64748b";
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <p style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.7, marginBottom: "20px" }}>
+                This will run a full AI re-analysis of <span style={{ color: "#dae2fd", fontWeight: 500 }}>{detail?.title ?? "this contract"}</span> and regenerate:
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  background: "rgba(255,255,255,0.025)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  marginBottom: "24px",
+                }}
+              >
+                {[
+                  { label: "Executive Summary",    color: "#818cf8" },
+                  { label: "Risk findings",        color: "#f87171" },
+                  { label: "Obligations",          color: "#fbbf24" },
+                  { label: "Alerts",               color: "#22d3ee" },
+                ].map(({ label, color }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color, flexShrink: 0 }} />
+                    <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: "0.78rem", color: "#475569", lineHeight: 1.6, marginBottom: "24px" }}>
+                Current analysis results will be replaced. This cannot be undone.
+              </p>
+
+              {/* Modal actions */}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setConfirmOpen(false)}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "10px",
+                    fontSize: "0.82rem",
+                    fontWeight: 500,
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    color: "#64748b",
+                    cursor: "pointer",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+                    (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color = "#64748b";
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={reanalyze}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    padding: "9px 20px",
+                    borderRadius: "10px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    background: "linear-gradient(135deg, #d97706, #b45309)",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                    color: "#ffffff",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 16px rgba(217,119,6,0.35)",
+                    transition: "opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.88")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
+                >
+                  <RefreshCw size={13} />
+                  Re-analyze Contract
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Ambient glow */}
       <div
         style={{
@@ -851,11 +1236,48 @@ export default function ContractOverviewPage() {
                     fontSize: "0.78rem",
                     fontWeight: 600,
                     textDecoration: "none",
+                    transition: "background 0.15s",
                   }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.16)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.10)")}
                 >
                   <FileSearch size={13} />
                   Review Contract
                 </Link>
+
+                {/* Re-analyze Contract button */}
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={analyzing}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    background: analyzing ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.07)",
+                    border: "1px solid rgba(245,158,11,0.28)",
+                    color: "#fbbf24",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: analyzing ? "not-allowed" : "pointer",
+                    opacity: analyzing ? 0.7 : 1,
+                    transition: "background 0.15s, opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!analyzing) (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,0.13)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!analyzing) (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,0.07)";
+                  }}
+                >
+                  {analyzing ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={13} />
+                  )}
+                  {analyzing ? "Analyzing…" : "Re-analyze Contract"}
+                </button>
               </>
             )}
           </div>
@@ -879,6 +1301,27 @@ export default function ContractOverviewPage() {
           >
             <AlertCircle size={14} style={{ flexShrink: 0 }} />
             {error}
+          </div>
+        )}
+
+        {/* ── Re-analysis success ── */}
+        {analyzeSuccess && (
+          <div
+            style={{
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "14px 18px",
+              borderRadius: "14px",
+              fontSize: "0.82rem",
+              background: "rgba(16,185,129,0.08)",
+              border: "1px solid rgba(16,185,129,0.20)",
+              color: "#34d399",
+            }}
+          >
+            <CheckCircle2 size={14} style={{ flexShrink: 0 }} />
+            Re-analysis complete — summary, risks, obligations, and alerts have been updated.
           </div>
         )}
 
@@ -914,7 +1357,7 @@ export default function ContractOverviewPage() {
                 <p style={{ fontSize: "1rem", fontWeight: 600, color: "#64748b", marginBottom: "8px" }}>
                   No Contracts Found
                 </p>
-                <p style={{ fontSize: "0.82rem", color: "#334155", lineHeight: 1.65, maxWidth: "340px" }}>
+                <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.65, maxWidth: "340px" }}>
                   Upload and analyze a contract to see its executive overview here.
                 </p>
               </div>
@@ -984,12 +1427,12 @@ export default function ContractOverviewPage() {
                     <InfoRow
                       label="Effective Date"
                       value={formatDate(detail.effective_date)}
-                      valueColor={detail.effective_date ? "#e2e8f0" : "#334155"}
+                      valueColor={detail.effective_date ? "#e2e8f0" : "#475569"}
                     />
                     <InfoRow
                       label="Expiration Date"
                       value={formatDate(detail.expiration_date)}
-                      valueColor={detail.expiration_date ? "#e2e8f0" : "#334155"}
+                      valueColor={detail.expiration_date ? "#e2e8f0" : "#475569"}
                     />
                     <InfoRow
                       label="Contract Duration"
@@ -1089,12 +1532,12 @@ export default function ContractOverviewPage() {
                 <div style={{ padding: "20px 24px" }}>
                   {parties.client.length === 0 && parties.provider.length === 0 && parties.other.length === 0 ? (
                     <div style={{ padding: "32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-                      <Users size={28} style={{ color: "#334155" }} />
+                      <Users size={28} style={{ color: "#64748b" }} />
                       <div>
                         <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>
                           No Parties Detected
                         </p>
-                        <p style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.6 }}>
+                        <p style={{ fontSize: "0.76rem", color: "#64748b", lineHeight: 1.6 }}>
                           Party names are extracted directly from the contract text. Ensure the contract has been analyzed to enable party detection.
                         </p>
                       </div>
@@ -1116,7 +1559,7 @@ export default function ContractOverviewPage() {
                           </div>
                           <div>
                             <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#60a5fa", marginBottom: "1px" }}>Client / Customer</p>
-                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>Receiving party</p>
+                            <p style={{ fontSize: "0.62rem", color: "#64748b" }}>Receiving party</p>
                           </div>
                         </div>
                         {parties.client.length > 0 ? (
@@ -1126,13 +1569,13 @@ export default function ContractOverviewPage() {
                                 <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#93c5fd", marginBottom: "3px", lineHeight: 1.3 }}>{p.name}</p>
                                 <p style={{ fontSize: "0.62rem", color: "#3b82f680", display: "flex", alignItems: "center", gap: "5px" }}>
                                   <span>{p.roleLabel}</span>
-                                  {p.confidence === "low" && <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>}
+                                  {p.confidence === "low" && <span style={{ color: "#64748b", fontStyle: "italic" }}>· inferred from obligations</span>}
                                 </p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
+                          <p style={{ fontSize: "0.76rem", color: "#64748b", fontStyle: "italic" }}>Not detected</p>
                         )}
                       </div>
 
@@ -1151,7 +1594,7 @@ export default function ContractOverviewPage() {
                           </div>
                           <div>
                             <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#34d399", marginBottom: "1px" }}>Provider / Vendor</p>
-                            <p style={{ fontSize: "0.62rem", color: "#334155" }}>Delivering party</p>
+                            <p style={{ fontSize: "0.62rem", color: "#64748b" }}>Delivering party</p>
                           </div>
                         </div>
                         {parties.provider.length > 0 ? (
@@ -1161,13 +1604,13 @@ export default function ContractOverviewPage() {
                                 <p style={{ fontSize: "0.84rem", fontWeight: 600, color: "#6ee7b7", marginBottom: "3px", lineHeight: 1.3 }}>{p.name}</p>
                                 <p style={{ fontSize: "0.62rem", color: "#10b98180", display: "flex", alignItems: "center", gap: "5px" }}>
                                   <span>{p.roleLabel}</span>
-                                  {p.confidence === "low" && <span style={{ color: "#334155", fontStyle: "italic" }}>· inferred from obligations</span>}
+                                  {p.confidence === "low" && <span style={{ color: "#64748b", fontStyle: "italic" }}>· inferred from obligations</span>}
                                 </p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p style={{ fontSize: "0.76rem", color: "#334155", fontStyle: "italic" }}>Not detected</p>
+                          <p style={{ fontSize: "0.76rem", color: "#64748b", fontStyle: "italic" }}>Not detected</p>
                         )}
                       </div>
 
@@ -1241,87 +1684,125 @@ export default function ContractOverviewPage() {
             </FadeUp>
 
             {/* ════════════════════════════════════════════════════════
-                SECTION 4 — Contract Summary
+                SECTION 4 — AI Executive Summary
             ════════════════════════════════════════════════════════ */}
             <FadeUp delay={0.15}>
               <div style={CARD}>
-                <CardHeader
-                  icon={Brain}
-                  title="Contract Summary"
-                  iconColor="#818cf8"
-                  iconBg="rgba(99,102,241,0.12)"
-                />
+                {/* Card header */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "20px 24px",
+                    ...DIVIDER,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "10px",
+                        background: "rgba(99,102,241,0.12)",
+                        border: "1px solid rgba(99,102,241,0.25)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Brain size={13} style={{ color: "#818cf8" }} />
+                    </div>
+                    <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+                      AI Executive Summary
+                    </span>
+                  </div>
+                  {generalSummary && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        background: "rgba(99,102,241,0.07)",
+                        border: "1px solid rgba(99,102,241,0.16)",
+                      }}
+                    >
+                      <div
+                        className="animate-pulse"
+                        style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#818cf8" }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "0.58rem",
+                          color: "#818cf8",
+                          fontWeight: 600,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          fontFamily: "var(--font-mono, monospace)",
+                        }}
+                      >
+                        AI Generated
+                      </span>
+                    </div>
+                  )}
+                </div>
 
+                {/* ── Empty state ── */}
                 {generalSummary === null ? (
                   <div
                     style={{
-                      padding: "48px 28px",
+                      padding: "56px 28px",
                       textAlign: "center",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
-                      gap: "12px",
+                      gap: "14px",
                     }}
                   >
                     <div
                       style={{
-                        width: "44px",
-                        height: "44px",
+                        width: "48px",
+                        height: "48px",
                         borderRadius: "14px",
-                        background: "rgba(99,102,241,0.08)",
-                        border: "1px solid rgba(99,102,241,0.16)",
+                        background: "rgba(99,102,241,0.07)",
+                        border: "1px solid rgba(99,102,241,0.14)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Brain size={20} style={{ color: "#6366f1", opacity: 0.5 }} />
+                      <Brain size={22} style={{ color: "#6366f1", opacity: 0.45 }} />
                     </div>
-                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
-                      Summary Not Generated Yet
-                    </p>
-                    <p style={{ fontSize: "0.76rem", color: "#334155", lineHeight: 1.65, maxWidth: "360px" }}>
-                      Run AI analysis on this contract to generate a plain-language executive summary.
-                    </p>
+                    <div>
+                      <p
+                        style={{
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                          color: "#475569",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        Summary Not Yet Generated
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "#64748b",
+                          lineHeight: 1.65,
+                          maxWidth: "340px",
+                        }}
+                      >
+                        Run AI analysis on this contract to produce a structured executive
+                        summary with key terms, parties, and risk highlights.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div style={{ padding: "28px 32px" }}>
-                    {(() => {
-                      // Split the summary into a headline sentence and the remaining body.
-                      // Same approach used in contracts/[id]/page.tsx summary tab.
-                      const sentences = generalSummary.summary_text
-                        .replace(/\n/g, " ")
-                        .split(/(?<=[.!?])\s+/)
-                        .filter(Boolean);
-                      const headline = sentences[0] ?? generalSummary.summary_text;
-                      const body     = sentences.slice(1).join(" ");
-                      return (
-                        <>
-                          <p
-                            style={{
-                              fontSize: "1rem",
-                              fontWeight: 600,
-                              color: "#dae2fd",
-                              lineHeight: 1.7,
-                              marginBottom: body ? "16px" : 0,
-                            }}
-                          >
-                            {headline}
-                          </p>
-                          {body && (
-                            <p
-                              style={{
-                                fontSize: "0.875rem",
-                                color: "#64748b",
-                                lineHeight: 1.9,
-                              }}
-                            >
-                              {body}
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
+                    <SummaryMarkdown text={generalSummary.summary_text} />
                   </div>
                 )}
               </div>

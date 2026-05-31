@@ -1099,7 +1099,7 @@ function UpcomingObligationsCard({
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Icon
                   size={12}
-                  style={{ color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "#1e293b" }}
+                  style={{ color: value > 0 ? (urgent ? "#f87171" : "#fbbf24") : "#3d4a5a" }}
                 />
                 <span style={{ fontSize: "0.81rem", color: "var(--th-text-2)" }}>{label}</span>
               </div>

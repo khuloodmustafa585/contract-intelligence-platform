@@ -120,7 +120,7 @@ function ContractsContent() {
   const SortIndicator = ({ field }: { field: SortField }) => (
     <ArrowUpDown
       size={12}
-      style={{ color: sortField === field ? "#818cf8" : "#3a4560" }}
+      style={{ color: sortField === field ? "#818cf8" : "#64748b" }}
     />
   );
 
@@ -304,7 +304,7 @@ function ContractsContent() {
                 fontSize: "0.82rem",
                 color: "#dae2fd",
               }}
-              className="placeholder:text-[#3a4560]"
+              className="placeholder:text-[#64748b]"
             />
           </div>
 
@@ -561,7 +561,7 @@ function ContractsContent() {
                           style={{
                             fontSize: "0.6rem",
                             fontFamily: "var(--font-mono, monospace)",
-                            color: "#3a4560",
+                            color: "#64748b",
                             marginTop: "2px",
                           }}
                         >
