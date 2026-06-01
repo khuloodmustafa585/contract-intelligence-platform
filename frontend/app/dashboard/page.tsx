@@ -790,7 +790,7 @@ function ContractsSection({
           {filtered.map((contract, i) => (
             <Link
               key={contract.id}
-              href={`/contracts/${contract.id}`}
+              href={`/contract-review/${contract.id}`}
               style={{
                 display: "grid",
                 gridTemplateColumns: COLS,

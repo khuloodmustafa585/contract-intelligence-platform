@@ -799,7 +799,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
               Close
             </button>
             <Link
-              href={`/contracts/${risk.contract_id}?highlightRisk=${risk.id}`}
+              href={`/contract-review/${risk.contract_id}`}
               style={{
                 display: "inline-flex", alignItems: "center", gap: "6px",
                 padding: "8px 18px", borderRadius: "10px",
@@ -1006,7 +1006,7 @@ function DetectedRisksTable({
                       </p>
                       {/* Clickable contract badge */}
                       <Link
-                        href={`/contracts/${risk.contract_id}`}
+                        href={`/contract-review/${risk.contract_id}`}
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: "4px",
@@ -1325,7 +1325,7 @@ function DetectedRisksTable({
                                     <span style={{ fontSize: "0.67rem", color: "#475569" }}>Contract</span>
                                   </div>
                                   <Link
-                                    href={`/contracts/${risk.contract_id}`}
+                                    href={`/contract-review/${risk.contract_id}`}
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       fontSize: "0.67rem", color: "#3b82f6",
@@ -1362,7 +1362,7 @@ function DetectedRisksTable({
                                     </button>
                                   )}
                                   <Link
-                                    href={`/contracts/${risk.contract_id}?highlightRisk=${risk.id}`}
+                                    href={`/contract-review/${risk.contract_id}`}
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       flex: 1, padding: "7px 10px", borderRadius: "8px",

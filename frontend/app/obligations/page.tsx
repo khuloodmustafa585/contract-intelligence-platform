@@ -248,7 +248,7 @@ function ObligationRow({
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <Link
-            href={`/contracts/${item.contract_id}`}
+            href={`/contract-review/${item.contract_id}`}
             style={{ textDecoration: "none" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -403,7 +403,7 @@ function ObligationRow({
         {/* Actions row */}
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <Link
-            href={`/contracts/${item.contract_id}`}
+            href={`/contract-review/${item.contract_id}`}
             style={{
               display: "flex",
               width: "24px",

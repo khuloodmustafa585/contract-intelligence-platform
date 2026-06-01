@@ -279,7 +279,7 @@ export default function ContractReviewPage({ params }: { params: Promise<{ contr
       <div style={{ maxWidth: "1440px", margin: "0 auto", padding: "44px 52px", position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "18px", marginBottom: "24px" }}>
           <div>
-            <Link href={detail ? `/contracts/${detail.id}` : "/contracts"} style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--th-text-3)", fontSize: "0.76rem", textDecoration: "none", marginBottom: "14px" }}>
+            <Link href="/contracts" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--th-text-3)", fontSize: "0.76rem", textDecoration: "none", marginBottom: "14px" }}>
               <ArrowLeft size={13} />
               Back to contract
             </Link>

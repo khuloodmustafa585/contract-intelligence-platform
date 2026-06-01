@@ -8,17 +8,16 @@ import { api } from "@/services/api";
 import { useUser, getInitials } from "@/contexts/UserContext";
 
 const PAGE_LABELS: Record<string, string> = {
-  "/dashboard":      "Dashboard",
-  "/contracts":      "Contracts",
-  "/upload":         "Upload Center",
-  "/ask-ai":         "Ask AI",
-  "/clause-library": "Clause Library",
-  "/risks":          "Risk Insights",
-  "/obligations":    "Obligations",
-  "/analytics":      "Analytics",
-  "/alerts":         "Alerts",
-  "/settings":       "Settings",
-  "/profile":        "Profile",
+  "/dashboard":   "Dashboard",
+  "/contracts":   "Contracts",
+  "/upload":      "Upload Center",
+  "/ask-ai":      "Ask AI",
+  "/risks":       "Risk Insights",
+  "/obligations": "Obligations",
+  "/analytics":   "Analytics",
+  "/alerts":      "Alerts",
+  "/settings":    "Settings",
+  "/profile":     "Profile",
 };
 
 export default function TopNavbar() {

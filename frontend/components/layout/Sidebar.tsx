@@ -7,7 +7,6 @@ import {
   FileText,
   Upload,
   Sparkles,
-  BookOpen,
   ShieldAlert,
   ClipboardList,
   BarChart2,
@@ -29,9 +28,8 @@ const NAV_MAIN = [
 ];
 
 const NAV_TOOLS = [
-  { href: "/upload",         label: "Upload Center",  icon: Upload   },
-  { href: "/clause-library", label: "Clause Library", icon: BookOpen },
-  { href: "/alerts",         label: "Alerts",         icon: Bell     },
+  { href: "/upload",  label: "Upload Center", icon: Upload },
+  { href: "/alerts",  label: "Alerts",        icon: Bell   },
 ];
 
 const NAV_SYSTEM = [

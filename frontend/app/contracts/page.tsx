@@ -515,7 +515,7 @@ function ContractsContent() {
                 >
                   {/* Name */}
                   <Link
-                    href={`/contracts/${contract.id}`}
+                    href={`/contract-review/${contract.id}`}
                     style={{ textDecoration: "none", minWidth: 0 }}
                   >
                     <div
@@ -641,7 +641,7 @@ function ContractsContent() {
                       Review
                     </Link>
                     <Link
-                      href={`/contracts/${contract.id}`}
+                      href={`/contract-review/${contract.id}`}
                       aria-label={`Open ${contract.title}`}
                       style={{
                         display: "inline-flex",

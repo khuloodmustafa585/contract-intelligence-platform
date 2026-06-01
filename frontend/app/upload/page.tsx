@@ -718,7 +718,7 @@ export default function UploadPage() {
                     return (
                       <Link
                         key={c.id}
-                        href={`/contracts/${c.id}`}
+                        href={`/contract-review/${c.id}`}
                         style={{
                           display: "flex",
                           alignItems: "center",
