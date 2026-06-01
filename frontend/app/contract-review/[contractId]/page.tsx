@@ -31,12 +31,15 @@ const CARD: React.CSSProperties = {
 };
 
 const LEGEND = [
-  { label: "Liability", color: "#f87171", bg: "rgba(248,113,113,0.16)" },
-  { label: "Compliance", color: "#60a5fa", bg: "rgba(96,165,250,0.16)" },
+  { label: "Confidentiality", color: "#f87171", bg: "rgba(248,113,113,0.16)" },
+  { label: "Integrity", color: "#60a5fa", bg: "rgba(96,165,250,0.16)" },
   { label: "Payment", color: "#facc15", bg: "rgba(250,204,21,0.18)" },
-  { label: "Termination", color: "#fb923c", bg: "rgba(251,146,60,0.18)" },
-  { label: "Renewal", color: "#34d399", bg: "rgba(52,211,153,0.16)" },
-  { label: "Confidentiality", color: "#a78bfa", bg: "rgba(167,139,250,0.17)" },
+  { label: "Data Protection", color: "#fb923c", bg: "rgba(251,146,60,0.18)" },
+  { label: "Termination", color: "#41d334", bg: "rgba(52,211,153,0.16)" },
+  { label: "Liability", color: "#a78bfa", bg: "rgba(167,139,250,0.17)" },
+  { label: "Term and Duration", color: "#d257a1", bg: "rgba(248, 113, 232, 0.16)" },
+  { label: "Idemnity", color: "#2c0202", bg: "rgba(104, 99, 99, 0.16)" },
+  { label: "Governing Law", color: "#c3b7b7", bg: "rgba(134, 129, 129, 0.16)" },
 ] as const;
 
 type LegendCategory = typeof LEGEND[number]["label"];
