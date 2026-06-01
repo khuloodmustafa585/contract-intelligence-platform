@@ -121,6 +121,9 @@ export async function registerUser(data: {
   last_name?: string;
   email: string;
   password: string;
+  job_title?: string;
+  department?: string;
+  company?: string;
 }) {
   return request("/auth/register", { method: "POST", body: JSON.stringify(data) });
 }

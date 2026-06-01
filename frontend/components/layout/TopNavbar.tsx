@@ -14,7 +14,6 @@ const PAGE_LABELS: Record<string, string> = {
   "/ask-ai":      "Ask AI",
   "/risks":       "Risk Insights",
   "/obligations": "Obligations",
-  "/analytics":   "Analytics",
   "/alerts":      "Alerts",
   "/settings":    "Settings",
   "/profile":     "Profile",

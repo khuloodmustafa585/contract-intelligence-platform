@@ -48,6 +48,9 @@ def register_user(db: Session, user_data: UserCreate) -> User:
         verification_code=code,
         code_expires_at=_utcnow() + timedelta(minutes=10),
         is_verified=False,
+        job_title=(user_data.job_title or "").strip() or None,
+        department=(user_data.department or "").strip() or None,
+        company=(user_data.company or "").strip() or None,
     )
 
     db.add(new_user)

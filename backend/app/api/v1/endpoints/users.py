@@ -12,7 +12,7 @@ router = APIRouter()
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-
+#تحديث حالة الالتزام (Obligation Status) ثم حفظ التغيير في قاعدة البيانات وإرجاع النسخة المحدثة.
 @router.patch("/me", response_model=UserResponse)
 def update_me(
     body: UserUpdate,

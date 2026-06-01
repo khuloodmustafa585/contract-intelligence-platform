@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye, EyeOff, Loader2, AlertCircle, CheckCircle2,
-  Mail, Lock,
+  Mail, Lock, Briefcase, Building2,
 } from "lucide-react";
 import { registerUser } from "@/services/api";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -33,7 +33,7 @@ function passwordStrength(pw: string): number {
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", password: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", password: "", job_title: "", department: "", company: "" });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error,   setError]   = useState("");
@@ -59,9 +59,12 @@ export default function SignUpPage() {
     try {
       await registerUser({
         first_name: form.first_name.trim(),
-        last_name:  form.last_name.trim() || undefined,
+        last_name:  form.last_name.trim()  || undefined,
         email:      form.email,
         password:   form.password,
+        job_title:  form.job_title.trim()  || undefined,
+        department: form.department.trim() || undefined,
+        company:    form.company.trim()    || undefined,
       });
       setMessage("Account created! Check your email for a 6-digit verification code.");
       setTimeout(() => router.push(`/verify?email=${encodeURIComponent(form.email)}`), 2200);
@@ -224,6 +227,38 @@ export default function SignUpPage() {
                 onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                 autoComplete="family-name"
                 placeholder="Smith"
+              />
+            </div>
+
+            <PremiumInput
+              label="Job Title"
+              type="text"
+              value={form.job_title}
+              onChange={(e) => setForm({ ...form, job_title: e.target.value })}
+              autoComplete="organization-title"
+              placeholder="e.g. Legal Counsel"
+              icon={<Briefcase size={15} />}
+            />
+
+            {/* Department + Company row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <PremiumInput
+                label="Department"
+                type="text"
+                value={form.department}
+                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                autoComplete="off"
+                placeholder="e.g. Legal"
+                icon={<Building2 size={15} />}
+              />
+              <PremiumInput
+                label="Company"
+                type="text"
+                value={form.company}
+                onChange={(e) => setForm({ ...form, company: e.target.value })}
+                autoComplete="organization"
+                placeholder="e.g. Acme Corp"
+                icon={<Building2 size={15} />}
               />
             </div>
 

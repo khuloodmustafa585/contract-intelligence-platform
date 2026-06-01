@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Sparkles,
   CheckCircle2,
-  ArrowRight,
   BarChart2,
   Flag,
   Shield,
@@ -1872,20 +1871,6 @@ function RiskDistributionCard({
         <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
           Risk Levels
         </span>
-        <Link
-          href="/analytics"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "0.72rem",
-            fontWeight: 500,
-            color: "#3b82f6",
-            textDecoration: "none",
-          }}
-        >
-          Details <ArrowRight size={10} />
-        </Link>
       </div>
 
       <div style={{ padding: "20px 24px" }}>
@@ -2214,20 +2199,6 @@ function ComplianceScoreCard({
         <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
           Overall Contract Risk Score
         </span>
-        <Link
-          href="/analytics"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "0.72rem",
-            fontWeight: 500,
-            color: "#3b82f6",
-            textDecoration: "none",
-          }}
-        >
-          Details <ArrowRight size={10} />
-        </Link>
       </div>
 
       <div style={{ padding: "20px 24px" }}>

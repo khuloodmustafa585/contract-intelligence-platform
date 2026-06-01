@@ -9,7 +9,6 @@ import {
   Sparkles,
   ShieldAlert,
   ClipboardList,
-  BarChart2,
   Bell,
   Settings,
   Scale,
@@ -24,7 +23,6 @@ const NAV_MAIN = [
   { href: "/risks",              label: "Risk Insights",     icon: ShieldAlert     },
   { href: "/ask-ai",             label: "Ask AI",            icon: Sparkles        },
   { href: "/obligations",        label: "Obligations",       icon: ClipboardList   },
-  { href: "/analytics",          label: "Analytics",         icon: BarChart2       },
 ];
 
 const NAV_TOOLS = [

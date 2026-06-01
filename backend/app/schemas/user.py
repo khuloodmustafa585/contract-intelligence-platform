@@ -9,6 +9,9 @@ class UserCreate(BaseModel):
     last_name: str = Field(default="", max_length=255)
     email: EmailStr
     password: str = Field(min_length=8)
+    job_title: Optional[str] = Field(None, max_length=255)
+    department: Optional[str] = Field(None, max_length=255)
+    company: Optional[str] = Field(None, max_length=255)
 
 
 class UserResponse(BaseModel):

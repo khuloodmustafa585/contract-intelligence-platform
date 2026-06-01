@@ -1180,7 +1180,6 @@ function ComplianceScoreCard({
         icon={CheckCircle2}
         iconBg="rgba(16,185,129,0.1)"
         iconColor="#34d399"
-        action={{ label: "Details", href: "/analytics" }}
       />
       <div style={{ padding: "20px 24px" }}>
         {loading ? (
