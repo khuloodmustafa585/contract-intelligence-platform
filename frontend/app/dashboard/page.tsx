@@ -1142,148 +1142,6 @@ function UpcomingObligationsCard({
   );
 }
 
-/* ─── Compliance Score ───────────────────────────────────────────── */
-function ComplianceScoreCard({
-  metrics,
-  loading,
-}: {
-  metrics: Metrics | null;
-  loading: boolean;
-}) {
-  const total    = metrics?.total_contracts     ?? 0;
-  const high     = metrics?.high_risk_contracts ?? 0;
-  const overdue  = metrics?.overdue_obligations ?? 0;
-  const expiring = metrics?.expiring_soon       ?? 0;
-
-  const score =
-    total === 0
-      ? 100
-      : Math.max(
-          40,
-          Math.round(
-            100 -
-              Math.min(high * 12, 40) -
-              Math.min(overdue * 8, 30) -
-              Math.min(expiring * 4, 20)
-          )
-        );
-
-  const scoreColor = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
-  const scoreLabel = score >= 80 ? "Compliant" : score >= 60 ? "Needs Attention" : "At Risk";
-  const circumference = 2 * Math.PI * 34;
-  const dash = (score / 100) * circumference;
-
-  return (
-    <div style={CARD}>
-      <CardHeader
-        title="Compliance Score"
-        icon={CheckCircle2}
-        iconBg="rgba(16,185,129,0.1)"
-        iconColor="#34d399"
-      />
-      <div style={{ padding: "20px 24px" }}>
-        {loading ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <div className="skeleton h-24 w-24 rounded-full shrink-0" />
-            <div style={{ flex: 1 }}>
-              <div className="skeleton h-4 w-20 rounded mb-2.5" />
-              <div className="skeleton h-3 w-32 rounded mb-4" />
-              <div className="skeleton h-2 w-full rounded-full mb-2" />
-              <div className="skeleton h-2 w-3/4 rounded-full" />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            {/* Gauge — horizontal layout, not centered-tall */}
-            <div
-              style={{
-                position: "relative",
-                width: "96px",
-                height: "96px",
-                flexShrink: 0,
-              }}
-            >
-              <svg width="96" height="96" viewBox="0 0 96 96">
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="34"
-                  fill="none"
-                  strokeWidth="8"
-                  style={{ stroke: "var(--th-gauge-track)" }}
-                />
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="34"
-                  fill="none"
-                  stroke={scoreColor}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${dash} ${circumference}`}
-                  transform="rotate(-90 48 48)"
-                  style={{
-                    transition: "stroke-dasharray 1s cubic-bezier(0.22, 1, 0.36, 1)",
-                    filter: `drop-shadow(0 0 6px ${scoreColor}88)`,
-                  }}
-                />
-              </svg>
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    color: "var(--th-text-1)",
-                    lineHeight: 1,
-                  }}
-                >
-                  {score}
-                </span>
-                <span style={{ fontSize: "0.62rem", color: "var(--th-text-3)", marginTop: "2px" }}>/100</span>
-              </div>
-            </div>
-
-            {/* Right side detail */}
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: "0.88rem", fontWeight: 600, color: scoreColor, marginBottom: "4px" }}>
-                {scoreLabel}
-              </p>
-              <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginBottom: "14px" }}>
-                Risk severity · overdue obligations · contract expiry
-              </p>
-              {/* Mini breakdown bars */}
-              {[
-                { label: "Risk score",      pct: Math.max(0, 100 - Math.min(high * 12, 40)),     color: high > 0     ? "#ef4444" : "#10b981" },
-                { label: "Obligations",     pct: Math.max(0, 100 - Math.min(overdue * 8, 30)),   color: overdue > 0  ? "#f59e0b" : "#10b981" },
-                { label: "Contract expiry", pct: Math.max(0, 100 - Math.min(expiring * 4, 20)),  color: expiring > 0 ? "#f59e0b" : "#10b981" },
-              ].map(({ label, pct, color }) => (
-                <div key={label} style={{ marginBottom: "8px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "0.68rem", color: "var(--th-text-3)" }}>{label}</span>
-                    <span style={{ fontSize: "0.68rem", color, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
-                  </div>
-                  <div style={{ height: "3px", borderRadius: "999px", background: "var(--th-tag-bg)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})`, borderRadius: "999px", transition: "width 0.8s ease" }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Dashboard Page ────────────────────────────────────────── */
 export default function DashboardPage() {
   const [metrics,      setMetrics]      = useState<Metrics | null>(null);
@@ -1433,24 +1291,11 @@ export default function DashboardPage() {
               riskCounts={riskCounts}
               loading={loading}
             />
+
+            <UpcomingObligationsCard metrics={metrics} loading={loading} />
           </div>
         </div>
       </FadeUp>
-
-        {/* Analytics row: obligations · compliance */}
-        <FadeUp delay={0.14}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "20px",
-              marginBottom: "32px",
-            }}
-          >
-            <UpcomingObligationsCard metrics={metrics} loading={loading} />
-            <ComplianceScoreCard metrics={metrics} loading={loading} />
-          </div>
-        </FadeUp>
 
         {/* Footer */}
         <div

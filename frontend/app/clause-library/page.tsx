@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -61,23 +62,41 @@ function computeHighestSeverity(risks: Risk[]): Severity {
 }
 
 /* ─── Category inference ─────────────────────────────────────────── */
-// Used as a fallback when the backend clause.category is null (existing data).
-// The backend now populates category for new analyses via the same patterns.
+// Fallback for legacy clauses where clause.category is null.
+// Mirrors _CATEGORY_PATTERNS in backend/clause_service.py — same order and
+// same approved taxonomy so filters stay consistent with backend data.
 function deriveCategory(heading: string | null | undefined, text: string): string {
-  const src = ((heading ?? "") + " " + text.slice(0, 200)).toLowerCase();
-  if (/terminat|expir|cancell/.test(src))                               return "Termination";
-  if (/confidential|non[- ]?disclosure|proprietary/.test(src))         return "Confidentiality";
-  if (/\bindemnif|\bliabilit/.test(src))                               return "Liability";
-  if (/\bpayment|\binvoice|\bfee\b|compensat|pric/.test(src))          return "Payment";
-  if (/governing law|jurisdiction|arbitrat|dispute resol/.test(src))   return "Governing Law";
-  if (/intellectual property|\bpatent\b|\bcopyright\b|trademark/.test(src)) return "IP";
-  if (/force majeure/.test(src))                                        return "Force Majeure";
-  if (/\bassign\b|\bsubcontract/.test(src))                            return "Assignment";
-  if (/\bdefini/.test(src))                                             return "Definitions";
-  if (/represent|warrant|covenant/.test(src))                           return "Warranties";
-  if (/\bnotice\b|\bnotif/.test(src))                                   return "Notices";
-  if (/limitation of liability|limitation on damages/.test(src))       return "Limitation";
-  return "General";
+  const src = ((heading ?? "") + " " + text.slice(0, 300)).toLowerCase();
+
+  // Data Protection — most specific, check first
+  if (/personal data|data subject|data controller|data processor|gdpr|ccpa|data protection act|privacy policy|privacy notice|data processing agreement|\bdpa\b/.test(src))
+    return "Data Protection";
+  // Indemnity — before Liability
+  if (/\bindemnif|\bhold harmless\b|\bindemnitor\b|\bindemnity\b/.test(src))
+    return "Indemnity";
+  // Intellectual Property
+  if (/intellectual property|\bpatent\b|\bcopyright\b|trademark|\btrade mark\b|\bip rights\b|ownership of.*work|work product|proprietary rights|moral rights/.test(src))
+    return "Intellectual Property";
+  // Governing Law
+  if (/governing law|applicable law|\bjurisdiction\b|\barbitrat|dispute resol|choice of law|courts of|venue clause/.test(src))
+    return "Governing Law";
+  // Confidentiality
+  if (/confidential information|non[- ]?disclosure|\bnda\b|confidentiality obligation|duty of confidentiality|proprietary information/.test(src))
+    return "Confidentiality";
+  // Termination — before Term and Duration
+  if (/\bterminat|\bcancell|termination for convenience|right to terminate|notice of termination|immediate termination/.test(src))
+    return "Termination";
+  // Term and Duration
+  if (/effective date|commencement date|expiration date|initial term|auto[- ]?renew|renewal term|\bduration\b|for a term|evergreen|rollover term/.test(src))
+    return "Term and Duration";
+  // Liability — after Indemnity
+  if (/\bliabilit|limitation of liability|consequential damages|exclude.*damages|cap on liability|aggregate liability|indirect damages/.test(src))
+    return "Liability";
+  // Payment Terms
+  if (/\bpayment|\binvoice|\bfee\b|\bfees\b|\bbilling\b|compensat|\bcharges\b|\bpric|\bremunerat/.test(src))
+    return "Payment Terms";
+
+  return "Unclassified";
 }
 
 const SEV: Record<Severity, { color: string; bg: string; border: string; label: string }> = {
@@ -101,9 +120,10 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 /* ─── Contract Picker ────────────────────────────────────────────── */
-// The outer trigger is a <div role="combobox">, NOT a <button>.
-// This eliminates the <button>-inside-<button> HTML violation that caused
-// React hydration errors. The clear (X) button inside is now valid HTML.
+// The dropdown is rendered via createPortal at document.body so it is never
+// clipped by the parent card's overflow:hidden.  Position is recalculated from
+// the trigger's getBoundingClientRect on open, scroll, and resize, and flips
+// above the trigger when there is not enough space below.
 function ContractPicker({
   contracts,
   contractsLoading,
@@ -125,30 +145,288 @@ function ContractPicker({
   riskCount:        number;
   highRiskCount:    number;
 }) {
-  const [open, setOpen]     = useState(false);
-  const [search, setSearch] = useState("");
-  const ref                 = useRef<HTMLDivElement>(null);
-  const inputRef            = useRef<HTMLInputElement>(null);
+  const [open, setOpen]           = useState(false);
+  const [search, setSearch]       = useState("");
+  const [focusedIdx, _setFocused] = useState(-1);
+  const [mounted, setMounted]     = useState(false);
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
 
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleOutside);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [open]);
+  const triggerRef  = useRef<HTMLDivElement>(null);
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const listRef     = useRef<HTMLDivElement>(null);
+  // Refs so keyboard handlers never capture stale values
+  const focusedRef  = useRef(-1);
+  const filteredRef = useRef<Contract[]>([]);
+
+  const setFocused = useCallback((idx: number) => {
+    focusedRef.current = idx;
+    _setFocused(idx);
+  }, []);
+
+  // Portal requires the DOM to exist
+  useEffect(() => { setMounted(true); }, []);
+
+  const canOpen = !contractsLoading && contracts.length > 0;
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return contracts;
-    const q = search.toLowerCase();
+    const q = search.trim().toLowerCase();
+    if (!q) return contracts;
     return contracts.filter((c) => c.title.toLowerCase().includes(q));
   }, [contracts, search]);
 
-  const canOpen      = !contractsLoading && contracts.length > 0;
-  const handleToggle = () => canOpen && setOpen((o) => !o);
+  // Keep filteredRef in sync so keyboard handlers use the latest list
+  useEffect(() => { filteredRef.current = filtered; }, [filtered]);
+
+  // Reset keyboard focus whenever the search query changes
+  useEffect(() => { setFocused(-1); }, [search, setFocused]);
+
+  // Compute fixed-position style for the portal dropdown
+  const recalcPos = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect  = triggerRef.current.getBoundingClientRect();
+    const vH    = window.innerHeight;
+    const vW    = window.innerWidth;
+    const below = vH - rect.bottom - 10;
+    const above = rect.top - 10;
+    const openAbove = below < 240 && above > below;
+
+    setDropStyle({
+      position: "fixed",
+      left:     Math.max(8, rect.left),
+      width:    Math.min(rect.width, vW - 16),
+      zIndex:   9999,
+      ...(openAbove
+        ? { bottom: vH - rect.top + 6, maxHeight: Math.min(460, above) }
+        : { top:    rect.bottom + 6,   maxHeight: Math.min(460, below) }),
+    });
+  }, []);
+
+  // Register/unregister global listeners while the dropdown is open
+  useEffect(() => {
+    if (!open) return;
+
+    recalcPos();
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 30);
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") { setOpen(false); return; }
+      const len = filteredRef.current.length;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocused(Math.min(focusedRef.current + 1, len - 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocused(Math.max(focusedRef.current - 1, -1));
+      } else if (e.key === "Enter") {
+        if (focusedRef.current >= 0) {
+          const item = filteredRef.current[focusedRef.current];
+          if (item) { onSelect(item); setOpen(false); setSearch(""); setFocused(-1); }
+        }
+      } else if (e.key === "Tab") {
+        setOpen(false);
+      }
+    }
+    function onMouseDown(e: MouseEvent) {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !listRef.current?.contains(t))
+        setOpen(false);
+    }
+    function onScroll() { recalcPos(); }
+    function onResize()  { recalcPos(); }
+
+    document.addEventListener("keydown",    onKeyDown);
+    document.addEventListener("mousedown",  onMouseDown);
+    window.addEventListener("scroll",       onScroll, true);
+    window.addEventListener("resize",       onResize);
+
+    return () => {
+      clearTimeout(focusTimer);
+      document.removeEventListener("keydown",   onKeyDown);
+      document.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("scroll",      onScroll, true);
+      window.removeEventListener("resize",      onResize);
+    };
+  }, [open, onSelect, recalcPos, setFocused]);
+
+  // Scroll the keyboard-focused item into view
+  useEffect(() => {
+    if (focusedIdx < 0 || !listRef.current) return;
+    const items = listRef.current.querySelectorAll<HTMLElement>("[data-item]");
+    items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focusedIdx]);
+
+  /* ── Portal dropdown ─────────────────────────────────────────── */
+  const dropdown = (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          role="listbox"
+          initial={{ opacity: 0, y: -8, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0,  scale: 1      }}
+          exit={{    opacity: 0, y: -8, scale: 0.985  }}
+          transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            ...dropStyle,
+            background:           "var(--th-dropdown-bg)",
+            border:               "1px solid var(--th-dropdown-border)",
+            borderRadius:         "18px",
+            boxShadow:            "var(--th-dropdown-shadow)",
+            backdropFilter:       "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            display:              "flex",
+            flexDirection:        "column",
+            overflow:             "hidden",
+          }}
+        >
+          {/* Search */}
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--th-divider)", flexShrink: 0 }}>
+            <div style={{
+              display:      "flex",
+              alignItems:   "center",
+              gap:          "9px",
+              padding:      "9px 13px",
+              borderRadius: "12px",
+              background:   "var(--th-subtle-bg)",
+              border:       "1px solid var(--th-input-border)",
+            }}>
+              <Search size={13} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search contracts…"
+                style={{
+                  flex:       1,
+                  background: "transparent",
+                  border:     "none",
+                  outline:    "none",
+                  fontSize:   "0.84rem",
+                  color:      "var(--th-text-1)",
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--th-text-4)", display: "flex" }}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable contract list */}
+          <div
+            ref={listRef}
+            style={{
+              overflowY:      "auto",
+              flex:           1,
+              scrollbarWidth: "thin",
+            }}
+          >
+            {filtered.length === 0 ? (
+              <div style={{ padding: "28px 20px", textAlign: "center", color: "var(--th-text-4)", fontSize: "0.82rem" }}>
+                No contracts match &ldquo;{search}&rdquo;
+              </div>
+            ) : (
+              filtered.map((c, idx) => {
+                const isSelected = selected?.id === c.id;
+                const isFocused  = focusedIdx === idx;
+                return (
+                  <button
+                    key={c.id}
+                    data-item
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => { onSelect(c); setOpen(false); setSearch(""); setFocused(-1); }}
+                    onMouseEnter={() => setFocused(idx)}
+                    style={{
+                      display:      "flex",
+                      alignItems:   "center",
+                      gap:          "14px",
+                      width:        "100%",
+                      padding:      "13px 18px",
+                      background:   isSelected
+                        ? "rgba(59,130,246,0.08)"
+                        : isFocused
+                        ? "var(--th-hover-bg)"
+                        : "transparent",
+                      border:       "none",
+                      borderBottom: "1px solid var(--th-row-divider)",
+                      cursor:       "pointer",
+                      textAlign:    "left",
+                      transition:   "background 0.1s",
+                    }}
+                  >
+                    <div style={{
+                      width:          "38px",
+                      height:         "38px",
+                      borderRadius:   "11px",
+                      background:     isSelected ? "rgba(59,130,246,0.1)"           : "var(--th-subtle-bg)",
+                      border:         isSelected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
+                      display:        "flex",
+                      alignItems:     "center",
+                      justifyContent: "center",
+                      flexShrink:     0,
+                    }}>
+                      <FileText size={15} style={{ color: isSelected ? "#60a5fa" : "var(--th-text-3)" }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize:     "0.87rem",
+                        fontWeight:   500,
+                        color:        isSelected ? "#93c5fd" : "var(--th-text-1)",
+                        overflow:     "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace:   "nowrap",
+                        margin:       0,
+                      }}>
+                        {c.title}
+                      </p>
+                      <p style={{ fontSize: "0.68rem", color: "var(--th-text-4)", marginTop: "3px", textTransform: "capitalize", margin: "3px 0 0" }}>
+                        {c.status}
+                        {c.created_at && (
+                          <span style={{ marginLeft: "6px", opacity: 0.7 }}>
+                            · {new Date(c.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div style={{
+                        width:          "22px",
+                        height:         "22px",
+                        borderRadius:   "6px",
+                        background:     "rgba(59,130,246,0.12)",
+                        border:         "1px solid rgba(59,130,246,0.22)",
+                        display:        "flex",
+                        alignItems:     "center",
+                        justifyContent: "center",
+                        flexShrink:     0,
+                      }}>
+                        <Check size={12} style={{ color: "#60a5fa" }} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer — count + keyboard hint */}
+          <div style={{ padding: "8px 14px", borderTop: "1px solid var(--th-divider)", flexShrink: 0 }}>
+            <p style={{ fontSize: "0.62rem", color: "var(--th-text-5)", textAlign: "center", margin: 0 }}>
+              {search.trim()
+                ? `${filtered.length} of ${contracts.length} contract${contracts.length !== 1 ? "s" : ""}`
+                : `${contracts.length} contract${contracts.length !== 1 ? "s" : ""} available`}
+              &nbsp;·&nbsp;↑↓ navigate&nbsp;·&nbsp;↵ select&nbsp;·&nbsp;Esc close
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div style={{ ...CARD, padding: "28px 32px" }}>
@@ -156,30 +434,20 @@ function ContractPicker({
       {/* Header row: label + contract count badge */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width:          "26px",
-              height:         "26px",
-              borderRadius:   "8px",
-              background:     "rgba(59,130,246,0.1)",
-              border:         "1px solid rgba(59,130,246,0.18)",
-              display:        "flex",
-              alignItems:     "center",
-              justifyContent: "center",
-            }}
-          >
+          <div style={{
+            width:          "26px",
+            height:         "26px",
+            borderRadius:   "8px",
+            background:     "rgba(59,130,246,0.1)",
+            border:         "1px solid rgba(59,130,246,0.18)",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+          }}>
             <FileText size={12} style={{ color: "#60a5fa" }} />
           </div>
           <div>
-            <p
-              style={{
-                fontSize:      "0.82rem",
-                fontWeight:    700,
-                color:         "var(--th-text-1)",
-                letterSpacing: "-0.01em",
-                margin:        0,
-              }}
-            >
+            <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--th-text-1)", letterSpacing: "-0.01em", margin: 0 }}>
               Select Contract
             </p>
             <p style={{ fontSize: "0.65rem", color: "var(--th-text-4)", margin: 0 }}>
@@ -192,340 +460,171 @@ function ContractPicker({
           </div>
         </div>
         {selected && (
-          <span
-            style={{
-              fontSize:     "0.62rem",
-              fontWeight:   600,
-              padding:      "3px 10px",
-              borderRadius: "999px",
-              background:   "rgba(59,130,246,0.08)",
-              border:       "1px solid rgba(59,130,246,0.16)",
-              color:        "#60a5fa",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
+          <span style={{
+            fontSize:      "0.62rem",
+            fontWeight:    600,
+            padding:       "3px 10px",
+            borderRadius:  "999px",
+            background:    "rgba(59,130,246,0.08)",
+            border:        "1px solid rgba(59,130,246,0.16)",
+            color:         "#60a5fa",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+          }}>
             Active
           </span>
         )}
       </div>
 
-      <div ref={ref} style={{ position: "relative" }}>
-        {/* Trigger — <div role="combobox"> so nested <button> is valid HTML */}
-        <div
-          role="combobox"
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          tabIndex={canOpen ? 0 : -1}
-          onClick={handleToggle}
-          onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === " ") && canOpen) {
-              e.preventDefault();
-              handleToggle();
-            }
-            if (e.key === "Escape") setOpen(false);
-          }}
-          style={{
-            display:       "flex",
-            alignItems:    "center",
-            gap:           "16px",
-            width:         "100%",
-            padding:       "18px 22px",
-            borderRadius:  "16px",
-            background:    selected
-              ? "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(59,130,246,0.02) 100%)"
-              : "var(--th-input-bg)",
-            border:        open
-              ? "1px solid rgba(59,130,246,0.5)"
-              : selected
-              ? "1px solid rgba(59,130,246,0.22)"
-              : "1px solid var(--th-input-border)",
-            boxShadow:     open
-              ? "0 0 0 3px rgba(59,130,246,0.08), 0 4px 16px rgba(59,130,246,0.06)"
-              : selected
-              ? "0 2px 12px rgba(59,130,246,0.05)"
-              : "none",
-            cursor:        canOpen ? "pointer" : "not-allowed",
-            transition:    "all 0.18s",
-            outline:       "none",
-            userSelect:    "none",
-          }}
-        >
-          {/* Contract icon */}
-          <div
-            style={{
-              width:           "46px",
-              height:          "46px",
-              borderRadius:    "13px",
-              background:      selected ? "rgba(59,130,246,0.12)" : "var(--th-subtle-bg)",
-              border:          selected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
-              display:         "flex",
-              alignItems:      "center",
-              justifyContent:  "center",
-              flexShrink:      0,
-              boxShadow:       selected ? "0 2px 8px rgba(59,130,246,0.12)" : "none",
-            }}
-          >
-            <FileText size={19} style={{ color: selected ? "#60a5fa" : "var(--th-text-4)" }} />
-          </div>
+      {/* Trigger — <div role="combobox"> keeps nested <button> (clear) valid HTML */}
+      <div
+        ref={triggerRef}
+        role="combobox"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        tabIndex={canOpen ? 0 : -1}
+        onClick={() => canOpen && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && canOpen) { e.preventDefault(); setOpen((o) => !o); }
+          if (e.key === "Escape") setOpen(false);
+        }}
+        style={{
+          display:    "flex",
+          alignItems: "center",
+          gap:        "16px",
+          width:      "100%",
+          padding:    "18px 22px",
+          borderRadius: "16px",
+          background:  selected
+            ? "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(59,130,246,0.02) 100%)"
+            : "var(--th-input-bg)",
+          border: open
+            ? "1px solid rgba(59,130,246,0.5)"
+            : selected
+            ? "1px solid rgba(59,130,246,0.22)"
+            : "1px solid var(--th-input-border)",
+          boxShadow: open
+            ? "0 0 0 3px rgba(59,130,246,0.08), 0 4px 16px rgba(59,130,246,0.06)"
+            : selected
+            ? "0 2px 12px rgba(59,130,246,0.05)"
+            : "none",
+          cursor:     canOpen ? "pointer" : "not-allowed",
+          transition: "all 0.18s",
+          outline:    "none",
+          userSelect: "none",
+        }}
+      >
+        {/* Contract icon */}
+        <div style={{
+          width:          "46px",
+          height:         "46px",
+          borderRadius:   "13px",
+          background:     selected ? "rgba(59,130,246,0.12)" : "var(--th-subtle-bg)",
+          border:         selected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "center",
+          flexShrink:     0,
+          boxShadow:      selected ? "0 2px 8px rgba(59,130,246,0.12)" : "none",
+        }}>
+          <FileText size={19} style={{ color: selected ? "#60a5fa" : "var(--th-text-4)" }} />
+        </div>
 
-          {/* Label / selected title */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {selected ? (
-              <>
-                <p
-                  style={{
-                    fontSize:      "1.0rem",
-                    fontWeight:    600,
-                    color:         "var(--th-text-1)",
-                    overflow:      "hidden",
-                    textOverflow:  "ellipsis",
-                    whiteSpace:    "nowrap",
-                    margin:        0,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {selected.title}
+        {/* Label / selected title */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {selected ? (
+            <>
+              <p style={{
+                fontSize:      "1.0rem",
+                fontWeight:    600,
+                color:         "var(--th-text-1)",
+                overflow:      "hidden",
+                textOverflow:  "ellipsis",
+                whiteSpace:    "nowrap",
+                margin:        0,
+                letterSpacing: "-0.01em",
+              }}>
+                {selected.title}
+              </p>
+              <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)", marginTop: "3px", margin: "3px 0 0" }}>
+                {contractLoading
+                  ? "Loading clauses…"
+                  : clauseCount > 0
+                  ? `${clauseCount} clause${clauseCount !== 1 ? "s" : ""} · ${riskCount} risk${riskCount !== 1 ? "s" : ""} identified`
+                  : "Click to switch contract"}
+              </p>
+            </>
+          ) : (
+            <div>
+              <p style={{ fontSize: "0.92rem", fontWeight: 500, color: canOpen ? "var(--th-text-3)" : "var(--th-text-4)", margin: 0 }}>
+                {contractsLoading
+                  ? "Loading contracts…"
+                  : contracts.length === 0
+                  ? "No contracts yet — upload one first"
+                  : "Choose a contract to explore its clauses…"}
+              </p>
+              {contracts.length > 0 && !contractsLoading && (
+                <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "3px", margin: "3px 0 0" }}>
+                  Click to browse {contracts.length} contract{contracts.length !== 1 ? "s" : ""}
                 </p>
-                <p style={{ fontSize: "0.72rem", color: "var(--th-text-4)", marginTop: "3px" }}>
-                  {contractLoading
-                    ? "Loading clauses…"
-                    : clauseCount > 0
-                    ? `${clauseCount} clause${clauseCount !== 1 ? "s" : ""} · ${riskCount} risk${riskCount !== 1 ? "s" : ""} identified`
-                    : "Click to switch contract"}
-                </p>
-              </>
-            ) : (
-              <div>
-                <p style={{ fontSize: "0.92rem", fontWeight: 500, color: canOpen ? "var(--th-text-3)" : "var(--th-text-4)", margin: 0 }}>
-                  {contractsLoading
-                    ? "Loading contracts…"
-                    : contracts.length === 0
-                    ? "No contracts yet — upload one first"
-                    : "Choose a contract to explore its clauses…"}
-                </p>
-                {contracts.length > 0 && !contractsLoading && (
-                  <p style={{ fontSize: "0.68rem", color: "var(--th-text-5)", marginTop: "3px" }}>
-                    Click to browse {contracts.length} contract{contracts.length !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
+        </div>
 
-          {/* Right controls: clear + chevron */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-            {selected && !contractLoading && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onClear(); setOpen(false); }}
-                aria-label="Clear selection"
-                style={{
-                  width:          "30px",
-                  height:         "30px",
-                  borderRadius:   "9px",
-                  display:        "flex",
-                  alignItems:     "center",
-                  justifyContent: "center",
-                  background:     "transparent",
-                  border:         "1px solid transparent",
-                  cursor:         "pointer",
-                  color:          "var(--th-text-4)",
-                  transition:     "all 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background   = "rgba(239,68,68,0.08)";
-                  el.style.color        = "#f87171";
-                  el.style.borderColor  = "rgba(239,68,68,0.18)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background   = "transparent";
-                  el.style.color        = "var(--th-text-4)";
-                  el.style.borderColor  = "transparent";
-                }}
-              >
-                <X size={13} />
-              </button>
-            )}
-            <div
+        {/* Right controls: clear + chevron */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+          {selected && !contractLoading && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onClear(); setOpen(false); }}
+              aria-label="Clear selection"
               style={{
                 width:          "30px",
                 height:         "30px",
                 borderRadius:   "9px",
-                background:     open ? "rgba(59,130,246,0.08)" : "var(--th-subtle-bg)",
-                border:         open ? "1px solid rgba(59,130,246,0.2)" : "1px solid var(--th-tag-border)",
                 display:        "flex",
                 alignItems:     "center",
                 justifyContent: "center",
-                transition:     "all 0.18s",
+                background:     "transparent",
+                border:         "1px solid transparent",
+                cursor:         "pointer",
+                color:          "var(--th-text-4)",
+                transition:     "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background  = "rgba(239,68,68,0.08)";
+                el.style.color       = "#f87171";
+                el.style.borderColor = "rgba(239,68,68,0.18)";
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.background  = "transparent";
+                el.style.color       = "var(--th-text-4)";
+                el.style.borderColor = "transparent";
               }}
             >
-              <ChevronDown
-                size={14}
-                style={{
-                  color:      open ? "#60a5fa" : "var(--th-text-3)",
-                  transform:  open ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s",
-                }}
-              />
-            </div>
+              <X size={13} />
+            </button>
+          )}
+          <div style={{
+            width:          "30px",
+            height:         "30px",
+            borderRadius:   "9px",
+            background:     open ? "rgba(59,130,246,0.08)" : "var(--th-subtle-bg)",
+            border:         open ? "1px solid rgba(59,130,246,0.2)" : "1px solid var(--th-tag-border)",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+            transition:     "all 0.18s",
+          }}>
+            <ChevronDown size={14} style={{
+              color:      open ? "#60a5fa" : "var(--th-text-3)",
+              transform:  open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }} />
           </div>
         </div>
-
-        {/* Dropdown */}
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              role="listbox"
-              initial={{ opacity: 0, y: -10, scale: 0.985 }}
-              animate={{ opacity: 1, y: 0,   scale: 1     }}
-              exit={{    opacity: 0, y: -10, scale: 0.985 }}
-              transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                position:     "absolute",
-                top:          "calc(100% + 12px)",
-                left:         0,
-                right:        0,
-                background:   "var(--th-dropdown-bg)",
-                border:       "1px solid var(--th-dropdown-border)",
-                borderRadius: "18px",
-                boxShadow:    "var(--th-dropdown-shadow)",
-                zIndex:       200,
-                overflow:     "hidden",
-              }}
-            >
-              {/* Search */}
-              <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--th-divider)" }}>
-                <div
-                  style={{
-                    display:      "flex",
-                    alignItems:   "center",
-                    gap:          "10px",
-                    padding:      "10px 14px",
-                    borderRadius: "12px",
-                    background:   "var(--th-subtle-bg)",
-                    border:       "1px solid var(--th-input-border)",
-                  }}
-                >
-                  <Search size={13} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search contracts…"
-                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: "0.85rem", color: "var(--th-text-1)" }}
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch("")}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "var(--th-text-4)", display: "flex" }}
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* List */}
-              <div style={{ overflowY: "auto", maxHeight: "420px" }}>
-                {filtered.length === 0 ? (
-                  <div style={{ padding: "32px 24px", textAlign: "center", color: "var(--th-text-4)", fontSize: "0.84rem" }}>
-                    No contracts match &ldquo;{search}&rdquo;
-                  </div>
-                ) : (
-                  filtered.map((c) => {
-                    const isSelected = selected?.id === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() => { onSelect(c); setOpen(false); setSearch(""); }}
-                        style={{
-                          display:      "flex",
-                          alignItems:   "center",
-                          gap:          "16px",
-                          width:        "100%",
-                          padding:      "16px 20px",
-                          background:   isSelected ? "rgba(59,130,246,0.07)" : "transparent",
-                          border:       "none",
-                          borderBottom: "1px solid var(--th-row-divider)",
-                          cursor:       "pointer",
-                          textAlign:    "left",
-                          transition:   "background 0.1s",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)";
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent";
-                        }}
-                      >
-                        <div
-                          style={{
-                            width:          "40px",
-                            height:         "40px",
-                            borderRadius:   "11px",
-                            background:     isSelected ? "rgba(59,130,246,0.1)"           : "var(--th-subtle-bg)",
-                            border:         isSelected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
-                            display:        "flex",
-                            alignItems:     "center",
-                            justifyContent: "center",
-                            flexShrink:     0,
-                          }}
-                        >
-                          <FileText size={16} style={{ color: isSelected ? "#60a5fa" : "var(--th-text-3)" }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p
-                            style={{
-                              fontSize:     "0.88rem",
-                              fontWeight:   500,
-                              color:        isSelected ? "#93c5fd" : "var(--th-text-1)",
-                              overflow:     "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace:   "nowrap",
-                              margin:       0,
-                            }}
-                          >
-                            {c.title}
-                          </p>
-                          <p style={{ fontSize: "0.7rem", color: "var(--th-text-4)", marginTop: "3px", textTransform: "capitalize" }}>
-                            {c.status}
-                            {c.created_at && (
-                              <span style={{ marginLeft: "8px", opacity: 0.7 }}>
-                                · {new Date(c.created_at).toLocaleDateString()}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <div
-                            style={{
-                              width:          "22px",
-                              height:         "22px",
-                              borderRadius:   "6px",
-                              background:     "rgba(59,130,246,0.12)",
-                              border:         "1px solid rgba(59,130,246,0.22)",
-                              display:        "flex",
-                              alignItems:     "center",
-                              justifyContent: "center",
-                              flexShrink:     0,
-                            }}
-                          >
-                            <Check size={12} style={{ color: "#60a5fa" }} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Stats row — appears once a contract with clauses is loaded */}
@@ -537,17 +636,15 @@ function ContractPicker({
             exit={{    opacity: 0, height: 0    }}
             transition={{ duration: 0.22 }}
           >
-            <div
-              style={{
-                display:    "flex",
-                alignItems: "center",
-                gap:        "8px",
-                marginTop:  "18px",
-                paddingTop: "18px",
-                borderTop:  "1px solid var(--th-divider)",
-                flexWrap:   "wrap",
-              }}
-            >
+            <div style={{
+              display:    "flex",
+              alignItems: "center",
+              gap:        "8px",
+              marginTop:  "18px",
+              paddingTop: "18px",
+              borderTop:  "1px solid var(--th-divider)",
+              flexWrap:   "wrap",
+            }}>
               {[
                 { label: `${clauseCount} clauses`,   color: "#3b82f6", bg: "rgba(59,130,246,0.08)",  border: "rgba(59,130,246,0.16)"  },
                 { label: `${riskCount} risks`,        color: "#fbbf24", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.16)"  },
@@ -555,18 +652,15 @@ function ContractPicker({
                   ? [{ label: `${highRiskCount} high risk`, color: "#f87171", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.16)"  }]
                   : [{ label: "No high risk",               color: "#34d399", bg: "rgba(16,185,129,0.08)",  border: "rgba(16,185,129,0.16)" }]),
               ].map(({ label, color, bg, border }) => (
-                <span
-                  key={label}
-                  style={{
-                    fontSize:     "0.68rem",
-                    fontWeight:   500,
-                    padding:      "5px 13px",
-                    borderRadius: "999px",
-                    background:   bg,
-                    border:       `1px solid ${border}`,
-                    color,
-                  }}
-                >
+                <span key={label} style={{
+                  fontSize:     "0.68rem",
+                  fontWeight:   500,
+                  padding:      "5px 13px",
+                  borderRadius: "999px",
+                  background:   bg,
+                  border:       `1px solid ${border}`,
+                  color,
+                }}>
                   {label}
                 </span>
               ))}
@@ -574,6 +668,9 @@ function ContractPicker({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Dropdown rendered via portal to escape the card's overflow:hidden */}
+      {mounted && createPortal(dropdown, document.body)}
     </div>
   );
 }

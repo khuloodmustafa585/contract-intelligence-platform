@@ -13,16 +13,18 @@ import {
   Settings,
   Scale,
   LayoutGrid,
+  FolderOpen,
 } from "lucide-react";
 import { useUser, getInitials } from "@/contexts/UserContext";
 
 const NAV_MAIN = [
-  { href: "/dashboard",          label: "Dashboard",         icon: LayoutDashboard },
-  { href: "/clause-library",      label: "Clause Library",    icon: BookOpen        },
-  { href: "/contract-overview",  label: "Contract Overview", icon: LayoutGrid      },
-  { href: "/risks",              label: "Risk Insights",     icon: ShieldAlert     },
-  { href: "/ask-ai",             label: "Ask AI",            icon: Sparkles        },
-  { href: "/obligations",        label: "Obligations",       icon: ClipboardList   },
+  { href: "/dashboard",         label: "Dashboard",         icon: LayoutDashboard },
+  { href: "/contracts",         label: "Contracts",         icon: FolderOpen      },
+  { href: "/clause-library",    label: "Clause Library",    icon: BookOpen        },
+  { href: "/contract-overview", label: "Contract Overview", icon: LayoutGrid      },
+  { href: "/risks",             label: "Risk Insights",     icon: ShieldAlert     },
+  { href: "/ask-ai",            label: "Ask AI",            icon: Sparkles        },
+  { href: "/obligations",       label: "Obligations",       icon: ClipboardList   },
 ];
 
 const NAV_TOOLS = [

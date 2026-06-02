@@ -54,12 +54,55 @@ _IS_ALLCAPS_HEADING_RE = re.compile(
     r"^[A-Z]{2}[A-Z0-9 .:-]{1,58}$",
 )
 
+# Title-case headings — short lines (2-6 words) where every word starts with an
+# uppercase letter and the line ends without sentence-final punctuation (.!?:;,).
+# This catches "Termination", "Payment Terms", "Governing Law and Jurisdiction"
+# without false-positiving on the first sentence of a paragraph.
+# Word-count ceiling (≤6) keeps long prose sentences from matching.
+_IS_TITLECASE_HEADING_RE = re.compile(
+    r"^(?:[A-Z][a-zA-Z]*)(?:\s+(?:[A-Z][a-zA-Z]*)|\s+(?:and|of|the|in|for|to|by))*$"
+)
+_TITLECASE_MAX_WORDS = 6
+_TITLECASE_COMMON_STARTS = frozenset({
+    "this", "the", "a", "an", "in", "on", "at", "to", "by", "for",
+    "with", "as", "if", "each", "any", "all", "both", "either",
+    "neither", "no", "not", "such", "where", "when", "upon",
+})
+
+
+def _is_titlecase_heading(line: str) -> bool:
+    """
+    Return True if *line* looks like a title-case heading.
+    Guards:
+    - 1–6 words only (longer = likely a sentence)
+    - Every word capitalised (allows lowercase connectors: and/of/the/in/for)
+    - Does not start with a common sentence-opening word
+    - Does not end with sentence-final punctuation
+    """
+    if line and line[-1] in ".!?:;,":
+        return False
+    words = line.split()
+    if not words or len(words) > _TITLECASE_MAX_WORDS:
+        return False
+    if words[0].lower() in _TITLECASE_COMMON_STARTS:
+        return False
+    # First word must be capitalised; subsequent words may be lowercase connectors
+    _connectors = {"and", "of", "the", "in", "for", "to", "by", "or", "at", "a", "an"}
+    for i, w in enumerate(words):
+        if i == 0:
+            if not w[0].isupper():
+                return False
+        elif w.lower() not in _connectors and not w[0].isupper():
+            return False
+    return True
+
 
 def _is_heading(line: str) -> bool:
     """Return True if *line* (already stripped) looks like a clause heading."""
     return bool(
         _IS_NAMED_HEADING_RE.match(line)
         or _IS_ALLCAPS_HEADING_RE.match(line)
+        or _is_titlecase_heading(line)
     )
 
 
@@ -69,14 +112,14 @@ def split_into_clauses(text: str) -> list[str]:
     attached to the body that follows it.
 
     Works line-by-line so every heading format is evaluated with the same
-    two-pattern check (_IS_NAMED_HEADING_RE + _IS_ALLCAPS_HEADING_RE) —
-    no regex lookahead that silently misses ARTICLE/SECTION in all-caps.
+    pattern checks — no regex lookahead that silently misses formats.
 
     Recognised heading formats
     --------------------------
     Numbered with title : "8. Termination"  "8.1 Payment Terms"  "1) Definitions"
     Article/Section     : "Article 5"  "ARTICLE 5"  "Section 3"  "SECTION 3"
     ALL-CAPS            : "TERMINATION"  "LIMITATION OF LIABILITY"  "ARTICLE 1"
+    Title-case (≤6 wds) : "Termination"  "Payment Terms"  "Governing Law"
     """
     if not text:
         return []

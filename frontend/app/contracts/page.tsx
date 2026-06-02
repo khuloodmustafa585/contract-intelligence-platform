@@ -515,7 +515,7 @@ function ContractsContent() {
                 >
                   {/* Name */}
                   <Link
-                    href={`/clause-library`}
+                    href={`/contracts/${contract.id}`}
                     style={{ textDecoration: "none", minWidth: 0 }}
                   >
                     <div
@@ -621,7 +621,7 @@ function ContractsContent() {
                   {/* Actions */}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                     <Link
-                      href={`/clause-library`}
+                      href={`/contracts/${contract.id}`}
                       aria-label={`Open ${contract.title}`}
                       style={{
                         display: "inline-flex",

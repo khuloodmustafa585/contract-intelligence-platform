@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -16,6 +16,9 @@ import {
   Target,
   Brain,
   ExternalLink,
+  Search,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import MetricCard from "@/components/ui/MetricCard";
@@ -248,7 +251,7 @@ function ObligationRow({
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <Link
-            href={`/clause-library`}
+            href={`/contract-review/${item.contract_id}`}
             style={{ textDecoration: "none" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -403,7 +406,7 @@ function ObligationRow({
         {/* Actions row */}
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <Link
-            href={`/clause-library`}
+            href={`/contract-review/${item.contract_id}`}
             style={{
               display: "flex",
               width: "24px",
@@ -457,18 +460,361 @@ function ObligationRow({
   );
 }
 
+/* ── Contract Selector ───────────────────────────────────────────── */
+function ContractSelector({
+  contracts,
+  selectedId,
+  onSelect,
+}: {
+  contracts:  Contract[];
+  selectedId: number | null;
+  onSelect:   (id: number | null) => void;
+}) {
+  const [open, setOpen]     = useState(false);
+  const [search, setSearch] = useState("");
+  const wrapperRef          = useRef<HTMLDivElement>(null);
+  const inputRef            = useRef<HTMLInputElement>(null);
+
+  const selected = contracts.find((c) => c.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!open) { setSearch(""); return; }
+    const t = setTimeout(() => inputRef.current?.focus(), 20);
+    function onMouseDown(e: MouseEvent) {
+      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return contracts;
+    return contracts.filter((c) => c.title.toLowerCase().includes(q));
+  }, [contracts, search]);
+
+  return (
+    <div ref={wrapperRef} style={{ position: "relative", display: "inline-block" }}>
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display:              "flex",
+          alignItems:           "center",
+          gap:                  "8px",
+          padding:              "9px 14px",
+          borderRadius:         "12px",
+          background:           selected ? "rgba(59,130,246,0.08)" : "var(--th-card-bg)",
+          border:               selected
+            ? "1px solid rgba(59,130,246,0.28)"
+            : open
+            ? "1px solid rgba(59,130,246,0.38)"
+            : "1px solid var(--th-card-border)",
+          boxShadow:            "var(--th-card-shadow)",
+          backdropFilter:       "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          cursor:               "pointer",
+          transition:           "all 0.15s",
+          color:                selected ? "#93c5fd" : "var(--th-text-2)",
+          fontSize:             "0.84rem",
+          fontWeight:           selected ? 500 : 400,
+          whiteSpace:           "nowrap",
+          maxWidth:             "340px",
+        }}
+      >
+        <FileText size={13} style={{ color: selected ? "#60a5fa" : "var(--th-text-4)", flexShrink: 0 }} />
+        <span
+          style={{
+            overflow:     "hidden",
+            textOverflow: "ellipsis",
+            maxWidth:     "220px",
+          }}
+        >
+          {selected ? selected.title : "All Contracts"}
+        </span>
+
+        {selected && (
+          <span
+            style={{
+              fontSize:     "0.6rem",
+              fontWeight:   600,
+              padding:      "1px 7px",
+              borderRadius: "999px",
+              background:   "rgba(59,130,246,0.12)",
+              border:       "1px solid rgba(59,130,246,0.20)",
+              color:        "#60a5fa",
+              flexShrink:   0,
+            }}
+          >
+            Filtered
+          </span>
+        )}
+
+        {selected ? (
+          <X
+            size={12}
+            style={{ color: "var(--th-text-4)", flexShrink: 0 }}
+            onClick={(e) => { e.stopPropagation(); onSelect(null); setOpen(false); }}
+          />
+        ) : (
+          <ChevronDown
+            size={12}
+            style={{
+              color:      "var(--th-text-4)",
+              transform:  open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.15s",
+              flexShrink: 0,
+            }}
+          />
+        )}
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          style={{
+            position:             "absolute",
+            top:                  "calc(100% + 6px)",
+            left:                 0,
+            minWidth:             "300px",
+            maxHeight:            "380px",
+            background:           "var(--th-dropdown-bg)",
+            border:               "1px solid var(--th-dropdown-border)",
+            borderRadius:         "16px",
+            boxShadow:            "var(--th-dropdown-shadow)",
+            backdropFilter:       "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            zIndex:               100,
+            display:              "flex",
+            flexDirection:        "column",
+            overflow:             "hidden",
+          }}
+        >
+          {/* Search input */}
+          <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--th-divider)", flexShrink: 0 }}>
+            <div
+              style={{
+                display:      "flex",
+                alignItems:   "center",
+                gap:          "8px",
+                padding:      "7px 10px",
+                borderRadius: "10px",
+                background:   "var(--th-subtle-bg)",
+                border:       "1px solid var(--th-input-border)",
+              }}
+            >
+              <Search size={11} style={{ color: "var(--th-text-4)", flexShrink: 0 }} />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search contracts…"
+                style={{
+                  flex:       1,
+                  background: "transparent",
+                  border:     "none",
+                  outline:    "none",
+                  fontSize:   "0.8rem",
+                  color:      "var(--th-text-1)",
+                  minWidth:   0,
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+                >
+                  <X size={10} style={{ color: "var(--th-text-4)" }} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable list */}
+          <div style={{ overflowY: "auto", flex: 1, scrollbarWidth: "thin" }}>
+            {/* "All Contracts" option */}
+            <button
+              onClick={() => { onSelect(null); setOpen(false); }}
+              style={{
+                display:      "flex",
+                alignItems:   "center",
+                gap:          "10px",
+                width:        "100%",
+                padding:      "11px 14px",
+                background:   selectedId === null ? "rgba(59,130,246,0.08)" : "transparent",
+                border:       "none",
+                borderBottom: "1px solid var(--th-row-divider)",
+                cursor:       "pointer",
+                textAlign:    "left",
+                transition:   "background 0.1s",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedId !== null)
+                  (e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                if (selectedId !== null)
+                  (e.currentTarget as HTMLElement).style.background = "transparent";
+              }}
+            >
+              <div
+                style={{
+                  width:          "26px",
+                  height:         "26px",
+                  borderRadius:   "8px",
+                  background:     selectedId === null ? "rgba(59,130,246,0.1)" : "var(--th-subtle-bg)",
+                  border:         selectedId === null ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
+                  display:        "flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  flexShrink:     0,
+                }}
+              >
+                <ClipboardList size={12} style={{ color: selectedId === null ? "#60a5fa" : "var(--th-text-3)" }} />
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize:   "0.83rem",
+                    fontWeight: selectedId === null ? 500 : 400,
+                    color:      selectedId === null ? "#93c5fd" : "var(--th-text-1)",
+                    margin:     0,
+                  }}
+                >
+                  All Contracts
+                </p>
+                <p style={{ fontSize: "0.63rem", color: "var(--th-text-4)", margin: 0 }}>
+                  Show obligations from every contract
+                </p>
+              </div>
+              {selectedId === null && (
+                <CheckCircle2 size={13} style={{ color: "#60a5fa", marginLeft: "auto", flexShrink: 0 }} />
+              )}
+            </button>
+
+            {/* Per-contract options */}
+            {filtered.length === 0 && search ? (
+              <div
+                style={{
+                  padding:   "20px 14px",
+                  textAlign: "center",
+                  color:     "var(--th-text-4)",
+                  fontSize:  "0.78rem",
+                }}
+              >
+                No contracts match &ldquo;{search}&rdquo;
+              </div>
+            ) : (
+              filtered.map((c) => {
+                const isSelected = selectedId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => { onSelect(c.id); setOpen(false); setSearch(""); }}
+                    style={{
+                      display:      "flex",
+                      alignItems:   "center",
+                      gap:          "10px",
+                      width:        "100%",
+                      padding:      "11px 14px",
+                      background:   isSelected ? "rgba(59,130,246,0.08)" : "transparent",
+                      border:       "none",
+                      borderBottom: "1px solid var(--th-row-divider)",
+                      cursor:       "pointer",
+                      textAlign:    "left",
+                      transition:   "background 0.1s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected)
+                        (e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected)
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }}
+                  >
+                    <div
+                      style={{
+                        width:          "26px",
+                        height:         "26px",
+                        borderRadius:   "8px",
+                        background:     isSelected ? "rgba(59,130,246,0.1)" : "var(--th-subtle-bg)",
+                        border:         isSelected ? "1px solid rgba(59,130,246,0.22)" : "1px solid var(--th-tag-border)",
+                        display:        "flex",
+                        alignItems:     "center",
+                        justifyContent: "center",
+                        flexShrink:     0,
+                      }}
+                    >
+                      <FileText size={12} style={{ color: isSelected ? "#60a5fa" : "var(--th-text-3)" }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p
+                        style={{
+                          fontSize:     "0.83rem",
+                          fontWeight:   isSelected ? 500 : 400,
+                          color:        isSelected ? "#93c5fd" : "var(--th-text-1)",
+                          overflow:     "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace:   "nowrap",
+                          margin:       0,
+                        }}
+                      >
+                        {c.title}
+                      </p>
+                      <p style={{ fontSize: "0.63rem", color: "var(--th-text-4)", marginTop: "2px", textTransform: "capitalize", margin: "2px 0 0" }}>
+                        {c.status}
+                        {c.created_at && (
+                          <span style={{ marginLeft: "5px", opacity: 0.7 }}>
+                            · {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle2 size={13} style={{ color: "#60a5fa", flexShrink: 0 }} />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer count */}
+          <div style={{ padding: "7px 12px", borderTop: "1px solid var(--th-divider)", flexShrink: 0 }}>
+            <p style={{ fontSize: "0.6rem", color: "var(--th-text-5)", textAlign: "center", margin: 0 }}>
+              {contracts.length} contract{contracts.length !== 1 ? "s" : ""} available
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Obligations List Card ────────────────────────────────────────── */
 function ObligationsListCard({
   items,
   loading,
   completing,
   contractMap,
+  selectedContractTitle,
   onMarkComplete,
 }: {
   items: Obligation[];
   loading: boolean;
   completing: number | null;
   contractMap: Map<number, string>;
+  selectedContractTitle?: string;
   onMarkComplete: (ob: Obligation) => void;
 }) {
   const [activeTab, setActiveTab] = useState<FilterId>("all");
@@ -636,13 +982,25 @@ function ObligationsListCard({
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title={items.length === 0 ? "No obligations yet" : "No items in this category"}
+          title={
+            items.length === 0 && selectedContractTitle
+              ? `No obligations for "${selectedContractTitle}"`
+              : items.length === 0
+              ? "No obligations yet"
+              : "No items in this category"
+          }
           description={
-            items.length === 0
+            items.length === 0 && selectedContractTitle
+              ? "This contract has no extracted obligations. Run or re-run AI analysis to extract them."
+              : items.length === 0
               ? "Once contracts are analyzed, AI automatically extracts deadlines, responsibilities, and obligations."
               : "Try selecting a different filter tab above."
           }
-          action={items.length === 0 ? { label: "Upload a contract", href: "/upload" } : undefined}
+          action={
+            items.length === 0 && !selectedContractTitle
+              ? { label: "Upload a contract", href: "/upload" }
+              : undefined
+          }
         />
       ) : (
         <div>
@@ -997,11 +1355,12 @@ function AIIntelligenceSidebar({
 
 /* ── Main Page ───────────────────────────────────────────────────── */
 export default function ObligationsPage() {
-  const [items,      setItems]      = useState<Obligation[]>([]);
-  const [contracts,  setContracts]  = useState<Contract[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState("");
-  const [completing, setCompleting] = useState<number | null>(null);
+  const [items,              setItems]              = useState<Obligation[]>([]);
+  const [contracts,          setContracts]          = useState<Contract[]>([]);
+  const [loading,            setLoading]            = useState(true);
+  const [error,              setError]              = useState("");
+  const [completing,         setCompleting]         = useState<number | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
 
   async function markComplete(ob: Obligation) {
     if (ob.status === "completed" || completing !== null) return;
@@ -1033,12 +1392,23 @@ export default function ObligationsPage() {
     [contracts]
   );
 
-  /* KPI metrics */
-  const total      = items.length;
-  const pending    = items.filter((i) => !isOverdueItem(i) && i.status !== "completed").length;
-  const completed  = items.filter((i) => i.status === "completed").length;
-  const overdueCount = items.filter(isOverdueItem).length;
-  const upcoming   = items.filter((i) => {
+  // Obligations scoped to the selected contract (or all when null).
+  const visibleItems = useMemo(
+    () =>
+      selectedContractId === null
+        ? items
+        : items.filter((i) => i.contract_id === selectedContractId),
+    [items, selectedContractId]
+  );
+
+  const selectedContract = contracts.find((c) => c.id === selectedContractId) ?? null;
+
+  /* KPI metrics — reflect the current contract selection */
+  const total      = visibleItems.length;
+  const pending    = visibleItems.filter((i) => !isOverdueItem(i) && i.status !== "completed").length;
+  const completed  = visibleItems.filter((i) => i.status === "completed").length;
+  const overdueCount = visibleItems.filter(isOverdueItem).length;
+  const upcoming   = visibleItems.filter((i) => {
     if (i.status === "completed") return false;
     const d = daysUntilDue(i.due_date);
     return d !== null && d > 0 && d <= 30;
@@ -1109,7 +1479,7 @@ export default function ObligationsPage() {
         }}
       >
         {/* Page header */}
-        <div style={{ marginBottom: "36px" }}>
+        <div style={{ marginBottom: "32px" }}>
           <div
             style={{
               display: "flex",
@@ -1139,19 +1509,44 @@ export default function ObligationsPage() {
               Contract Obligations
             </span>
           </div>
-          <h1
+
+          {/* Title row — heading and selector on the same line */}
+          <div
             style={{
-              fontSize: "1.75rem",
-              fontWeight: 700,
-              color: "#dae2fd",
-              letterSpacing: "-0.02em",
-              marginBottom: "6px",
+              display:     "flex",
+              flexWrap:    "wrap",
+              alignItems:  "center",
+              gap:         "16px",
+              marginBottom:"8px",
             }}
           >
-            Obligations
-          </h1>
-          <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6 }}>
-            AI-extracted action items, deadlines, and performance obligations from your contracts.
+            <h1
+              style={{
+                fontSize:      "1.75rem",
+                fontWeight:    700,
+                color:         "#dae2fd",
+                letterSpacing: "-0.02em",
+                margin:        0,
+              }}
+            >
+              Obligations
+            </h1>
+
+            {/* Contract selector — only shown once contracts are loaded */}
+            {!loading && contracts.length > 0 && (
+              <ContractSelector
+                contracts={contracts}
+                selectedId={selectedContractId}
+                onSelect={setSelectedContractId}
+              />
+            )}
+          </div>
+
+          {/* Description below the title row */}
+          <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.6, margin: 0 }}>
+            {selectedContract
+              ? <>Showing obligations for <strong style={{ color: "#94a3b8" }}>{selectedContract.title}</strong></>
+              : "AI-extracted action items, deadlines, and performance obligations from your contracts."}
           </p>
         </div>
 
@@ -1203,20 +1598,21 @@ export default function ObligationsPage() {
         ) : (
           <div
             style={{
-              display: "grid",
+              display:             "grid",
               gridTemplateColumns: "2fr 1fr",
-              gap: "20px",
-              alignItems: "start",
+              gap:                 "20px",
+              alignItems:          "start",
             }}
           >
             <ObligationsListCard
-              items={items}
+              items={visibleItems}
               loading={loading}
               completing={completing}
               contractMap={contractMap}
+              selectedContractTitle={selectedContract?.title}
               onMarkComplete={markComplete}
             />
-            <AIIntelligenceSidebar items={items} loading={loading} />
+            <AIIntelligenceSidebar items={visibleItems} loading={loading} />
           </div>
         )}
       </div>

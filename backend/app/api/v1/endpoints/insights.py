@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -36,11 +36,16 @@ def list_summaries(db: Session = Depends(get_db), current_user: User = Depends(g
 
 
 @router.get("/obligations", response_model=list[ObligationResponse])
-def list_obligations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return (
+def list_obligations(
+    contract_id: int | None = Query(default=None, description="Filter by contract ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = (
         db.query(Obligation)
         .join(Contract, Contract.id == Obligation.contract_id)
         .filter(Contract.owner_id == current_user.id)
-        .order_by(Obligation.created_at.desc())
-        .all()
     )
+    if contract_id is not None:
+        q = q.filter(Obligation.contract_id == contract_id)
+    return q.order_by(Obligation.created_at.desc()).all()

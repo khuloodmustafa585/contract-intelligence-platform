@@ -1,3 +1,30 @@
+# ── Clause classification taxonomy ────────────────────────────────────────
+# These are the ONLY allowed category values for the Clause model.
+# Any clause that does not match is stored as CLAUSE_CATEGORY_UNCLASSIFIED.
+CLAUSE_CATEGORY_INDEMNITY            = "Indemnity"
+CLAUSE_CATEGORY_CONFIDENTIALITY      = "Confidentiality"
+CLAUSE_CATEGORY_LIABILITY            = "Liability"
+CLAUSE_CATEGORY_PAYMENT_TERMS        = "Payment Terms"
+CLAUSE_CATEGORY_TERMINATION          = "Termination"
+CLAUSE_CATEGORY_GOVERNING_LAW        = "Governing Law"
+CLAUSE_CATEGORY_INTELLECTUAL_PROPERTY = "Intellectual Property"
+CLAUSE_CATEGORY_TERM_AND_DURATION    = "Term and Duration"
+CLAUSE_CATEGORY_DATA_PROTECTION      = "Data Protection"
+CLAUSE_CATEGORY_UNCLASSIFIED         = "Unclassified"
+
+CLAUSE_CATEGORIES: list[str] = [
+    CLAUSE_CATEGORY_INDEMNITY,
+    CLAUSE_CATEGORY_CONFIDENTIALITY,
+    CLAUSE_CATEGORY_LIABILITY,
+    CLAUSE_CATEGORY_PAYMENT_TERMS,
+    CLAUSE_CATEGORY_TERMINATION,
+    CLAUSE_CATEGORY_GOVERNING_LAW,
+    CLAUSE_CATEGORY_INTELLECTUAL_PROPERTY,
+    CLAUSE_CATEGORY_TERM_AND_DURATION,
+    CLAUSE_CATEGORY_DATA_PROTECTION,
+    CLAUSE_CATEGORY_UNCLASSIFIED,
+]
+
 UPLOAD_DIR = "uploads"
 SUPPORTED_FILE_TYPES = (".pdf", ".docx")
 

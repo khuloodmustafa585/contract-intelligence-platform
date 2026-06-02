@@ -34,15 +34,25 @@ def analyze_contract(db: Session, contract_id: int) -> dict:
             "error": contract.processing_error,
         }
 
-    # ── Early guard: API key must be present ─────────────────────────────────
-    # The sub-services each have their own "if not OPENAI_API_KEY: return fallback"
-    # guards which silently produce regex/heuristic data.  That data looks like a
-    # real analysis result, so without this check the contract would be marked
-    # completed even though OpenAI was never called.
     app_logger.info(
         "contract id=%s analysis starting: openai_key_configured=%s text_len=%s",
         contract_id, bool(settings.OPENAI_API_KEY), len(text),
     )
+
+    # Always recreate clauses first — clause creation is purely heuristic (no AI
+    # call needed) so it must run regardless of whether OPENAI_API_KEY is set.
+    # create_clauses issues a DELETE before inserting, so this is idempotent.
+    # The old guard (if count == 0) caused upload_service to write bad 3-clause
+    # blobs that analysis then permanently skipped re-creating.
+    app_logger.info("contract id=%s recreating clauses via split_into_clauses", contract_id)
+    create_clauses(contract_id, text, db)
+
+    # ── Early guard: API key must be present for AI sub-services ─────────────
+    # The AI services (summary, risks, obligations) each have their own
+    # "if not OPENAI_API_KEY: return fallback" guards which silently produce
+    # heuristic data that looks like a real result, so we guard here instead
+    # to ensure the contract is honestly marked analysis_failed when AI is
+    # unavailable — clauses are still populated above.
     if not settings.OPENAI_API_KEY:
         app_logger.warning(
             "contract id=%s OPENAI_API_KEY not configured — marking analysis_failed",
@@ -58,14 +68,6 @@ def analyze_contract(db: Session, contract_id: int) -> dict:
             "obligation_count": 0,
             "alert_count": 0,
         }
-
-    # Always recreate clauses so every analysis (new upload or re-analysis) runs
-    # the current split_into_clauses segmentation logic.  clause_service.create_clauses
-    # issues a DELETE before inserting, so this is idempotent and safe to call
-    # unconditionally.  The old guard (if count == 0) caused upload_service to write
-    # bad 3-clause blobs that analysis then permanently skipped re-creating.
-    app_logger.info("contract id=%s recreating clauses via split_into_clauses", contract_id)
-    create_clauses(contract_id, text, db)
 
     # Track how many of the three AI calls failed due to OpenAI being unavailable.
     openai_failure_count = 0
