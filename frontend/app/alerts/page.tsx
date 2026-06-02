@@ -131,8 +131,8 @@ function quickAction(
   const t = alertType?.toLowerCase();
   if (t === "high_risk")                   return { label: "View Risks",       href: "/risks",                   icon: ShieldAlert   };
   if (t === "overdue" || t === "due_soon") return { label: "View Obligations", href: "/obligations",             icon: ClipboardList };
-  if (t === "expiring_soon")               return { label: "View Contract",    href: `/contract-review/${contractId}`, icon: Timer         };
-  if (t === "renewal_upcoming")            return { label: "View Contract",    href: `/contract-review/${contractId}`, icon: Timer         };
+  if (t === "expiring_soon")               return { label: "View Contract",    href: `/clause-library`, icon: Timer         };
+  if (t === "renewal_upcoming")            return { label: "View Contract",    href: `/clause-library`, icon: Timer         };
   return null;
 }
 
@@ -737,7 +737,7 @@ export default function AlertsPage() {
                                 )}
 
                                 <Link
-                                  href={`/contract-review/${alert.contract_id}`}
+                                  href={`/clause-library`}
                                   title="View contract"
                                   style={{
                                     display: "flex",

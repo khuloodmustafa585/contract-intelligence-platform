@@ -1222,8 +1222,9 @@ export default function ContractOverviewPage() {
                   <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#60a5fa", display: "inline-block" }} />
                   Contract Analysis
                 </span>
+
                 <Link
-                  href={`/contract-review/${detail.id}`}
+                  href="/clause-library"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -1242,7 +1243,7 @@ export default function ContractOverviewPage() {
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.10)")}
                 >
                   <FileSearch size={13} />
-                  Review Contract
+                  View in Clause Library
                 </Link>
 
                 {/* Re-analyze Contract button */}

@@ -113,9 +113,13 @@ RISK_PATTERNS = [
 def _fallback_risks(clauses: list[Clause]) -> list[dict]:
     risks: list[dict] = []
     for clause in clauses:
-        text = clause.text or ""
+        heading = clause.heading or ""
+        body = clause.text or ""
+        # Search heading + body so a clause whose heading IS the signal (e.g.
+        # "TERMINATION") is not missed when the body lacks the keyword.
+        full_text = (heading + "\n" + body).strip() if heading else body
         for risk_type, title, severity, pattern in RISK_PATTERNS:
-            if re.search(pattern, text, re.IGNORECASE):
+            if re.search(pattern, full_text, re.IGNORECASE):
                 bi_json, wtm, tt_json = _fallback_detail(risk_type)
                 risks.append({
                     "clause_id":        clause.id,
@@ -124,7 +128,7 @@ def _fallback_risks(clauses: list[Clause]) -> list[dict]:
                     "title":            title,
                     "explanation":      "This clause contains language commonly associated with legal or business risk.",
                     "suggested_action": "Review with counsel and compare against your preferred contract playbook.",
-                    "source_snippet":   text[:500],
+                    "source_snippet":   full_text[:500],
                     "business_impact":  bi_json,
                     "why_this_matters": wtm,
                     "trigger_terms":    tt_json,
@@ -248,17 +252,22 @@ _AI_SYSTEM = (
 )
 
 _AI_USER_TEMPLATE = """
+The contract below is divided into labelled clauses. Each clause begins with a
+[CLAUSE_ID:N] tag — N is an integer. Set "clause_id" to that exact integer for
+every risk you detect, so it can be linked back to the correct clause.
+
 Return JSON only in the following format:
 
 {{
   "risks": [
     {{
+      "clause_id": 0,
       "risk_type": "liability|payment|termination|confidentiality|renewal|compliance",
       "severity": "low|medium|high",
       "title": "concise risk name specific to this clause",
       "explanation": "2-3 sentence AI analysis specific to this exact clause",
       "suggested_action": "specific recommended action for this clause",
-      "source_snippet": "verbatim excerpt from the contract that triggered this risk",
+      "source_snippet": "verbatim excerpt from the clause text that triggered this risk",
       "business_impact": [
         "bullet 1 specific to this clause",
         "bullet 2",
@@ -274,6 +283,9 @@ Return JSON only in the following format:
     }}
   ]
 }}
+
+IMPORTANT: "clause_id" must be the integer from the [CLAUSE_ID:N] tag immediately
+above the clause where you found the risk. Do not guess or omit it.
 
 Risk detection guidelines — flag ALL of the following when present:
 
@@ -308,21 +320,40 @@ Risk detection guidelines — flag ALL of the following when present:
 
 Do NOT limit detection to only these categories — flag any other material contractual risk.
 
-Contract:
+Contract clauses:
 
 {text}
 """
 
 
-def _ai_risks(contract_text: str) -> list[dict]:
+def _build_annotated_text(clauses: list[Clause], max_chars: int) -> str:
+    """
+    Concatenate clauses with [CLAUSE_ID:N] tags so the AI can embed exact integer
+    clause IDs in its response, eliminating the need for fragile snippet matching.
+    """
+    parts = []
+    for clause in clauses:
+        heading = clause.heading or ""
+        body = clause.text or ""
+        full = (heading + "\n" + body).strip() if heading else body.strip()
+        parts.append(f"[CLAUSE_ID:{clause.id}]\n{full}")
+    return "\n\n---\n\n".join(parts)[:max_chars]
+
+
+def _ai_risks(clauses: list[Clause], contract_text: str) -> list[dict]:
     if not settings.OPENAI_API_KEY:
         app_logger.info("risk extraction: OPENAI_API_KEY missing, using fallback")
         return []
     client = get_openai_client()
-    safe_text = (contract_text or "")[: settings.AI_MAX_INPUT_CHARS]
+    # Prefer annotated clause text (with CLAUSE_ID tags) so the AI can set
+    # clause_id directly; fall back to raw contract text if no clauses yet.
+    if clauses:
+        input_text = _build_annotated_text(clauses, settings.AI_MAX_INPUT_CHARS)
+    else:
+        input_text = (contract_text or "")[: settings.AI_MAX_INPUT_CHARS]
     app_logger.info(
-        "risk extraction: calling OpenAI model=%s max_tokens=%s input_chars=%s",
-        settings.OPENAI_MODEL, settings.AI_MAX_OUTPUT_TOKENS, len(safe_text),
+        "risk extraction: calling OpenAI model=%s max_tokens=%s input_chars=%s clauses=%s",
+        settings.OPENAI_MODEL, settings.AI_MAX_OUTPUT_TOKENS, len(input_text), len(clauses),
     )
     response = client.chat.completions.create(
         model=settings.OPENAI_MODEL,
@@ -331,7 +362,7 @@ def _ai_risks(contract_text: str) -> list[dict]:
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": _AI_SYSTEM},
-            {"role": "user",   "content": _AI_USER_TEMPLATE.format(text=safe_text)},
+            {"role": "user",   "content": _AI_USER_TEMPLATE.format(text=input_text)},
         ],
     )
     choice      = response.choices[0]
@@ -369,7 +400,7 @@ def create_or_replace_risks(db: Session, contract_id: int, contract_text: str) -
     clauses = db.query(Clause).filter(Clause.contract_id == contract_id).order_by(Clause.order_index).all()
     app_logger.info("contract id=%s risk extraction: %s clauses available", contract_id, len(clauses))
 
-    ai_results = _ai_risks(contract_text)
+    ai_results = _ai_risks(clauses, contract_text)
     if ai_results:
         app_logger.info("contract id=%s risk extraction: AI returned %s raw items", contract_id, len(ai_results))
         extracted = ai_results
@@ -384,10 +415,41 @@ def create_or_replace_risks(db: Session, contract_id: int, contract_text: str) -
     risks: list[Risk] = []
     for item in extracted:
         snippet   = (item.get("source_snippet") or "")[:1000]
-        clause_id = item.get("clause_id")
-        if not clause_id and snippet:
-            matching_clause = next((c for c in clauses if snippet[:80].lower() in (c.text or "").lower()), None)
-            clause_id = matching_clause.id if matching_clause else None
+
+        # AI now returns clause_id as an integer from the [CLAUSE_ID:N] tag.
+        # Coerce to int defensively; the model occasionally returns a string.
+        raw_cid   = item.get("clause_id")
+        try:
+            clause_id = int(raw_cid) if raw_cid is not None else None
+        except (TypeError, ValueError):
+            clause_id = None
+
+        # Verify the returned clause_id actually belongs to this contract.
+        if clause_id is not None:
+            if not any(c.id == clause_id for c in clauses):
+                app_logger.warning(
+                    "contract id=%s risk clause_id=%s not found in this contract — clearing",
+                    contract_id, clause_id,
+                )
+                clause_id = None
+
+        # Snippet-based fallback: search heading+body with progressively shorter
+        # prefixes so AI snippets that include the heading line still resolve.
+        if clause_id is None and snippet:
+            snippet_lower = snippet.lower()
+            for prefix_len in (80, 60, 40):
+                prefix = snippet_lower[:prefix_len].strip()
+                if not prefix:
+                    break
+                for c in clauses:
+                    haystack = (
+                        (c.heading or "") + " " + (c.text or "")
+                    ).lower()
+                    if prefix in haystack:
+                        clause_id = c.id
+                        break
+                if clause_id:
+                    break
 
         risk_type = item.get("risk_type") if item.get("risk_type") in RISK_TYPES else RISK_TYPE_LIABILITY
 

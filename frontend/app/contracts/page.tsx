@@ -515,7 +515,7 @@ function ContractsContent() {
                 >
                   {/* Name */}
                   <Link
-                    href={`/contract-review/${contract.id}`}
+                    href={`/clause-library`}
                     style={{ textDecoration: "none", minWidth: 0 }}
                   >
                     <div
@@ -621,27 +621,7 @@ function ContractsContent() {
                   {/* Actions */}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                     <Link
-                      href={`/contract-review/${contract.id}`}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "7px 11px",
-                        borderRadius: "9px",
-                        background: "rgba(99,102,241,0.10)",
-                        border: "1px solid rgba(99,102,241,0.22)",
-                        color: "#818cf8",
-                        fontSize: "0.72rem",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <FileSearch size={12} />
-                      Review
-                    </Link>
-                    <Link
-                      href={`/contract-review/${contract.id}`}
+                      href={`/clause-library`}
                       aria-label={`Open ${contract.title}`}
                       style={{
                         display: "inline-flex",

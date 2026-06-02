@@ -4,7 +4,6 @@ from app.core.config import settings
 from app.core.constants import CONTRACT_STATUS_ANALYSIS_FAILED, CONTRACT_STATUS_COMPLETED, CONTRACT_STATUS_FAILED
 from app.core.database import SessionLocal
 from app.core.logging import app_logger
-from app.models.clause import Clause
 from app.models.contract import Contract
 from app.services.alert_service import generate_alerts_for_contract
 from app.services.clause_service import create_clauses
@@ -60,12 +59,13 @@ def analyze_contract(db: Session, contract_id: int) -> dict:
             "alert_count": 0,
         }
 
-    # Re-extract clauses when none exist (e.g. user triggers re-analysis after
-    # an upload that failed mid-pipeline, or manually requests a fresh run).
-    existing_clause_count = db.query(Clause).filter(Clause.contract_id == contract_id).count()
-    if existing_clause_count == 0:
-        app_logger.info("contract id=%s no clauses found — extracting now", contract_id)
-        create_clauses(contract_id, text, db)
+    # Always recreate clauses so every analysis (new upload or re-analysis) runs
+    # the current split_into_clauses segmentation logic.  clause_service.create_clauses
+    # issues a DELETE before inserting, so this is idempotent and safe to call
+    # unconditionally.  The old guard (if count == 0) caused upload_service to write
+    # bad 3-clause blobs that analysis then permanently skipped re-creating.
+    app_logger.info("contract id=%s recreating clauses via split_into_clauses", contract_id)
+    create_clauses(contract_id, text, db)
 
     # Track how many of the three AI calls failed due to OpenAI being unavailable.
     openai_failure_count = 0

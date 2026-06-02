@@ -641,7 +641,7 @@ function ContractsSection({
           )}
 
           <Link
-            href="/contracts"
+            href="/clause-library"
             style={{
               display: "flex",
               alignItems: "center",
@@ -790,7 +790,7 @@ function ContractsSection({
           {filtered.map((contract, i) => (
             <Link
               key={contract.id}
-              href={`/contract-review/${contract.id}`}
+              href={`/clause-library`}
               style={{
                 display: "grid",
                 gridTemplateColumns: COLS,

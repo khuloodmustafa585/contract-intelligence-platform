@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  FileText,
+  BookOpen,
   Upload,
   Sparkles,
   ShieldAlert,
@@ -18,7 +18,7 @@ import { useUser, getInitials } from "@/contexts/UserContext";
 
 const NAV_MAIN = [
   { href: "/dashboard",          label: "Dashboard",         icon: LayoutDashboard },
-  { href: "/contracts",          label: "Contracts",         icon: FileText        },
+  { href: "/clause-library",      label: "Clause Library",    icon: BookOpen        },
   { href: "/contract-overview",  label: "Contract Overview", icon: LayoutGrid      },
   { href: "/risks",              label: "Risk Insights",     icon: ShieldAlert     },
   { href: "/ask-ai",             label: "Ask AI",            icon: Sparkles        },

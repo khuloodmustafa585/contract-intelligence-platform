@@ -797,20 +797,6 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             >
               Close
             </button>
-            <Link
-              href={`/contract-review/${risk.contract_id}`}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "6px",
-                padding: "8px 18px", borderRadius: "10px",
-                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-                color: "#ffffff", fontSize: "0.8rem", fontWeight: 500,
-                textDecoration: "none",
-                boxShadow: "0 4px 14px rgba(99,102,241,0.3)",
-              }}
-            >
-              <ExternalLink size={12} />
-              Review in Contract
-            </Link>
           </div>
         </div>
       </motion.div>
@@ -1005,7 +991,7 @@ function DetectedRisksTable({
                       </p>
                       {/* Clickable contract badge */}
                       <Link
-                        href={`/contract-review/${risk.contract_id}`}
+                        href={`/clause-library`}
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: "4px",
@@ -1324,7 +1310,7 @@ function DetectedRisksTable({
                                     <span style={{ fontSize: "0.67rem", color: "#475569" }}>Contract</span>
                                   </div>
                                   <Link
-                                    href={`/contract-review/${risk.contract_id}`}
+                                    href={`/clause-library`}
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       fontSize: "0.67rem", color: "#3b82f6",
@@ -1360,23 +1346,6 @@ function DetectedRisksTable({
                                       <FileSearch size={11} /> View Clause
                                     </button>
                                   )}
-                                  <Link
-                                    href={`/contract-review/${risk.contract_id}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                      flex: 1, padding: "7px 10px", borderRadius: "8px",
-                                      background: "linear-gradient(135deg, rgba(239,68,68,0.16), rgba(220,38,38,0.12))",
-                                      border: "1px solid rgba(239,68,68,0.28)",
-                                      color: "#f87171", fontSize: "0.7rem", fontWeight: 500,
-                                      textDecoration: "none", display: "flex",
-                                      alignItems: "center", justifyContent: "center", gap: "5px",
-                                      transition: "all 0.15s ease",
-                                    }}
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(239,68,68,0.24), rgba(220,38,38,0.18))"; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "linear-gradient(135deg, rgba(239,68,68,0.16), rgba(220,38,38,0.12))"; }}
-                                  >
-                                    <ExternalLink size={11} /> Review in Contract
-                                  </Link>
                                 </div>
                               </div>
                             </div>
