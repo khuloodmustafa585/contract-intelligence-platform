@@ -3,45 +3,46 @@ interface Props {
   value: string | number;
 }
 
-export default function MetricCard({
-  title,
-  value,
-}: Props) {
+export default function MetricCard({ title, value }: Props) {
   return (
     <div
-      className="
-        rounded-xl border border-slate-800
-        bg-slate-900/70 p-6
-      "
+      style={{
+        borderRadius: "0.75rem",
+        border: "1px solid var(--th-card-border)",
+        background: "var(--th-card-bg)",
+        padding: "1.5rem",
+      }}
     >
       <div className="flex items-center justify-between">
-
         <span
-          className="
-            text-xs uppercase tracking-widest
-            text-slate-400
-          "
+          style={{
+            fontSize: "0.75rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--th-text-3)",
+          }}
         >
           {title}
         </span>
-
         <div
-          className="
-            h-10 w-10 rounded-lg bg-slate-800
-          "
+          style={{
+            height: "2.5rem",
+            width: "2.5rem",
+            borderRadius: "0.5rem",
+            background: "var(--th-subtle-bg)",
+          }}
         />
       </div>
-
       <div className="mt-6">
-
         <div
-          className="
-            text-3xl font-bold text-white
-          "
+          style={{
+            fontSize: "1.875rem",
+            fontWeight: 700,
+            color: "var(--th-text-1)",
+          }}
         >
           {value}
         </div>
-
       </div>
     </div>
   );

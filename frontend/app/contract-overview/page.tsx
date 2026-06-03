@@ -29,9 +29,9 @@ import { api, Contract, ContractDetail, Risk, Obligation, Clause } from "@/servi
 
 /* ─── Shared card style ──────────────────────────────────────────── */
 const CARD: React.CSSProperties = {
-  background: "rgba(10, 20, 38, 0.65)",
-  border: "1px solid rgba(255,255,255,0.06)",
-  boxShadow: "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)",
+  background: "var(--th-card-bg)",
+  border: "1px solid var(--th-card-border)",
+  boxShadow: "var(--th-card-shadow)",
   borderRadius: "20px",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
@@ -39,7 +39,7 @@ const CARD: React.CSSProperties = {
 };
 
 const DIVIDER: React.CSSProperties = {
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  borderBottom: "1px solid var(--th-divider)",
 };
 
 /* ─── Section header inside a card ──────────────────────────────── */
@@ -79,7 +79,7 @@ function CardHeader({
       >
         <Icon size={13} style={{ color: iconColor }} />
       </div>
-      <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+      <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
         {title}
       </span>
     </div>
@@ -109,7 +109,7 @@ function renderInlineNodes(text: string): React.ReactNode {
   boldSplit.forEach((seg, i) => {
     if (i % 2 === 1) {
       parts.push(
-        <strong key={`b${i}`} style={{ color: "#e2e8f0", fontWeight: 600 }}>
+        <strong key={`b${i}`} style={{ color: "var(--th-text-1)", fontWeight: 600 }}>
           {seg}
         </strong>,
       );
@@ -118,7 +118,7 @@ function renderInlineNodes(text: string): React.ReactNode {
       const italicSplit = seg.split(/\*([^*\n]+)\*/);
       italicSplit.forEach((ip, j) => {
         if (j % 2 === 1) {
-          parts.push(<em key={`i${i}-${j}`} style={{ color: "#b8c5d8", fontStyle: "italic" }}>{ip}</em>);
+          parts.push(<em key={`i${i}-${j}`} style={{ color: "var(--th-text-2)", fontStyle: "italic" }}>{ip}</em>);
         } else if (ip) {
           parts.push(ip);
         }
@@ -214,7 +214,7 @@ function SummaryMarkdown({ text }: { text: string }) {
                 style={{
                   fontSize: "0.78rem",
                   fontWeight: 700,
-                  color: "#dae2fd",
+                  color: "var(--th-text-1)",
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
                 }}
@@ -240,7 +240,7 @@ function SummaryMarkdown({ text }: { text: string }) {
                       background: "rgba(99,102,241,0.6)",
                     }}
                   />
-                  <span style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.75 }}>
+                  <span style={{ fontSize: "0.875rem", color: "var(--th-text-2)", lineHeight: 1.75 }}>
                     {renderInlineNodes(item)}
                   </span>
                 </li>
@@ -256,7 +256,7 @@ function SummaryMarkdown({ text }: { text: string }) {
             key={i}
             style={{
               fontSize: isLead ? "0.925rem" : "0.875rem",
-              color: isLead ? "#b0bfd0" : "#94a3b8",
+              color: "var(--th-text-2)",
               lineHeight: 1.85,
             }}
           >
@@ -565,9 +565,9 @@ function ContractSelector({
           gap: "10px",
           padding: "9px 16px",
           borderRadius: "12px",
-          background: selectedId != null ? "rgba(59,130,246,0.09)" : "rgba(255,255,255,0.04)",
-          border: selectedId != null ? "1px solid rgba(59,130,246,0.28)" : "1px solid rgba(255,255,255,0.10)",
-          color: selectedId != null ? "#60a5fa" : "#94a3b8",
+          background: selectedId != null ? "rgba(59,130,246,0.09)" : "var(--th-subtle-bg)",
+          border: selectedId != null ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-surface-border)",
+          color: selectedId != null ? "#60a5fa" : "var(--th-text-2)",
           fontSize: "0.82rem",
           fontWeight: 500,
           cursor: loading ? "not-allowed" : "pointer",
@@ -607,8 +607,8 @@ function ContractSelector({
               left: 0,
               minWidth: "300px",
               maxWidth: "400px",
-              background: "rgba(8,16,32,0.98)",
-              border: "1px solid rgba(255,255,255,0.09)",
+              background: "var(--th-dropdown-bg)",
+              border: "1px solid var(--th-dropdown-border)",
               borderRadius: "14px",
               boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
               zIndex: 1200,
@@ -637,17 +637,17 @@ function ContractSelector({
                         padding: "11px 16px",
                         background: isSelected ? "rgba(59,130,246,0.09)" : "transparent",
                         border: "none",
-                        borderBottom: "1px solid rgba(255,255,255,0.03)",
-                        color: isSelected ? "#60a5fa" : "#94a3b8",
+                        borderBottom: "1px solid var(--th-divider)",
+                        color: isSelected ? "#60a5fa" : "var(--th-text-2)",
                         fontSize: "0.8rem",
                         cursor: "pointer",
                         textAlign: "left",
                         transition: "background 0.12s ease",
                       }}
-                      onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                      onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--th-inner-hover)"; }}
                       onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                     >
-                      <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isSelected ? "#60a5fa" : "#3d4a5a", flexShrink: 0, marginTop: "5px" }} />
+                      <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isSelected ? "#60a5fa" : "var(--th-text-4)", flexShrink: 0, marginTop: "5px" }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
                           {contractDisplayName(c)}
@@ -675,7 +675,7 @@ function SkeletonCard({ height = 180 }: { height?: number }) {
       style={{
         ...CARD,
         height,
-        background: "rgba(10,20,38,0.4)",
+        background: "var(--th-subtle-bg)",
         display: "flex",
         flexDirection: "column",
         gap: "12px",
@@ -708,8 +708,8 @@ function InfoRow({
         gap: "5px",
         padding: "16px 20px",
         borderRadius: "13px",
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.05)",
+        background: "var(--th-subtle-bg)",
+        border: "1px solid var(--th-surface-border)",
       }}
     >
       <p
@@ -718,7 +718,7 @@ function InfoRow({
           fontWeight: 700,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
-          color: "#475569",
+          color: "var(--th-text-3)",
         }}
       >
         {label}
@@ -727,7 +727,7 @@ function InfoRow({
         style={{
           fontSize: "0.85rem",
           fontWeight: 500,
-          color: valueColor ?? "#e2e8f0",
+          color: valueColor ?? "var(--th-text-1)",
           lineHeight: 1.4,
         }}
       >
@@ -765,12 +765,12 @@ function DateCard({
           ? "rgba(245,158,11,0.05)"
           : expired
           ? "rgba(239,68,68,0.04)"
-          : "rgba(255,255,255,0.025)",
+          : "var(--th-subtle-bg)",
         border: urgent
           ? "1px solid rgba(245,158,11,0.16)"
           : expired
           ? "1px solid rgba(239,68,68,0.16)"
-          : "1px solid rgba(255,255,255,0.06)",
+          : "1px solid var(--th-surface-border)",
         display: "flex",
         flexDirection: "column",
         gap: "12px",
@@ -799,7 +799,7 @@ function DateCard({
             fontWeight: 700,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            color: "#475569",
+            color: "var(--th-text-3)",
           }}
         >
           {label}
@@ -817,7 +817,7 @@ function DateCard({
             style={{
               fontSize: "0.9rem",
               fontWeight: 600,
-              color: expired ? "#f87171" : urgent ? "#fbbf24" : "#e2e8f0",
+              color: expired ? "#f87171" : urgent ? "#fbbf24" : "var(--th-text-1)",
               lineHeight: 1.3,
               marginBottom: "3px",
             }}
@@ -969,8 +969,8 @@ export default function ContractOverviewPage() {
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: "rgba(8, 16, 32, 0.97)",
-                border: "1px solid rgba(255,255,255,0.10)",
+                background: "var(--th-dropdown-bg)",
+                border: "1px solid var(--th-dropdown-border)",
                 borderRadius: "20px",
                 padding: "32px",
                 maxWidth: "460px",
@@ -999,7 +999,7 @@ export default function ContractOverviewPage() {
                     <RefreshCw size={16} style={{ color: "#fbbf24" }} />
                   </div>
                   <div>
-                    <p style={{ fontSize: "1rem", fontWeight: 700, color: "#f1f5f9", lineHeight: 1.3 }}>
+                    <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--th-text-1)", lineHeight: 1.3 }}>
                       Re-analyze Contract
                     </p>
                     <p style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
@@ -1014,7 +1014,7 @@ export default function ContractOverviewPage() {
                     height: "28px",
                     borderRadius: "8px",
                     background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    border: "1px solid var(--th-surface-border)",
                     color: "#64748b",
                     cursor: "pointer",
                     display: "flex",
@@ -1037,8 +1037,8 @@ export default function ContractOverviewPage() {
               </div>
 
               {/* Modal body */}
-              <p style={{ fontSize: "0.875rem", color: "#94a3b8", lineHeight: 1.7, marginBottom: "20px" }}>
-                This will run a full AI re-analysis of <span style={{ color: "#dae2fd", fontWeight: 500 }}>{detail?.title ?? "this contract"}</span> and regenerate:
+              <p style={{ fontSize: "0.875rem", color: "var(--th-text-2)", lineHeight: 1.7, marginBottom: "20px" }}>
+                This will run a full AI re-analysis of <span style={{ color: "var(--th-text-1)", fontWeight: 500 }}>{detail?.title ?? "this contract"}</span> and regenerate:
               </p>
 
               <div
@@ -1048,8 +1048,8 @@ export default function ContractOverviewPage() {
                   gap: "8px",
                   padding: "16px",
                   borderRadius: "12px",
-                  background: "rgba(255,255,255,0.025)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "var(--th-subtle-bg)",
+                  border: "1px solid var(--th-surface-border)",
                   marginBottom: "24px",
                 }}
               >
@@ -1061,12 +1061,12 @@ export default function ContractOverviewPage() {
                 ].map(({ label, color }) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>{label}</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--th-text-2)" }}>{label}</span>
                   </div>
                 ))}
               </div>
 
-              <p style={{ fontSize: "0.78rem", color: "#475569", lineHeight: 1.6, marginBottom: "24px" }}>
+              <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", lineHeight: 1.6, marginBottom: "24px" }}>
                 Current analysis results will be replaced. This cannot be undone.
               </p>
 
@@ -1080,8 +1080,8 @@ export default function ContractOverviewPage() {
                     fontSize: "0.82rem",
                     fontWeight: 500,
                     background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    color: "#64748b",
+                    border: "1px solid var(--th-surface-border)",
+                    color: "var(--th-text-3)",
                     cursor: "pointer",
                     transition: "background 0.15s, color 0.15s",
                   }}
@@ -1179,7 +1179,7 @@ export default function ContractOverviewPage() {
                 fontSize: "2rem",
                 fontWeight: 700,
                 lineHeight: 1.15,
-                background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
+                background: "linear-gradient(135deg, var(--th-title-from) 0%, var(--th-title-to) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -1189,7 +1189,7 @@ export default function ContractOverviewPage() {
             </h1>
           </div>
 
-          <p style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "24px", lineHeight: 1.6 }}>
+          <p style={{ fontSize: "0.85rem", color: "var(--th-text-3)", marginBottom: "24px", lineHeight: 1.6 }}>
             Executive briefing — parties, dates, and summary for the selected contract.
           </p>
 
@@ -1471,8 +1471,8 @@ export default function ContractOverviewPage() {
                         marginTop: "12px",
                         padding: "14px 18px",
                         borderRadius: "13px",
-                        background: "rgba(99,102,241,0.05)",
-                        border: "1px solid rgba(99,102,241,0.12)",
+                        background: "rgba(99,102,241,0.06)",
+                        border: "1px solid rgba(99,102,241,0.14)",
                         display: "flex",
                         alignItems: "center",
                         gap: "20px",
@@ -1507,7 +1507,7 @@ export default function ContractOverviewPage() {
                         {parties.other.map((p) => (
                           <span
                             key={p.name}
-                            style={{ fontSize: "0.72rem", color: "#94a3b8", background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: "6px", padding: "3px 10px", fontWeight: 500 }}
+                            style={{ fontSize: "0.72rem", color: "var(--th-text-2)", background: "var(--th-subtle-bg)", border: "1px solid var(--th-surface-border)", borderRadius: "6px", padding: "3px 10px", fontWeight: 500 }}
                           >
                             {p.name}
                           </span>
@@ -1535,7 +1535,7 @@ export default function ContractOverviewPage() {
                     <div style={{ padding: "32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                       <Users size={28} style={{ color: "#64748b" }} />
                       <div>
-                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>
+                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--th-text-3)", marginBottom: "6px" }}>
                           No Parties Detected
                         </p>
                         <p style={{ fontSize: "0.76rem", color: "#64748b", lineHeight: 1.6 }}>
@@ -1623,7 +1623,7 @@ export default function ContractOverviewPage() {
                           </p>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                             {parties.other.map((p) => (
-                              <span key={p.name} style={{ fontSize: "0.76rem", color: "#94a3b8", background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.14)", borderRadius: "8px", padding: "5px 12px", fontWeight: 500 }}>
+                              <span key={p.name} style={{ fontSize: "0.76rem", color: "var(--th-text-2)", background: "var(--th-subtle-bg)", border: "1px solid var(--th-surface-border)", borderRadius: "8px", padding: "5px 12px", fontWeight: 500 }}>
                                 {p.name}
                               </span>
                             ))}
@@ -1715,7 +1715,7 @@ export default function ContractOverviewPage() {
                     >
                       <Brain size={13} style={{ color: "#818cf8" }} />
                     </div>
-                    <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+                    <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
                       AI Executive Summary
                     </span>
                   </div>
@@ -1782,7 +1782,7 @@ export default function ContractOverviewPage() {
                         style={{
                           fontSize: "0.88rem",
                           fontWeight: 600,
-                          color: "#475569",
+                          color: "var(--th-text-3)",
                           marginBottom: "6px",
                         }}
                       >

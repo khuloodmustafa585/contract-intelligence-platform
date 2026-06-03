@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -74,7 +74,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
         style={{
           fontSize: "0.875rem",
           lineHeight: 1.75,
-          color: isNotFound ? "#64748b" : "#dae2fd",
+          color: isNotFound ? "var(--th-text-3)" : "var(--th-text-1)",
           margin: 0,
         }}
       >
@@ -93,7 +93,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
           <p
             style={{
               fontSize: "0.68rem",
-              color: "#475569",
+              color: "var(--th-text-3)",
               marginBottom: "4px",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
@@ -106,7 +106,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
             style={{
               fontSize: "0.825rem",
               lineHeight: 1.65,
-              color: "#7c8fa8",
+              color: "var(--th-text-2)",
               fontStyle: "italic",
               margin: 0,
             }}
@@ -124,7 +124,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
             alignItems: "flex-start",
             gap: "8px",
             fontSize: "0.8rem",
-            color: "#fca5a5",
+            color: "var(--badge-red-text)",
             padding: "8px 12px",
             borderRadius: "8px",
             background: "rgba(239,68,68,0.05)",
@@ -145,7 +145,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
             alignItems: "flex-start",
             gap: "8px",
             fontSize: "0.8rem",
-            color: "#86efac",
+            color: "var(--badge-success-text)",
             padding: "8px 12px",
             borderRadius: "8px",
             background: "rgba(16,185,129,0.04)",
@@ -163,7 +163,7 @@ function AiAnswerBubble({ ai }: { ai: AiAnswer }) {
         <p
           style={{
             fontSize: "0.7rem",
-            color: "#64748b",
+            color: "var(--th-text-3)",
             margin: 0,
             fontStyle: "italic",
           }}
@@ -229,14 +229,10 @@ export default function AskAIPage() {
       .finally(() => setLoadingContracts(false));
   }, []);
 
-  // Scroll when a new message is appended.
-  // Uses messages.length (a stable primitive) instead of the full `messages`
-  // array reference to keep the dependency array type-stable between renders.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scroll when the loading state changes so the typing indicator stays visible.
   useEffect(() => {
     if (loading) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [loading]);
@@ -255,7 +251,6 @@ export default function AskAIPage() {
     setMessages((prev) => [...prev, userMsg]);
     setQuestion("");
 
-    // ── Handle greetings / casual messages locally — no API call ──────────
     const intent = classifyInput(q);
     if (intent === "greeting") {
       setMessages((prev) => [
@@ -282,7 +277,6 @@ export default function AskAIPage() {
       return;
     }
 
-    // ── Real contract question → call the API ─────────────────────────────
     setLoading(true);
     setError("");
     try {
@@ -341,36 +335,37 @@ export default function AskAIPage() {
             display:        "flex",
             flexDirection:  "column",
             overflowY:      "auto",
-            background:     "rgba(11,19,38,0.92)",
-            border:         "1px solid rgba(99,102,241,0.10)",
+            background:     "var(--th-card-bg)",
+            border:         "1px solid rgba(99,102,241,0.12)",
             borderRadius:   "14px",
+            boxShadow:      "var(--th-card-shadow)",
           }}
         >
           {/* Contract selector */}
           <div
             style={{
               padding:      "20px 20px 18px",
-              borderBottom: "1px solid rgba(99,102,241,0.07)",
+              borderBottom: "1px solid var(--th-divider)",
             }}
           >
             <p
               style={{
-                color:        "#6366f1",
-                fontSize:     "0.6rem",
-                fontFamily:   "var(--font-mono, monospace)",
-                fontWeight:   600,
-                letterSpacing:"0.12em",
-                textTransform:"uppercase",
-                marginBottom: "12px",
+                color:         "#6366f1",
+                fontSize:      "0.6rem",
+                fontFamily:    "var(--font-mono, monospace)",
+                fontWeight:    600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom:  "12px",
               }}
             >
               Contract
             </p>
 
             {loadingContracts ? (
-              <p style={{ fontSize: "0.78rem", color: "#475569" }}>Loading…</p>
+              <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)" }}>Loading…</p>
             ) : contracts.length === 0 ? (
-              <p style={{ fontSize: "0.78rem", color: "#475569", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "0.78rem", color: "var(--th-text-3)", lineHeight: 1.5 }}>
                 No indexed contracts yet. Upload and analyze a contract first.
               </p>
             ) : (
@@ -382,20 +377,20 @@ export default function AskAIPage() {
                     setMessages([]);
                   }}
                   style={{
-                    width:       "100%",
-                    appearance:  "none",
-                    borderRadius:"10px",
-                    padding:     "9px 32px 9px 12px",
-                    fontSize:    "0.82rem",
-                    outline:     "none",
-                    background:  "rgba(19,27,46,0.8)",
-                    border:      "1px solid rgba(99,102,241,0.16)",
-                    color:       "#dae2fd",
-                    cursor:      "pointer",
+                    width:        "100%",
+                    appearance:   "none",
+                    borderRadius: "10px",
+                    padding:      "9px 32px 9px 12px",
+                    fontSize:     "0.82rem",
+                    outline:      "none",
+                    background:   "var(--th-input-bg)",
+                    border:       "1px solid var(--th-input-border)",
+                    color:        "var(--th-text-1)",
+                    cursor:       "pointer",
                   }}
                 >
                   {contracts.map((c) => (
-                    <option key={c.id} value={c.id} style={{ background: "#131b2e" }}>
+                    <option key={c.id} value={c.id} style={{ background: "var(--th-dropdown-bg)" }}>
                       {c.title}
                     </option>
                   ))}
@@ -403,12 +398,12 @@ export default function AskAIPage() {
                 <ChevronDown
                   size={12}
                   style={{
-                    position:       "absolute",
-                    right:          "10px",
-                    top:            "50%",
-                    transform:      "translateY(-50%)",
-                    color:          "#475569",
-                    pointerEvents:  "none",
+                    position:      "absolute",
+                    right:         "10px",
+                    top:           "50%",
+                    transform:     "translateY(-50%)",
+                    color:         "var(--th-text-3)",
+                    pointerEvents: "none",
                   }}
                 />
               </div>
@@ -422,7 +417,7 @@ export default function AskAIPage() {
                   gap:        "6px",
                   marginTop:  "8px",
                   fontSize:   "0.72rem",
-                  color:      "#475569",
+                  color:      "var(--th-text-3)",
                 }}
               >
                 <FileText size={10} style={{ color: "#6366f1", flexShrink: 0 }} />
@@ -435,13 +430,13 @@ export default function AskAIPage() {
           <div style={{ padding: "18px 20px", flex: 1 }}>
             <p
               style={{
-                color:        "#6366f1",
-                fontSize:     "0.6rem",
-                fontFamily:   "var(--font-mono, monospace)",
-                fontWeight:   600,
-                letterSpacing:"0.12em",
-                textTransform:"uppercase",
-                marginBottom: "10px",
+                color:         "#6366f1",
+                fontSize:      "0.6rem",
+                fontFamily:    "var(--font-mono, monospace)",
+                fontWeight:    600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginBottom:  "10px",
               }}
             >
               Suggestions
@@ -457,8 +452,8 @@ export default function AskAIPage() {
                     textAlign:    "left",
                     padding:      "9px 12px",
                     borderRadius: "10px",
-                    border:       "1px solid rgba(99,102,241,0.10)",
-                    color:        "#64748b",
+                    border:       "1px solid rgba(99,102,241,0.12)",
+                    color:        "var(--th-text-3)",
                     background:   "transparent",
                     fontSize:     "0.78rem",
                     lineHeight:   1.5,
@@ -469,14 +464,14 @@ export default function AskAIPage() {
                   onMouseEnter={(e) => {
                     if (!(!contractId || loading)) {
                       (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.06)";
-                      (e.currentTarget as HTMLElement).style.color = "#94a3b8";
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.18)";
+                      (e.currentTarget as HTMLElement).style.color = "var(--th-text-2)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.20)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = "#64748b";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.10)";
+                    (e.currentTarget as HTMLElement).style.color = "var(--th-text-3)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,102,241,0.12)";
                   }}
                 >
                   {q}
@@ -489,26 +484,27 @@ export default function AskAIPage() {
         {/* ── Chat panel ────────────────────────────────────────────────── */}
         <div
           style={{
-            flex:           1,
-            display:        "flex",
-            flexDirection:  "column",
-            overflow:       "hidden",
-            background:     "rgba(11,19,38,0.6)",
-            border:         "1px solid rgba(99,102,241,0.08)",
-            borderRadius:   "14px",
+            flex:          1,
+            display:       "flex",
+            flexDirection: "column",
+            overflow:      "hidden",
+            background:    "var(--th-card-bg)",
+            border:        "1px solid rgba(99,102,241,0.10)",
+            borderRadius:  "14px",
+            boxShadow:     "var(--th-card-shadow)",
           }}
         >
           {/* Header */}
           <div
             style={{
-              display:        "flex",
-              alignItems:     "center",
-              gap:            "12px",
-              padding:        "16px 24px",
-              borderBottom:   "1px solid rgba(99,102,241,0.08)",
-              background:     "rgba(11,19,38,0.8)",
-              flexShrink:     0,
-              borderRadius:   "14px 14px 0 0",
+              display:       "flex",
+              alignItems:    "center",
+              gap:           "12px",
+              padding:       "16px 24px",
+              borderBottom:  "1px solid var(--th-divider)",
+              background:    "var(--th-insights-header-bg)",
+              flexShrink:    0,
+              borderRadius:  "14px 14px 0 0",
             }}
           >
             <div
@@ -526,10 +522,10 @@ export default function AskAIPage() {
               <Sparkles size={15} style={{ color: "#fff" }} />
             </div>
             <div>
-              <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#dae2fd", lineHeight: 1.3 }}>
+              <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)", lineHeight: 1.3 }}>
                 Contract AI
               </p>
-              <p style={{ fontSize: "0.72rem", color: "#475569", marginTop: "1px" }}>
+              <p style={{ fontSize: "0.72rem", color: "var(--th-text-3)", marginTop: "1px" }}>
                 {selectedContract ? selectedContract.title : "Select a contract to begin"}
               </p>
             </div>
@@ -539,17 +535,17 @@ export default function AskAIPage() {
           {error && (
             <div
               style={{
-                margin:     "12px 20px 0",
-                display:    "flex",
-                alignItems: "center",
-                gap:        "8px",
-                padding:    "10px 14px",
+                margin:      "12px 20px 0",
+                display:     "flex",
+                alignItems:  "center",
+                gap:         "8px",
+                padding:     "10px 14px",
                 borderRadius:"10px",
-                fontSize:   "0.82rem",
-                background: "rgba(239,68,68,0.07)",
-                border:     "1px solid rgba(239,68,68,0.18)",
-                color:      "#f87171",
-                flexShrink: 0,
+                fontSize:    "0.82rem",
+                background:  "rgba(239,68,68,0.07)",
+                border:      "1px solid rgba(239,68,68,0.18)",
+                color:       "#f87171",
+                flexShrink:  0,
               }}
             >
               <AlertCircle size={13} style={{ flexShrink: 0 }} /> {error}
@@ -559,12 +555,12 @@ export default function AskAIPage() {
           {/* Messages */}
           <div
             style={{
-              flex:           1,
-              overflowY:      "auto",
-              padding:        "28px 28px 20px",
-              display:        "flex",
-              flexDirection:  "column",
-              gap:            "20px",
+              flex:          1,
+              overflowY:     "auto",
+              padding:       "28px 28px 20px",
+              display:       "flex",
+              flexDirection: "column",
+              gap:           "20px",
             }}
           >
             {/* Empty state */}
@@ -595,10 +591,10 @@ export default function AskAIPage() {
                 >
                   <Bot size={24} style={{ color: "#6366f1", opacity: 0.6 }} />
                 </div>
-                <p style={{ fontSize: "0.92rem", fontWeight: 600, color: "#94a3b8" }}>
+                <p style={{ fontSize: "0.92rem", fontWeight: 600, color: "var(--th-text-2)" }}>
                   Contract AI
                 </p>
-                <p style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.65, maxWidth: "340px" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--th-text-3)", lineHeight: 1.65, maxWidth: "340px" }}>
                   Ask a question about the selected contract. Answers are grounded in the exact contract text.
                 </p>
               </div>
@@ -609,10 +605,10 @@ export default function AskAIPage() {
               <div
                 key={msg.id}
                 style={{
-                  display:        "flex",
-                  gap:            "10px",
-                  flexDirection:  msg.role === "user" ? "row-reverse" : "row",
-                  alignItems:     "flex-start",
+                  display:       "flex",
+                  gap:           "10px",
+                  flexDirection: msg.role === "user" ? "row-reverse" : "row",
+                  alignItems:    "flex-start",
                 }}
               >
                 {/* Avatar */}
@@ -626,7 +622,7 @@ export default function AskAIPage() {
                     alignItems:     "center",
                     justifyContent: "center",
                     marginTop:      "2px",
-                    background:     msg.role === "user"
+                    background: msg.role === "user"
                       ? "rgba(99,102,241,0.14)"
                       : "rgba(99,102,241,0.08)",
                     border: msg.role === "user"
@@ -659,7 +655,7 @@ export default function AskAIPage() {
                         background:   "rgba(99,102,241,0.12)",
                         border:       "1px solid rgba(99,102,241,0.20)",
                         fontSize:     "0.875rem",
-                        color:        "#dae2fd",
+                        color:        "var(--th-text-1)",
                         lineHeight:   1.65,
                       }}
                     >
@@ -671,8 +667,8 @@ export default function AskAIPage() {
                       style={{
                         padding:      "14px 16px",
                         borderRadius: "3px 12px 12px 12px",
-                        background:   "rgba(15,23,42,0.7)",
-                        border:       "1px solid rgba(99,102,241,0.09)",
+                        background:   "var(--th-subtle-bg)",
+                        border:       "1px solid var(--th-surface-border)",
                         width:        "100%",
                       }}
                     >
@@ -684,10 +680,10 @@ export default function AskAIPage() {
                       style={{
                         padding:      "10px 14px",
                         borderRadius: "3px 12px 12px 12px",
-                        background:   "rgba(15,23,42,0.7)",
-                        border:       "1px solid rgba(99,102,241,0.09)",
+                        background:   "var(--th-subtle-bg)",
+                        border:       "1px solid var(--th-surface-border)",
                         fontSize:     "0.875rem",
-                        color:        "#94a3b8",
+                        color:        "var(--th-text-2)",
                         lineHeight:   1.65,
                       }}
                     >
@@ -698,7 +694,7 @@ export default function AskAIPage() {
                   <span
                     style={{
                       fontSize: "0.65rem",
-                      color:    "#475569",
+                      color:    "var(--th-text-3)",
                       padding:  "0 2px",
                     }}
                   >
@@ -731,8 +727,8 @@ export default function AskAIPage() {
                   style={{
                     padding:      "14px 16px",
                     borderRadius: "3px 12px 12px 12px",
-                    background:   "rgba(15,23,42,0.7)",
-                    border:       "1px solid rgba(99,102,241,0.09)",
+                    background:   "var(--th-subtle-bg)",
+                    border:       "1px solid var(--th-surface-border)",
                   }}
                 >
                   <TypingIndicator />
@@ -748,8 +744,8 @@ export default function AskAIPage() {
             style={{
               flexShrink:   0,
               padding:      "14px 20px 18px",
-              borderTop:    "1px solid rgba(99,102,241,0.08)",
-              background:   "rgba(11,19,38,0.8)",
+              borderTop:    "1px solid var(--th-divider)",
+              background:   "var(--th-subtle-bg)",
               borderRadius: "0 0 14px 14px",
             }}
           >
@@ -764,8 +760,8 @@ export default function AskAIPage() {
                   alignItems:   "center",
                   borderRadius: "12px",
                   overflow:     "hidden",
-                  background:   "rgba(15,23,42,0.8)",
-                  border:       "1px solid rgba(99,102,241,0.16)",
+                  background:   "var(--th-input-bg)",
+                  border:       "1px solid var(--th-input-border)",
                 }}
               >
                 <input
@@ -780,13 +776,15 @@ export default function AskAIPage() {
                   }
                   disabled={!contractId || loading}
                   maxLength={1000}
+                  className="placeholder:text-[#64748b]"
                   style={{
                     flex:       1,
                     background: "transparent",
                     padding:    "12px 14px",
                     fontSize:   "0.875rem",
                     outline:    "none",
-                    color:      "#dae2fd",
+                    border:     "none",
+                    color:      "var(--th-text-1)",
                     opacity:    !contractId || loading ? 0.45 : 1,
                   }}
                 />
@@ -795,7 +793,7 @@ export default function AskAIPage() {
                     style={{
                       marginRight: "12px",
                       fontSize:    "0.68rem",
-                      color:       "#475569",
+                      color:       "var(--th-text-3)",
                       fontFamily:  "var(--font-mono, monospace)",
                       whiteSpace:  "nowrap",
                     }}

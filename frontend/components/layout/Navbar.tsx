@@ -14,26 +14,35 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 left-64 right-0 z-40 h-16 border-b border-slate-800 bg-slate-950/70 backdrop-blur-xl">
+    <header
+      className="fixed top-0 left-64 right-0 z-40 h-16 backdrop-blur-xl"
+      style={{
+        borderBottom: "1px solid var(--th-navbar-border)",
+        background: "var(--th-navbar-bg)",
+      }}
+    >
       <div className="flex h-full items-center justify-between px-8">
 
         {/* Left Section */}
         <div className="flex items-center gap-4 w-full max-w-md">
-
           <div className="relative w-full">
             <input
               type="text"
               placeholder="Search placeholder..."
-              className="
-                w-full rounded-lg border border-slate-700
-                bg-slate-900 px-4 py-2 text-sm
-                text-slate-200 placeholder:text-slate-500
-                outline-none transition
-                focus:border-sky-500
-              "
+              className="w-full rounded-lg px-4 py-2 text-sm outline-none transition placeholder:text-[#64748b] focus:outline-none"
+              style={{
+                background: "var(--th-input-bg)",
+                border: "1px solid var(--th-input-border)",
+                color: "var(--th-text-1)",
+              }}
+              onFocus={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "#38bdf8";
+              }}
+              onBlur={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--th-input-border)";
+              }}
             />
           </div>
-
         </div>
 
         {/* Right Section */}
@@ -41,42 +50,51 @@ export default function Navbar() {
 
           {/* Notifications */}
           <button
-            className="
-              rounded-lg border border-slate-800
-              bg-slate-900 p-2 text-slate-400
-              transition hover:border-sky-500
-              hover:text-sky-400
-            "
+            className="rounded-lg p-2 transition hover:border-sky-500 hover:text-sky-400"
+            style={{
+              border: "1px solid var(--th-input-border)",
+              background: "var(--th-subtle-bg)",
+              color: "var(--th-text-3)",
+            }}
           >
             <Bell size={18} />
           </button>
 
           {/* Language Buttons */}
-          <div className="flex items-center rounded-lg border border-slate-800 overflow-hidden">
-
+          <div
+            className="flex items-center rounded-lg overflow-hidden"
+            style={{ border: "1px solid var(--th-input-border)" }}
+          >
             <button
               onClick={() => changeLanguage("en")}
-              className="
-                px-3 py-2 text-xs font-medium
-                text-slate-300 transition
-                hover:bg-slate-800
-              "
+              className="px-3 py-2 text-xs font-medium transition"
+              style={{ color: "var(--th-text-2)" }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+              }}
             >
               EN
             </button>
 
             <button
               onClick={() => changeLanguage("ar")}
-              className="
-                border-l border-slate-800
-                px-3 py-2 text-xs font-medium
-                text-slate-300 transition
-                hover:bg-slate-800
-              "
+              className="px-3 py-2 text-xs font-medium transition"
+              style={{
+                borderLeft: "1px solid var(--th-input-border)",
+                color: "var(--th-text-2)",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "var(--th-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+              }}
             >
               AR
             </button>
-
           </div>
 
           {/* Logout */}
@@ -96,11 +114,12 @@ export default function Navbar() {
 
           {/* User Avatar */}
           <div
-            className="
-              flex h-10 w-10 items-center justify-center
-              rounded-full border border-slate-800
-              bg-slate-900 text-slate-400
-            "
+            className="flex h-10 w-10 items-center justify-center rounded-full"
+            style={{
+              border: "1px solid var(--th-input-border)",
+              background: "var(--th-subtle-bg)",
+              color: "var(--th-text-3)",
+            }}
           >
             <Globe size={18} />
           </div>

@@ -137,6 +137,28 @@
   --th-dropdown-shadow:     0 8px 24px rgba(0,0,0,0.12);
 }
 
+/* ─── Badge status color tokens ──────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --badge-success-text: #34d399;
+  --badge-blue-text:    #93c5fd;
+  --badge-yellow-text:  #fbbf24;
+  --badge-purple-text:  #c4b5fd;
+  --badge-cyan-text:    #67e8f9;
+  --badge-red-text:     #fca5a5;
+  --badge-gray-text:    #94a3b8;
+}
+
+[data-theme="light"] {
+  --badge-success-text: #059669;
+  --badge-blue-text:    #1d4ed8;
+  --badge-yellow-text:  #92400e;
+  --badge-purple-text:  #6d28d9;
+  --badge-cyan-text:    #0e7490;
+  --badge-red-text:     #b91c1c;
+  --badge-gray-text:    #475569;
+}
+
 /* Apply body background reactively */
 [data-theme="light"] body {
   background: var(--th-body-bg);
@@ -270,7 +292,7 @@ body {
   text-transform: uppercase;
 }
 
-/* ─── Dark autofill override ──────────────────────────────────── */
+/* ─── Autofill override ───────────────────────────────────────── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -284,4 +306,18 @@ input:-webkit-autofill:active {
 input:autofill {
   background: rgba(4, 7, 17, 0.98) !important;
   color: #dae2fd !important;
+}
+
+[data-theme="light"] input:-webkit-autofill,
+[data-theme="light"] input:-webkit-autofill:hover,
+[data-theme="light"] input:-webkit-autofill:focus,
+[data-theme="light"] input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f1f5f9 inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #6366f1 !important;
+}
+
+[data-theme="light"] input:autofill {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
 }
