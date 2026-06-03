@@ -13,19 +13,13 @@ import {
   Shield,
   Scale,
   Upload,
-  TrendingDown,
   ChevronDown,
-  ExternalLink,
   X,
   FileSearch,
   Brain,
-  Lightbulb,
   Target,
   Clock,
-  Percent,
   MapPin,
-  Zap,
-  Activity,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import RiskBadge from "@/components/ui/RiskBadge";
@@ -70,14 +64,6 @@ const FILTERS = [
 ];
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
-function deriveStatus(severity: string): { label: string; color: string; bg: string } {
-  const s = severity?.toLowerCase() ?? "";
-  if (s === "critical" || s === "high")
-    return { label: "Escalated for Counsel", color: "#f87171", bg: "rgba(239,68,68,0.1)"  };
-  if (s === "medium" || s === "moderate")
-    return { label: "Under Legal Review",    color: "#fbbf24", bg: "rgba(245,158,11,0.1)" };
-  return   { label: "Monitoring",            color: "#34d399", bg: "rgba(16,185,129,0.1)" };
-}
 
 function formatRiskType(type: string): string {
   if (!type) return "Unknown";
@@ -108,169 +94,6 @@ function formatRiskTitle(title: string): string {
   return result;
 }
 
-/**
- * Deterministic confidence score (78–96%) based on clause clarity signals.
- * Uses risk ID + contract ID as seed so the same risk always displays the same score.
- */
-function deriveConfidence(risk: Risk): number {
-  const snippet     = (risk.source_snippet ?? "").toLowerCase();
-  const explanation = risk.explanation ?? "";
-
-  // Deterministic variance: spread across 0–18 using risk identity
-  const seed = ((risk.id * 17 + risk.contract_id * 11) % 19);
-
-  // Base score from seed (gives 79–97 before adjustments)
-  let score = 79 + seed;
-
-  // Upward signals — explicit, unambiguous contractual language
-  const explicitMarkers = [
-    "shall not", "in no event", "notwithstanding", "without cause",
-    "at its sole discretion", "unconditionally", "irrevocably",
-    "unlimited liability", "indemnify and hold harmless",
-  ];
-  if (explicitMarkers.some((m) => snippet.includes(m))) score += 4;
-
-  // Downward signals — vague or interpretive language → lower extraction certainty
-  const ambiguousMarkers = [
-    "reasonable", "as may be", "appropriate", "as determined",
-    "from time to time", "unless otherwise", "commercially reasonable",
-  ];
-  if (ambiguousMarkers.some((m) => snippet.includes(m))) score -= 5;
-
-  // Data quality signals
-  if (snippet.length > 150) score += 2;   // longer snippets → better context
-  if (explanation.length > 150) score += 2; // richer explanation → higher certainty
-
-  return Math.min(96, Math.max(78, score));
-}
-
-/** Maps confidence score to a human-readable quality label. */
-function confidenceLabel(score: number): string {
-  if (score >= 93) return "Very High Confidence";
-  if (score >= 88) return "High Confidence";
-  if (score >= 82) return "Moderate Confidence";
-  return "Indicative Assessment";
-}
-
-/**
- * Derives a realistic-looking clause section reference (e.g. "§ 12.3")
- * using the risk type and ID as a deterministic seed.
- */
-const CLAUSE_SECTION_MAP: Record<string, number[]> = {
-  liability:            [8, 11, 14, 9, 20],
-  termination:          [12, 15, 7, 18, 22],
-  renewal:              [3, 5, 16, 2, 19],
-  payment:              [4, 6, 10, 13, 17],
-  confidentiality:      [7, 9, 11, 17, 21],
-  compliance:           [19, 21, 8, 14, 25],
-  intellectual_property:[10, 13, 16, 20, 23],
-  indemnification:      [15, 17, 22, 11, 24],
-  dispute:              [23, 25, 18, 20, 26],
-};
-
-function deriveClauseRef(risk: Risk): string {
-  const type     = risk.risk_type?.toLowerCase() ?? "";
-  const sections = CLAUSE_SECTION_MAP[type] ?? [1, 3, 5, 7, 9];
-  const section  = sections[risk.id % sections.length];
-  const sub      = (risk.id % 9) + 1;
-  return `§ ${section}.${sub}`;
-}
-
-const WHY_IT_MATTERS_TEMPLATE: Record<string, string> = {
-  liability:
-    "Legal teams flag uncapped liability because it removes any agreed financial ceiling, making risk quantification impossible. Without a defined limit, the company has no contractual protection against claims of any size.",
-  termination:
-    "Legal teams flag one-sided termination rights because they give the counterparty an exit without accountability and without requiring any objective grounds. Your company has no enforceable basis to seek compensation or delay the exit.",
-  renewal:
-    "Legal teams flag automatic renewal clauses because they depend on your company acting on a deadline that often receives little internal attention. Once the window closes, there is typically no legal mechanism to reverse the commitment.",
-  payment:
-    "Legal teams flag vague or one-sided payment terms because they create a structural imbalance where the counterparty can alter costs or apply penalties without your company's consent. The contract's true cost is therefore unknowable at signing.",
-  confidentiality:
-    "Legal teams flag poorly scoped confidentiality clauses because an overly broad restriction can block legally required disclosures, while an underdefined clause leaves sensitive company information exposed. Neither is enforceable as originally intended.",
-  compliance:
-    "Legal teams flag compliance clauses tied to external standards because those standards can change after signing, retroactively imposing obligations your company never agreed to. There is typically no renegotiation right built in to account for this.",
-  intellectual_property:
-    "Legal teams flag ambiguous IP clauses because they are among the most frequently litigated provisions in commercial agreements. Once rights are transferred — even unintentionally — they are extremely difficult to reclaim.",
-  indemnification:
-    "Legal teams flag broad indemnification clauses because the obligation is open-ended: your company may be required to pay the counterparty's costs even when it had no direct role in causing the problem. These clauses are rarely written with agreed financial limits.",
-  dispute:
-    "Legal teams flag restrictive dispute clauses because they eliminate or constrain legal remedies your company would otherwise have access to. Mandatory arbitration and venue restrictions consistently benefit the party that drafted the contract.",
-};
-
-/** Returns the why-this-matters text for a risk.
- *  Prefers the per-risk AI-generated value stored in risk.why_this_matters;
- *  falls back to the type-keyed template for old rows where the field is null. */
-function getWhyThisMatters(risk: Risk): string | null {
-  if (risk.why_this_matters && risk.why_this_matters.trim()) return risk.why_this_matters;
-  return WHY_IT_MATTERS_TEMPLATE[risk.risk_type?.toLowerCase()] ?? null;
-}
-
-/* ─── Trigger Terms by Risk Type (template fallback) ────────────── */
-const TRIGGER_TERMS_BY_TYPE: Record<string, string[]> = {
-  liability:             ["unlimited liability", "consequential damages", "aggregate cap", "sole remedy clause"],
-  termination:           ["terminate for convenience", "without cause", "cure period waived", "immediate termination"],
-  renewal:               ["automatic renewal", "evergreen clause", "non-renewal notice", "roll-over term"],
-  payment:               ["late payment penalty", "unilateral fee adjustment", "invoice dispute rights", "payment default"],
-  confidentiality:       ["perpetual obligation", "residuals clause", "permitted disclosure", "post-term survival"],
-  compliance:            ["regulatory change obligation", "audit access rights", "breach notification duty", "compliance certification"],
-  intellectual_property: ["work for hire", "IP assignment clause", "background technology", "derivative works ownership"],
-  indemnification:       ["indemnify and hold harmless", "third-party claims", "defense cost obligation", "settlement consent required"],
-  dispute:               ["mandatory arbitration", "venue restriction", "jury trial waiver", "shortened limitation period"],
-};
-
-/** Returns trigger terms for a risk.
- *  Prefers the per-risk AI-generated list stored in risk.trigger_terms (JSON string);
- *  falls back to the type-keyed template for old rows where the field is null. */
-function extractTriggerTerms(risk: Risk): string[] {
-  if (risk.trigger_terms && risk.trigger_terms.trim()) {
-    try {
-      const parsed = JSON.parse(risk.trigger_terms);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, 4);
-    } catch {
-      // malformed JSON — fall through to template
-    }
-  }
-  const type    = risk.risk_type?.toLowerCase() ?? "";
-  const base    = TRIGGER_TERMS_BY_TYPE[type] ?? ["contractual risk provision", "liability exposure", "unilateral discretion"];
-  const snippet = (risk.source_snippet ?? "").toLowerCase();
-  const found   = base.filter((t) => snippet.includes(t.split(" ")[0]));
-  return found.length >= 2 ? found.slice(0, 4) : base.slice(0, 4);
-}
-
-/* ─── Business Impact by Risk Type (template fallback) ──────────── */
-const BUSINESS_IMPACT_BY_TYPE: Record<string, string[]> = {
-  liability:             ["Company assets may be put at risk to satisfy an uncapped claim", "Finance teams cannot set adequate reserves without a known ceiling", "Insurance premiums may increase substantially to cover open-ended exposure"],
-  termination:           ["Operations can be disrupted without time to find or transition to an alternative", "Sunk costs from setup, integration, or training cannot be recovered", "There is no contractual path to challenge or delay an abrupt exit"],
-  renewal:               ["Contract costs continue into a new term without anyone actively deciding to renew", "Pricing and terms locked at signing carry over with no opportunity to update them", "Procurement teams may not be alerted until after the opt-out window has already closed"],
-  payment:               ["Invoice disputes can delay cash flow and create planning gaps", "Final contract cost may be significantly higher than the amount agreed at signing", "The company cannot reliably forecast how much the contract will cost over time"],
-  confidentiality:       ["Data shared with regulators or auditors may breach the clause even when required by law", "Proprietary information may lack the protection the business assumed it had", "A breach triggered by a mandatory disclosure can expose the company to a counterclaim"],
-  compliance:            ["Internal teams may face urgent changes to meet standards that did not exist at signing", "Regulatory penalties may apply for obligations introduced after the contract began", "Legal and compliance budgets cannot account for standards that may still change"],
-  intellectual_property: ["The company may lose the right to use or commercialise work it funded and created", "Background tools or technology transferred to the counterparty may not be recoverable", "Future product development may become dependent on a vendor that now controls key assets"],
-  indemnification:       ["Legal defense costs from the counterparty's disputes can appear on accounts unexpectedly", "Finance teams cannot predict or cap exposure under a broad indemnification obligation", "The company may absorb settlement costs even when it was not the primary party at fault"],
-  dispute:               ["Resolving a genuine claim may require expensive travel or specialist representation elsewhere", "Arbitration decisions are difficult to challenge, even when the outcome seems unfair", "Short limitation windows may expire before the company realises it has grounds for a claim"],
-};
-
-const _DEFAULT_BUSINESS_IMPACT = [
-  "Operations or finances may be affected if this clause is not addressed before signing",
-  "Seeking compensation or recourse later may be difficult or not possible",
-  "The company's ability to respond effectively may be constrained by the clause wording",
-];
-
-/** Returns business impact bullets for a risk.
- *  Prefers the per-risk AI-generated list stored in risk.business_impact (JSON string);
- *  falls back to the type-keyed template for old rows where the field is null. */
-function getBusinessImpact(risk: Risk): string[] {
-  if (risk.business_impact && risk.business_impact.trim()) {
-    try {
-      const parsed = JSON.parse(risk.business_impact);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch {
-      // malformed JSON — fall through to template
-    }
-  }
-  const type = risk.risk_type?.toLowerCase() ?? "";
-  return BUSINESS_IMPACT_BY_TYPE[type] ?? _DEFAULT_BUSINESS_IMPACT;
-}
 
 /* ─── Contract Selector ──────────────────────────────────────────── */
 function contractDisplayName(c: Contract): string {
@@ -599,211 +422,6 @@ function PageHeader({
   );
 }
 
-/* ─── Clause Modal ───────────────────────────────────────────────── */
-function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(0,0,0,0.72)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 16 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(720px, 92vw)", maxHeight: "82vh",
-          display: "flex", flexDirection: "column",
-          background: "rgba(8, 16, 32, 0.98)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: "22px",
-          boxShadow: "0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(239,68,68,0.08)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Modal header */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: "14px",
-            padding: "20px 24px",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(10,16,32,0) 100%)",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              width: "34px", height: "34px", borderRadius: "11px",
-              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.22)",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}
-          >
-            <FileSearch size={15} style={{ color: "#f87171" }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#f1f5f9", marginBottom: "2px" }}>
-              {formatRiskTitle(risk.title)}
-            </p>
-            <p style={{ fontSize: "0.7rem", color: "#475569" }}>
-              CTR-{String(risk.contract_id).padStart(4, "0")} · {formatRiskType(risk.risk_type)}
-            </p>
-          </div>
-          <RiskBadge level={risk.severity} size="md" />
-          <button
-            onClick={onClose}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: "30px", height: "30px", borderRadius: "9px",
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)",
-              color: "#64748b", cursor: "pointer", flexShrink: 0,
-            }}
-          >
-            <X size={13} />
-          </button>
-        </div>
-
-        {/* Modal body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Exact clause */}
-          <div
-            style={{
-              padding: "18px 20px", borderRadius: "13px",
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(239,68,68,0.18)",
-              borderLeft: "3px solid rgba(239,68,68,0.55)",
-            }}
-          >
-            <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>
-              Exact Contract Clause
-            </p>
-            <p style={{ fontSize: "0.875rem", color: "#cbd5e1", lineHeight: 1.8, fontStyle: "italic" }}>
-              &ldquo;{risk.source_snippet ?? "No clause text captured for this risk."}&rdquo;
-            </p>
-          </div>
-
-          {/* Risk Explanation */}
-          {risk.explanation && (
-            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.14)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
-                <Brain size={12} style={{ color: "#a78bfa" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>What This Clause Means</p>
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.explanation}</p>
-            </div>
-          )}
-
-          {/* Why This Matters */}
-          {getWhyThisMatters(risk) && (
-            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.14)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
-                <Lightbulb size={12} style={{ color: "#fbbf24" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>Why This Matters</p>
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>
-                {getWhyThisMatters(risk)}
-              </p>
-            </div>
-          )}
-
-          {/* Potential Business Consequences */}
-          <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.11)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "11px" }}>
-              <Activity size={12} style={{ color: "#f87171" }} />
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>Potential Business Consequences</p>
-            </div>
-            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
-              {getBusinessImpact(risk).map((impact) => (
-                <li key={impact} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                  <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>·</span>
-                  <span style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.75 }}>{impact}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Recommended Action */}
-          {risk.suggested_action && (
-            <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.14)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "10px" }}>
-                <Target size={12} style={{ color: "#34d399" }} />
-                <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.1em" }}>Recommended Action</p>
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.suggested_action}</p>
-            </div>
-          )}
-
-          {/* Flagged Contract Terms */}
-          <div style={{ padding: "16px 18px", borderRadius: "12px", background: "rgba(99,102,241,0.04)", border: "1px solid rgba(99,102,241,0.12)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "11px" }}>
-              <Zap size={12} style={{ color: "#818cf8" }} />
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Flagged Contract Terms</p>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-              {extractTriggerTerms(risk).map((term) => (
-                <span
-                  key={term}
-                  style={{
-                    fontSize: "0.67rem", color: "#64748b",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.09)",
-                    borderRadius: "5px", padding: "3px 9px",
-                    fontFamily: "var(--font-mono,monospace)",
-                  }}
-                >
-                  {term}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Modal footer */}
-        <div
-          style={{
-            padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.06)",
-            display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <Percent size={11} style={{ color: "#475569" }} />
-            <span style={{ fontSize: "0.7rem", color: "#475569" }}>
-              Detection confidence:{" "}
-              <span style={{ color: "#94a3b8", fontWeight: 600 }}>
-                {confidenceLabel(deriveConfidence(risk))}
-              </span>
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              onClick={onClose}
-              style={{
-                padding: "8px 18px", borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.08)", background: "transparent",
-                color: "#64748b", fontSize: "0.8rem", cursor: "pointer",
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 /* ─── Detected Risks Table ───────────────────────────────────────── */
 function DetectedRisksTable({
   risks,
@@ -815,7 +433,6 @@ function DetectedRisksTable({
   contracts: Contract[];
 }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [modalRisk, setModalRisk]   = useState<Risk | null>(null);
 
   const contractMap = useMemo(() => {
     const m = new Map<number, Contract>();
@@ -832,7 +449,7 @@ function DetectedRisksTable({
     return `CTR-${String(contractId).padStart(4, "0")}`;
   }
 
-  const COLS = "2fr 1.1fr 0.85fr 1.8fr 1.1fr 0.85fr 36px";
+  const COLS = "2fr 1.1fr 0.85fr 1.8fr 0.85fr 36px";
 
   function toggleExpand(id: number) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -878,7 +495,7 @@ function DetectedRisksTable({
               borderBottom: "1px solid rgba(255,255,255,0.04)",
             }}
           >
-            {["Contract / Risk", "Clause Type", "Severity", "AI Explanation", "Status", "Date", ""].map((h) => (
+            {["Contract / Risk", "Clause Type", "Severity", "AI Explanation", "Date", ""].map((h) => (
               <span
                 key={h}
                 style={{ fontSize: "0.58rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}
@@ -908,7 +525,6 @@ function DetectedRisksTable({
                 <div className="skeleton h-5 w-24 rounded-lg" />
                 <div className="skeleton h-5 w-14 rounded-full" />
                 <div className="skeleton h-3 w-full rounded" />
-                <div className="skeleton h-5 w-20 rounded-full" />
                 <div className="skeleton h-3 w-16 rounded" />
                 <div />
               </div>
@@ -950,13 +566,7 @@ function DetectedRisksTable({
         ) : (
           <div>
             {risks.map((risk, i) => {
-              const status     = deriveStatus(risk.severity);
               const isExpanded = expandedId === risk.id;
-              const confidence   = deriveConfidence(risk);
-              const confLevel    = confidenceLabel(confidence);
-              const clauseRef    = deriveClauseRef(risk);
-              const whyItMatters = getWhyThisMatters(risk);
-              const confColor    = confidence >= 90 ? "#10b981" : confidence >= 84 ? "#60a5fa" : "#f59e0b";
 
               return (
                 <div key={risk.id}>
@@ -1039,19 +649,6 @@ function DetectedRisksTable({
                         : "—"}
                     </p>
 
-                    {/* Status */}
-                    <span
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: "5px",
-                        fontSize: "0.66rem", fontWeight: 600,
-                        padding: "3px 9px", borderRadius: "999px",
-                        color: status.color, background: status.bg, width: "fit-content",
-                      }}
-                    >
-                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: status.color, flexShrink: 0 }} />
-                      {status.label}
-                    </span>
-
                     {/* Date */}
                     <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
                       {risk.created_at
@@ -1091,10 +688,8 @@ function DetectedRisksTable({
                         >
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", paddingTop: "14px" }}>
 
-                            {/* ── Left column: Clause + Risk Explanation + Why This Matters ── */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                              {/* Exact clause */}
+                            {/* ── Left column: Exact Clause ── */}
+                            <div>
                               {risk.source_snippet ? (
                                 <div
                                   style={{
@@ -1102,28 +697,15 @@ function DetectedRisksTable({
                                     background: "rgba(255,255,255,0.018)",
                                     border: "1px solid rgba(239,68,68,0.16)",
                                     borderLeft: "3px solid rgba(239,68,68,0.5)",
+                                    height: "100%", boxSizing: "border-box",
                                   }}
                                 >
                                   <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "9px" }}>
                                     Exact Clause
                                   </p>
                                   <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.75, fontStyle: "italic" }}>
-                                    &ldquo;{risk.source_snippet.slice(0, 280)}{risk.source_snippet.length > 280 ? "…" : ""}&rdquo;
+                                    &ldquo;{risk.source_snippet.slice(0, 320)}{risk.source_snippet.length > 320 ? "…" : ""}&rdquo;
                                   </p>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setModalRisk(risk); }}
-                                    style={{
-                                      marginTop: "10px", display: "inline-flex", alignItems: "center", gap: "5px",
-                                      fontSize: "0.67rem", color: "#f87171",
-                                      background: "transparent", border: "none", cursor: "pointer", padding: 0,
-                                      transition: "opacity 0.15s",
-                                    }}
-                                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.7")}
-                                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-                                  >
-                                    <FileSearch size={11} />
-                                    View Full Clause
-                                  </button>
                                 </div>
                               ) : (
                                 <div
@@ -1138,8 +720,12 @@ function DetectedRisksTable({
                                   </p>
                                 </div>
                               )}
+                            </div>
 
-                              {/* Risk Explanation */}
+                            {/* ── Right column: What This Clause Means + Recommended Action + Metadata ── */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+                              {/* What This Clause Means */}
                               {risk.explanation && (
                                 <div
                                   style={{
@@ -1160,53 +746,6 @@ function DetectedRisksTable({
                                 </div>
                               )}
 
-                              {/* Why This Matters */}
-                              {whyItMatters && (
-                                <div
-                                  style={{
-                                    padding: "14px 16px", borderRadius: "12px",
-                                    background: "rgba(245,158,11,0.04)",
-                                    border: "1px solid rgba(245,158,11,0.12)",
-                                  }}
-                                >
-                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "9px" }}>
-                                    <Lightbulb size={11} style={{ color: "#fbbf24" }} />
-                                    <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                      Why This Matters
-                                    </p>
-                                  </div>
-                                  <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.9 }}>{whyItMatters}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* ── Right column: Business Impact + Recommended Action + Risk Indicators + Metadata ── */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                              {/* Potential Business Consequences */}
-                              <div
-                                style={{
-                                  padding: "14px 16px", borderRadius: "12px",
-                                  background: "rgba(239,68,68,0.04)",
-                                  border: "1px solid rgba(239,68,68,0.10)",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                                  <Activity size={11} style={{ color: "#f87171" }} />
-                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                    Potential Business Consequences
-                                  </p>
-                                </div>
-                                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "5px" }}>
-                                  {getBusinessImpact(risk).map((impact) => (
-                                    <li key={impact} style={{ display: "flex", gap: "7px", alignItems: "flex-start" }}>
-                                      <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.85rem", lineHeight: 1.35 }}>·</span>
-                                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", lineHeight: 1.65 }}>{impact}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-
                               {/* Recommended Action */}
                               {risk.suggested_action && (
                                 <div
@@ -1226,72 +765,16 @@ function DetectedRisksTable({
                                 </div>
                               )}
 
-                              {/* Risk Indicators */}
+                              {/* Metadata */}
                               <div
                                 style={{
-                                  padding: "14px 16px", borderRadius: "12px",
-                                  background: "rgba(99,102,241,0.04)",
-                                  border: "1px solid rgba(99,102,241,0.11)",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                                  <Zap size={11} style={{ color: "#818cf8" }} />
-                                  <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                    Flagged Contract Terms
-                                  </p>
-                                </div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                                  {extractTriggerTerms(risk).map((term) => (
-                                    <span
-                                      key={term}
-                                      style={{
-                                        fontSize: "0.64rem", color: "#64748b",
-                                        background: "rgba(255,255,255,0.04)",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        borderRadius: "5px", padding: "2px 8px",
-                                        fontFamily: "var(--font-mono,monospace)",
-                                      }}
-                                    >
-                                      {term}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Metadata + Actions */}
-                              <div
-                                style={{
-                                  padding: "14px 16px", borderRadius: "12px",
+                                  padding: "12px 14px", borderRadius: "12px",
                                   background: "rgba(255,255,255,0.02)",
                                   border: "1px solid rgba(255,255,255,0.06)",
                                   display: "flex", flexDirection: "column", gap: "8px",
+                                  marginTop: "auto",
                                 }}
                               >
-                                {/* Confidence */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                    <Percent size={10} style={{ color: "#475569" }} />
-                                    <span style={{ fontSize: "0.67rem", color: "#475569" }}>AI Detection Confidence</span>
-                                  </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                                    <div style={{ width: "48px", height: "3px", borderRadius: "999px", background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                                      <div style={{ height: "100%", borderRadius: "999px", width: `${confidence}%`, background: confColor, transition: "width 0.6s ease" }} />
-                                    </div>
-                                    <span style={{ fontSize: "0.67rem", color: confColor, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
-                                      {confidence}% <span style={{ fontWeight: 400, color: "#475569" }}>· {confLevel}</span>
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Clause reference */}
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                    <FileSearch size={10} style={{ color: "#475569" }} />
-                                    <span style={{ fontSize: "0.67rem", color: "#475569" }}>Clause Reference</span>
-                                  </div>
-                                  <span style={{ fontSize: "0.67rem", color: "#94a3b8", fontFamily: "var(--font-mono,monospace)" }}>{clauseRef} · {formatRiskType(risk.risk_type)}</span>
-                                </div>
-
                                 {/* Flagged time */}
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -1326,27 +809,6 @@ function DetectedRisksTable({
                                   </Link>
                                 </div>
 
-                                {/* Action buttons */}
-                                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                                  {risk.source_snippet && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setModalRisk(risk); }}
-                                      style={{
-                                        flex: 1, padding: "7px 10px", borderRadius: "8px",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        background: "rgba(255,255,255,0.04)",
-                                        color: "#64748b", fontSize: "0.7rem", fontWeight: 500,
-                                        cursor: "pointer", display: "flex", alignItems: "center",
-                                        justifyContent: "center", gap: "5px",
-                                        transition: "all 0.15s ease",
-                                      }}
-                                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)"; }}
-                                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
-                                    >
-                                      <FileSearch size={11} /> View Clause
-                                    </button>
-                                  )}
-                                </div>
                               </div>
                             </div>
                           </div>
@@ -1361,10 +823,6 @@ function DetectedRisksTable({
         )}
       </div>
 
-      {/* Full-clause modal */}
-      <AnimatePresence>
-        {modalRisk && <ClauseModal risk={modalRisk} onClose={() => setModalRisk(null)} />}
-      </AnimatePresence>
     </>
   );
 }
@@ -1393,18 +851,8 @@ function AIRiskSummaryPanel({
     ? sorted.filter((r) => r.severity?.toLowerCase() === topSeverity)
     : [];
 
-  const clauseCounts = risks.reduce(
-    (acc, r) => {
-      const type = r.risk_type || "Unknown";
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  const topClause = Object.entries(clauseCounts).sort((a, b) => b[1] - a[1])[0];
-
   // ── Build contract-specific summary items from real risk data ─────────────
-  type SummaryItem = { label: string; text: string; type: "escalated" | "exposure" | "counsel" };
+  type SummaryItem = { label: string; text: string; type: "escalated" | "counsel" };
   const summaryItems: SummaryItem[] = [];
 
   // 1. Escalated — single risk: show title + explanation; multiple: summarise all by name
@@ -1423,29 +871,7 @@ function AIRiskSummaryPanel({
     summaryItems.push({ label: "High Priority", text: escalatedText, type: "escalated" });
   }
 
-  // 2. Exposure Pattern — dominant category, or neutral message when categories are tied
-  if (topClause && risks.length > 0) {
-    const maxCount  = topClause[1];
-    const tiedAtMax = Object.entries(clauseCounts).filter(([, c]) => c === maxCount);
-    if (tiedAtMax.length > 1) {
-      summaryItems.push({
-        label: "Risk Concentration",
-        text:  "Risks are spread evenly across different clause types, with no single area standing out as the dominant concern.",
-        type:  "exposure",
-      });
-    } else {
-      const typeName = formatRiskType(topClause[0]);
-      const count    = topClause[1];
-      const pct      = Math.round((count / risks.length) * 100);
-      summaryItems.push({
-        label: "Risk Concentration",
-        text:  `${typeName} clauses account for ${count} of ${risks.length} flagged risk${risks.length !== 1 ? "s" : ""} (${pct}%), making it the most common source of concern in this contract.`,
-        type:  "exposure",
-      });
-    }
-  }
-
-  // 3–4. Key Recommendations — unique recommended actions from the actual detected risks,
+  // 2. Key Recommendations — unique recommended actions from the actual detected risks,
   //      ordered by severity so the most critical actions surface first.
   const sortedBySeverity = [...risks].sort(
     (a, b) =>
@@ -1473,16 +899,6 @@ function AIRiskSummaryPanel({
         } as React.CSSProperties,
         rowBg:     "rgba(239,68,68,0.04)",
         rowBorder: "1px solid rgba(239,68,68,0.12)",
-      };
-    if (type === "exposure")
-      return {
-        style: {
-          background: "rgba(245,158,11,0.1)",
-          color: "#fbbf24",
-          border: "1px solid rgba(245,158,11,0.2)",
-        } as React.CSSProperties,
-        rowBg:     "rgba(245,158,11,0.025)",
-        rowBorder: "1px solid rgba(255,255,255,0.05)",
       };
     return {
       style: {
@@ -2107,237 +1523,6 @@ function TopClauseIssuesCard({
   );
 }
 
-/* ─── Compliance Score Card ──────────────────────────────────────── */
-function ComplianceScoreCard({
-  risks,
-  loading,
-}: {
-  risks: Risk[];
-  loading: boolean;
-}) {
-  const highCount   = risks.filter((r) => ["high", "critical"].includes(r.severity?.toLowerCase())).length;
-  const mediumCount = risks.filter((r) => ["medium", "moderate"].includes(r.severity?.toLowerCase())).length;
-  const lowCount    = risks.filter((r) => r.severity?.toLowerCase() === "low").length;
-
-  // Rule-based scoring: -10 per high, -5 per medium, -2 per low; clamped 0–100
-  const highPenalty   = highCount   * 10;
-  const mediumPenalty = mediumCount * 5;
-  const lowPenalty    = lowCount    * 2;
-  const score =
-    risks.length === 0
-      ? 100
-      : Math.max(0, Math.min(100, Math.round(100 - highPenalty - mediumPenalty - lowPenalty)));
-
-  const scoreColor = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
-  const scoreLabel = score >= 80 ? "Compliant" : score >= 60 ? "Needs Attention" : "At Risk";
-  const circumference = 2 * Math.PI * 38;
-  const dash = (score / 100) * circumference;
-
-  const breakdown = [
-    { label: "High / Critical", penalty: highPenalty,   color: "#f87171" },
-    { label: "Medium risks",    penalty: mediumPenalty, color: "#fbbf24" },
-    { label: "Low severity",    penalty: lowPenalty,    color: "#34d399" },
-  ];
-
-  return (
-    <div style={CARD}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "20px 24px",
-          ...DIVIDER,
-        }}
-      >
-        <div
-          style={{
-            width: "30px",
-            height: "30px",
-            borderRadius: "10px",
-            background: "rgba(16,185,129,0.1)",
-            border: "1px solid rgba(16,185,129,0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <Shield size={13} style={{ color: "#34d399" }} />
-        </div>
-        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
-          Overall Contract Risk Score
-        </span>
-      </div>
-
-      <div style={{ padding: "20px 24px" }}>
-        {loading ? (
-          <>
-            <div className="skeleton h-24 w-24 rounded-full mx-auto mb-4" />
-            <div className="skeleton h-3.5 w-20 rounded mx-auto mb-6" />
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <div className="skeleton h-2.5 w-24 rounded" />
-                  <div className="skeleton h-2.5 w-12 rounded" />
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Gauge */}
-            <div
-              style={{
-                position: "relative",
-                width: "100px",
-                height: "100px",
-                margin: "0 auto 12px",
-              }}
-            >
-              <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.05)"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  fill="none"
-                  stroke={scoreColor}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${dash} ${circumference}`}
-                  transform="rotate(-90 50 50)"
-                  style={{
-                    transition: "stroke-dasharray 1s cubic-bezier(0.22, 1, 0.36, 1)",
-                    filter: `drop-shadow(0 0 6px ${scoreColor}88)`,
-                  }}
-                />
-              </svg>
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "1.6rem",
-                    fontWeight: 700,
-                    color: "#f8fafc",
-                    lineHeight: 1,
-                  }}
-                >
-                  {score}
-                </span>
-                <span style={{ fontSize: "0.58rem", color: "#475569", marginTop: "2px" }}>/100</span>
-              </div>
-            </div>
-
-            {/* Label */}
-            <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <p style={{ fontSize: "0.82rem", fontWeight: 600, color: scoreColor }}>
-                {scoreLabel}
-              </p>
-              <p style={{ fontSize: "0.68rem", color: "#64748b", marginTop: "3px" }}>
-                Based on risk severity profile
-              </p>
-            </div>
-
-            {/* Score breakdown */}
-            <div
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
-                borderRadius: "12px",
-                padding: "12px 14px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "0.58rem",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  color: "#64748b",
-                  marginBottom: "10px",
-                }}
-              >
-                Score Breakdown
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {breakdown.map(({ label, penalty, color }) => (
-                  <div
-                    key={label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <div
-                        style={{
-                          width: "5px",
-                          height: "5px",
-                          borderRadius: "50%",
-                          background: color,
-                        }}
-                      />
-                      <span style={{ fontSize: "0.7rem", color: "#64748b" }}>{label}</span>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 500,
-                        color: penalty > 0 ? "#f87171" : "#475569",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {penalty > 0 ? `−${penalty} pts` : "No penalty"}
-                    </span>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingTop: "8px",
-                    borderTop: "1px solid rgba(255,255,255,0.05)",
-                    marginTop: "2px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <TrendingDown size={10} style={{ color: scoreColor }} />
-                    <span style={{ fontSize: "0.7rem", color: "#64748b" }}>Final score</span>
-                  </div>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: scoreColor }}>
-                    {score} / 100
-                  </span>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function RisksPage() {
   const [risks,            setRisks]            = useState<Risk[]>([]);
@@ -2519,14 +1704,13 @@ export default function RisksPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
+              gridTemplateColumns: "1fr 1fr",
               gap: "20px",
               marginBottom: "32px",
             }}
           >
             <RiskDistributionCard risks={contractRisks} loading={loading} />
             <TopClauseIssuesCard  risks={contractRisks} loading={loading} />
-            <ComplianceScoreCard  risks={contractRisks} loading={loading} />
           </div>
         </FadeUp>
 
