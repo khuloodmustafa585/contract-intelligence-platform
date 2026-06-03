@@ -196,7 +196,7 @@ function ContractsContent() {
               style={{
                 fontSize: "1.75rem",
                 fontWeight: 700,
-                color: "#dae2fd",
+                color: "var(--th-text-1)",
                 letterSpacing: "-0.02em",
                 marginBottom: "6px",
               }}
@@ -285,7 +285,7 @@ function ContractsContent() {
               width: "280px",
               borderRadius: "12px",
               padding: "10px 14px",
-              background: "rgba(19,27,46,0.8)",
+              background: "var(--th-input-bg)",
               border: "1px solid rgba(99,102,241,0.14)",
               flexShrink: 0,
             }}
@@ -302,7 +302,7 @@ function ContractsContent() {
                 border: "none",
                 outline: "none",
                 fontSize: "0.82rem",
-                color: "#dae2fd",
+                color: "var(--th-text-1)",
               }}
               className="placeholder:text-[#64748b]"
             />
@@ -342,12 +342,12 @@ function ContractsContent() {
                   background:
                     statusFilter === s
                       ? "rgba(99,102,241,0.16)"
-                      : "rgba(255,255,255,0.03)",
+                      : "var(--th-subtle-bg)",
                   color: statusFilter === s ? "#a5b4fc" : "#64748b",
                   border:
                     statusFilter === s
                       ? "1px solid rgba(99,102,241,0.30)"
-                      : "1px solid rgba(255,255,255,0.06)",
+                      : "1px solid var(--th-surface-border)",
                 }}
                 onMouseEnter={(e) => {
                   if (statusFilter !== s)
@@ -548,7 +548,7 @@ function ContractsContent() {
                         style={{
                           fontSize: "0.88rem",
                           fontWeight: 600,
-                          color: "#dae2fd",
+                          color: "var(--th-text-1)",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -799,7 +799,7 @@ function ContractsContent() {
         >
           <div
             style={{
-              background: "rgba(13,17,34,0.98)",
+              background: "var(--th-dropdown-bg)",
               border: "1px solid rgba(99,102,241,0.20)",
               borderRadius: "18px",
               padding: "32px",
@@ -812,7 +812,7 @@ function ContractsContent() {
               style={{
                 fontSize: "1.05rem",
                 fontWeight: 700,
-                color: "#dae2fd",
+                color: "var(--th-text-1)",
                 marginBottom: "10px",
               }}
             >

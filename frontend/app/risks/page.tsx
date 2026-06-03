@@ -34,9 +34,9 @@ import { api, Risk, Contract } from "@/services/api";
 
 /* ─── Shared card style ──────────────────────────────────────────── */
 const CARD: React.CSSProperties = {
-  background:           "rgba(10, 20, 38, 0.65)",
-  border:               "1px solid rgba(255,255,255,0.06)",
-  boxShadow:            "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)",
+  background:           "var(--th-card-bg)",
+  border:               "1px solid var(--th-card-border)",
+  boxShadow:            "var(--th-card-shadow)",
   borderRadius:         "20px",
   backdropFilter:       "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
@@ -44,7 +44,7 @@ const CARD: React.CSSProperties = {
 };
 
 const DIVIDER: React.CSSProperties = {
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  borderBottom: "1px solid var(--th-divider)",
 };
 
 /* ─── Fade animation ─────────────────────────────────────────────── */
@@ -312,9 +312,9 @@ function ContractSelector({
         style={{
           display: "flex", alignItems: "center", gap: "10px",
           padding: "9px 16px", borderRadius: "12px",
-          background: selectedId != null ? "rgba(59,130,246,0.09)" : "rgba(255,255,255,0.04)",
-          border: selectedId != null ? "1px solid rgba(59,130,246,0.28)" : "1px solid rgba(255,255,255,0.08)",
-          color: selectedId != null ? "#60a5fa" : "#94a3b8",
+          background: selectedId != null ? "rgba(59,130,246,0.09)" : "var(--th-subtle-bg)",
+          border: selectedId != null ? "1px solid rgba(59,130,246,0.28)" : "1px solid var(--th-surface-border)",
+          color: selectedId != null ? "#60a5fa" : "var(--th-text-2)",
           fontSize: "0.82rem", fontWeight: 500,
           cursor: loading ? "not-allowed" : "pointer",
           opacity: loading ? 0.55 : 1, minWidth: "230px", maxWidth: "320px",
@@ -340,10 +340,10 @@ function ContractSelector({
             style={{
               position: "absolute", top: "calc(100% + 6px)", left: 0,
               minWidth: "290px", maxWidth: "380px",
-              background: "rgba(8,16,32,0.98)",
-              border: "1px solid rgba(255,255,255,0.09)",
+              background: "var(--th-dropdown-bg)",
+              border: "1px solid var(--th-dropdown-border)",
               borderRadius: "14px",
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+              boxShadow: "var(--th-dropdown-shadow)",
               zIndex: 1200, overflow: "hidden",
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
@@ -356,17 +356,17 @@ function ContractSelector({
                 display: "flex", alignItems: "center", gap: "10px",
                 width: "100%", padding: "12px 16px",
                 background: selectedId == null ? "rgba(59,130,246,0.09)" : "transparent",
-                border: "none", borderBottom: "1px solid rgba(255,255,255,0.05)",
-                color: selectedId == null ? "#60a5fa" : "#94a3b8",
+                border: "none", borderBottom: "1px solid var(--th-divider)",
+                color: selectedId == null ? "#60a5fa" : "var(--th-text-2)",
                 fontSize: "0.82rem", cursor: "pointer", textAlign: "left",
                 transition: "background 0.12s ease",
               }}
-              onMouseEnter={(e) => { if (selectedId != null) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseEnter={(e) => { if (selectedId != null) (e.currentTarget as HTMLElement).style.background = "var(--th-inner-hover)"; }}
               onMouseLeave={(e) => { if (selectedId != null) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
               <div style={{
                 width: "8px", height: "8px", borderRadius: "50%",
-                background: selectedId == null ? "#60a5fa" : "#334155",
+                background: selectedId == null ? "#60a5fa" : "var(--th-text-4)",
                 flexShrink: 0,
               }} />
               <div>
@@ -389,17 +389,17 @@ function ContractSelector({
                       display: "flex", alignItems: "flex-start", gap: "10px",
                       width: "100%", padding: "10px 16px",
                       background: isSelected ? "rgba(59,130,246,0.09)" : "transparent",
-                      border: "none", borderBottom: "1px solid rgba(255,255,255,0.03)",
-                      color: isSelected ? "#60a5fa" : "#94a3b8",
+                      border: "none", borderBottom: "1px solid var(--th-divider)",
+                      color: isSelected ? "#60a5fa" : "var(--th-text-2)",
                       fontSize: "0.8rem", cursor: "pointer", textAlign: "left",
                       transition: "background 0.12s ease",
                     }}
-                    onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                    onMouseEnter={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "var(--th-inner-hover)"; }}
                     onMouseLeave={(e) => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                   >
                     <div style={{
                       width: "7px", height: "7px", borderRadius: "50%",
-                      background: isSelected ? "#60a5fa" : "#334155",
+                      background: isSelected ? "#60a5fa" : "var(--th-text-4)",
                       flexShrink: 0, marginTop: "5px",
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -481,7 +481,7 @@ function PageHeader({
             fontSize: "2rem",
             fontWeight: 700,
             lineHeight: 1.15,
-            background: "linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%)",
+            background: "linear-gradient(135deg, var(--th-title-from) 0%, var(--th-title-to) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -543,8 +543,8 @@ function PageHeader({
           flexWrap: "wrap",
           gap: "8px",
           padding: "10px 12px",
-          background: "rgba(255,255,255,0.025)",
-          border: "1px solid rgba(255,255,255,0.05)",
+          background: "var(--th-subtle-bg)",
+          border: "1px solid var(--th-surface-border)",
           borderRadius: "14px",
           width: "fit-content",
         }}
@@ -561,7 +561,7 @@ function PageHeader({
                 borderRadius: "999px",
                 fontSize: "0.78rem",
                 fontWeight: active ? 600 : 400,
-                color: active ? "#f1f5f9" : "#475569",
+                color: active ? "var(--th-text-1)" : "#475569",
                 background: active
                   ? isHigh
                     ? "rgba(239,68,68,0.18)"
@@ -578,8 +578,8 @@ function PageHeader({
               onMouseEnter={(e) => {
                 if (!active) {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.color = "#94a3b8";
-                  el.style.background = "rgba(255,255,255,0.06)";
+                  el.style.color = "var(--th-text-2)";
+                  el.style.background = "var(--th-hover-bg)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -627,8 +627,8 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
         style={{
           width: "min(720px, 92vw)", maxHeight: "82vh",
           display: "flex", flexDirection: "column",
-          background: "rgba(8, 16, 32, 0.98)",
-          border: "1px solid rgba(255,255,255,0.09)",
+          background: "var(--th-dropdown-bg)",
+          border: "1px solid var(--th-dropdown-border)",
           borderRadius: "22px",
           boxShadow: "0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(239,68,68,0.08)",
           overflow: "hidden",
@@ -639,8 +639,8 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
           style={{
             display: "flex", alignItems: "center", gap: "14px",
             padding: "20px 24px",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(10,16,32,0) 100%)",
+            borderBottom: "1px solid var(--th-divider)",
+            background: "linear-gradient(135deg, rgba(239,68,68,0.06) 0%, transparent 100%)",
             flexShrink: 0,
           }}
         >
@@ -654,7 +654,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             <FileSearch size={15} style={{ color: "#f87171" }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#f1f5f9", marginBottom: "2px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--th-text-1)", marginBottom: "2px" }}>
               {formatRiskTitle(risk.title)}
             </p>
             <p style={{ fontSize: "0.7rem", color: "#475569" }}>
@@ -667,7 +667,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: "30px", height: "30px", borderRadius: "9px",
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)",
+              background: "var(--th-subtle-bg)", border: "1px solid var(--th-surface-border)",
               color: "#64748b", cursor: "pointer", flexShrink: 0,
             }}
           >
@@ -681,7 +681,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
           <div
             style={{
               padding: "18px 20px", borderRadius: "13px",
-              background: "rgba(255,255,255,0.02)",
+              background: "var(--th-subtle-bg)",
               border: "1px solid rgba(239,68,68,0.18)",
               borderLeft: "3px solid rgba(239,68,68,0.55)",
             }}
@@ -689,7 +689,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "12px" }}>
               Exact Contract Clause
             </p>
-            <p style={{ fontSize: "0.875rem", color: "#cbd5e1", lineHeight: 1.8, fontStyle: "italic" }}>
+            <p style={{ fontSize: "0.875rem", color: "var(--th-text-1)", lineHeight: 1.8, fontStyle: "italic" }}>
               &ldquo;{risk.source_snippet ?? "No clause text captured for this risk."}&rdquo;
             </p>
           </div>
@@ -701,7 +701,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
                 <Brain size={12} style={{ color: "#a78bfa" }} />
                 <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>What This Clause Means</p>
               </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.explanation}</p>
+              <p style={{ fontSize: "0.84rem", color: "var(--th-text-2)", lineHeight: 1.9 }}>{risk.explanation}</p>
             </div>
           )}
 
@@ -712,7 +712,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
                 <Lightbulb size={12} style={{ color: "#fbbf24" }} />
                 <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.1em" }}>Why This Matters</p>
               </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>
+              <p style={{ fontSize: "0.84rem", color: "var(--th-text-2)", lineHeight: 1.9 }}>
                 {getWhyThisMatters(risk)}
               </p>
             </div>
@@ -728,7 +728,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
               {getBusinessImpact(risk).map((impact) => (
                 <li key={impact} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
                   <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>·</span>
-                  <span style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.75 }}>{impact}</span>
+                  <span style={{ fontSize: "0.82rem", color: "var(--th-text-2)", lineHeight: 1.75 }}>{impact}</span>
                 </li>
               ))}
             </ul>
@@ -741,7 +741,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
                 <Target size={12} style={{ color: "#34d399" }} />
                 <p style={{ fontSize: "0.6rem", fontWeight: 700, color: "#34d399", textTransform: "uppercase", letterSpacing: "0.1em" }}>Recommended Action</p>
               </div>
-              <p style={{ fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.suggested_action}</p>
+              <p style={{ fontSize: "0.84rem", color: "var(--th-text-2)", lineHeight: 1.9 }}>{risk.suggested_action}</p>
             </div>
           )}
 
@@ -757,8 +757,8 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
                   key={term}
                   style={{
                     fontSize: "0.67rem", color: "#64748b",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.09)",
+                    background: "var(--th-subtle-bg)",
+                    border: "1px solid var(--th-surface-border)",
                     borderRadius: "5px", padding: "3px 9px",
                     fontFamily: "var(--font-mono,monospace)",
                   }}
@@ -773,7 +773,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
         {/* Modal footer */}
         <div
           style={{
-            padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.06)",
+            padding: "16px 24px", borderTop: "1px solid var(--th-divider)",
             display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0,
           }}
         >
@@ -781,7 +781,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
             <Percent size={11} style={{ color: "#475569" }} />
             <span style={{ fontSize: "0.7rem", color: "#475569" }}>
               Detection confidence:{" "}
-              <span style={{ color: "#94a3b8", fontWeight: 600 }}>
+              <span style={{ color: "var(--th-text-2)", fontWeight: 600 }}>
                 {confidenceLabel(deriveConfidence(risk))}
               </span>
             </span>
@@ -791,7 +791,7 @@ function ClauseModal({ risk, onClose }: { risk: Risk; onClose: () => void }) {
               onClick={onClose}
               style={{
                 padding: "8px 18px", borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.08)", background: "transparent",
+                border: "1px solid var(--th-surface-border)", background: "transparent",
                 color: "#64748b", fontSize: "0.8rem", cursor: "pointer",
               }}
             >
@@ -852,14 +852,14 @@ function DetectedRisksTable({
           >
             <ShieldAlert size={13} style={{ color: "#f87171" }} />
           </div>
-          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
             Detected Risks
           </span>
           {!loading && (
             <span
               style={{
                 fontSize: "0.72rem", fontWeight: 500, color: "#475569",
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)",
+                background: "var(--th-subtle-bg)", border: "1px solid var(--th-surface-border)",
                 borderRadius: "999px", padding: "2px 10px",
               }}
             >
@@ -874,8 +874,8 @@ function DetectedRisksTable({
             style={{
               display: "grid", gridTemplateColumns: COLS,
               padding: "10px 24px",
-              background: "rgba(255,255,255,0.015)",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
+              background: "var(--th-table-header-bg)",
+              borderBottom: "1px solid var(--th-divider)",
             }}
           >
             {["Contract / Risk", "Clause Type", "Severity", "AI Explanation", "Status", "Date", ""].map((h) => (
@@ -898,7 +898,7 @@ function DetectedRisksTable({
                 style={{
                   display: "grid", gridTemplateColumns: COLS,
                   alignItems: "center", padding: "16px 24px", gap: "8px",
-                  borderBottom: i < 5 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                  borderBottom: i < 5 ? "1px solid var(--th-row-divider)" : "none",
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -970,7 +970,7 @@ function DetectedRisksTable({
                       display: "grid", gridTemplateColumns: COLS,
                       alignItems: "center", padding: "15px 24px", gap: "8px",
                       borderBottom: !isExpanded && i < risks.length - 1
-                        ? "1px solid rgba(255,255,255,0.03)"
+                        ? "1px solid var(--th-row-divider)"
                         : "none",
                       cursor: "pointer",
                       background: isExpanded ? "rgba(239,68,68,0.04)" : "transparent",
@@ -978,7 +978,7 @@ function DetectedRisksTable({
                       outline: "none",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)";
+                      if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "var(--th-inner-hover)";
                     }}
                     onMouseLeave={(e) => {
                       if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "transparent";
@@ -986,7 +986,7 @@ function DetectedRisksTable({
                   >
                     {/* Contract / Risk */}
                     <div style={{ minWidth: 0, paddingRight: "8px" }}>
-                      <p style={{ fontSize: "0.82rem", fontWeight: 500, color: isExpanded ? "#f1f5f9" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "4px" }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--th-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "4px" }}>
                         {formatRiskTitle(risk.title)}
                       </p>
                       {/* Clickable contract badge */}
@@ -1017,7 +1017,7 @@ function DetectedRisksTable({
                     <span
                       style={{
                         fontSize: "0.68rem", fontWeight: 500, color: "#64748b",
-                        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)",
+                        background: "var(--th-subtle-bg)", border: "1px solid var(--th-surface-border)",
                         borderRadius: "6px", padding: "3px 8px", display: "inline-block",
                         width: "fit-content", whiteSpace: "nowrap", overflow: "hidden",
                         textOverflow: "ellipsis", maxWidth: "100%",
@@ -1085,8 +1085,8 @@ function DetectedRisksTable({
                         <div
                           style={{
                             padding: "4px 24px 24px",
-                            borderBottom: i < risks.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                            background: "linear-gradient(180deg, rgba(239,68,68,0.025) 0%, rgba(10,16,32,0.0) 100%)",
+                            borderBottom: i < risks.length - 1 ? "1px solid var(--th-divider)" : "none",
+                            background: "linear-gradient(180deg, rgba(239,68,68,0.025) 0%, transparent 100%)",
                           }}
                         >
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", paddingTop: "14px" }}>
@@ -1099,7 +1099,7 @@ function DetectedRisksTable({
                                 <div
                                   style={{
                                     padding: "14px 16px", borderRadius: "12px",
-                                    background: "rgba(255,255,255,0.018)",
+                                    background: "var(--th-subtle-bg)",
                                     border: "1px solid rgba(239,68,68,0.16)",
                                     borderLeft: "3px solid rgba(239,68,68,0.5)",
                                   }}
@@ -1107,7 +1107,7 @@ function DetectedRisksTable({
                                   <p style={{ fontSize: "0.58rem", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "9px" }}>
                                     Exact Clause
                                   </p>
-                                  <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.75, fontStyle: "italic" }}>
+                                  <p style={{ fontSize: "0.76rem", color: "var(--th-text-2)", lineHeight: 1.75, fontStyle: "italic" }}>
                                     &ldquo;{risk.source_snippet.slice(0, 280)}{risk.source_snippet.length > 280 ? "…" : ""}&rdquo;
                                   </p>
                                   <button
@@ -1129,8 +1129,8 @@ function DetectedRisksTable({
                                 <div
                                   style={{
                                     padding: "14px 16px", borderRadius: "12px",
-                                    background: "rgba(255,255,255,0.02)",
-                                    border: "1px solid rgba(255,255,255,0.06)",
+                                    background: "var(--th-subtle-bg)",
+                                    border: "1px solid var(--th-surface-border)",
                                   }}
                                 >
                                   <p style={{ fontSize: "0.74rem", color: "#64748b", fontStyle: "italic" }}>
@@ -1154,7 +1154,7 @@ function DetectedRisksTable({
                                       What This Clause Means
                                     </p>
                                   </div>
-                                  <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.85 }}>
+                                  <p style={{ fontSize: "0.76rem", color: "var(--th-text-2)", lineHeight: 1.85 }}>
                                     {risk.explanation}
                                   </p>
                                 </div>
@@ -1175,7 +1175,7 @@ function DetectedRisksTable({
                                       Why This Matters
                                     </p>
                                   </div>
-                                  <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.9 }}>{whyItMatters}</p>
+                                  <p style={{ fontSize: "0.76rem", color: "var(--th-text-2)", lineHeight: 1.9 }}>{whyItMatters}</p>
                                 </div>
                               )}
                             </div>
@@ -1201,7 +1201,7 @@ function DetectedRisksTable({
                                   {getBusinessImpact(risk).map((impact) => (
                                     <li key={impact} style={{ display: "flex", gap: "7px", alignItems: "flex-start" }}>
                                       <span style={{ color: "#f87171", flexShrink: 0, fontSize: "0.85rem", lineHeight: 1.35 }}>·</span>
-                                      <span style={{ fontSize: "0.74rem", color: "#94a3b8", lineHeight: 1.65 }}>{impact}</span>
+                                      <span style={{ fontSize: "0.74rem", color: "var(--th-text-2)", lineHeight: 1.65 }}>{impact}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -1222,7 +1222,7 @@ function DetectedRisksTable({
                                       Recommended Action
                                     </p>
                                   </div>
-                                  <p style={{ fontSize: "0.76rem", color: "#94a3b8", lineHeight: 1.9 }}>{risk.suggested_action}</p>
+                                  <p style={{ fontSize: "0.76rem", color: "var(--th-text-2)", lineHeight: 1.9 }}>{risk.suggested_action}</p>
                                 </div>
                               )}
 
@@ -1246,8 +1246,8 @@ function DetectedRisksTable({
                                       key={term}
                                       style={{
                                         fontSize: "0.64rem", color: "#64748b",
-                                        background: "rgba(255,255,255,0.04)",
-                                        border: "1px solid rgba(255,255,255,0.08)",
+                                        background: "var(--th-subtle-bg)",
+                                        border: "1px solid var(--th-surface-border)",
                                         borderRadius: "5px", padding: "2px 8px",
                                         fontFamily: "var(--font-mono,monospace)",
                                       }}
@@ -1262,8 +1262,8 @@ function DetectedRisksTable({
                               <div
                                 style={{
                                   padding: "14px 16px", borderRadius: "12px",
-                                  background: "rgba(255,255,255,0.02)",
-                                  border: "1px solid rgba(255,255,255,0.06)",
+                                  background: "var(--th-subtle-bg)",
+                                  border: "1px solid var(--th-surface-border)",
                                   display: "flex", flexDirection: "column", gap: "8px",
                                 }}
                               >
@@ -1274,7 +1274,7 @@ function DetectedRisksTable({
                                     <span style={{ fontSize: "0.67rem", color: "#475569" }}>AI Detection Confidence</span>
                                   </div>
                                   <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                                    <div style={{ width: "48px", height: "3px", borderRadius: "999px", background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                                    <div style={{ width: "48px", height: "3px", borderRadius: "999px", background: "var(--th-gauge-track)", overflow: "hidden" }}>
                                       <div style={{ height: "100%", borderRadius: "999px", width: `${confidence}%`, background: confColor, transition: "width 0.6s ease" }} />
                                     </div>
                                     <span style={{ fontSize: "0.67rem", color: confColor, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
@@ -1289,7 +1289,7 @@ function DetectedRisksTable({
                                     <FileSearch size={10} style={{ color: "#475569" }} />
                                     <span style={{ fontSize: "0.67rem", color: "#475569" }}>Clause Reference</span>
                                   </div>
-                                  <span style={{ fontSize: "0.67rem", color: "#94a3b8", fontFamily: "var(--font-mono,monospace)" }}>{clauseRef} · {formatRiskType(risk.risk_type)}</span>
+                                  <span style={{ fontSize: "0.67rem", color: "var(--th-text-2)", fontFamily: "var(--font-mono,monospace)" }}>{clauseRef} · {formatRiskType(risk.risk_type)}</span>
                                 </div>
 
                                 {/* Flagged time */}
@@ -1333,15 +1333,15 @@ function DetectedRisksTable({
                                       onClick={(e) => { e.stopPropagation(); setModalRisk(risk); }}
                                       style={{
                                         flex: 1, padding: "7px 10px", borderRadius: "8px",
-                                        border: "1px solid rgba(255,255,255,0.08)",
-                                        background: "rgba(255,255,255,0.04)",
+                                        border: "1px solid var(--th-surface-border)",
+                                        background: "var(--th-subtle-bg)",
                                         color: "#64748b", fontSize: "0.7rem", fontWeight: 500,
                                         cursor: "pointer", display: "flex", alignItems: "center",
                                         justifyContent: "center", gap: "5px",
                                         transition: "all 0.15s ease",
                                       }}
-                                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)"; }}
-                                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
+                                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--th-text-2)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--th-card-border)"; }}
+                                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.borderColor = "var(--th-surface-border)"; }}
                                     >
                                       <FileSearch size={11} /> View Clause
                                     </button>
@@ -1482,7 +1482,7 @@ function AIRiskSummaryPanel({
           border: "1px solid rgba(245,158,11,0.2)",
         } as React.CSSProperties,
         rowBg:     "rgba(245,158,11,0.025)",
-        rowBorder: "1px solid rgba(255,255,255,0.05)",
+        rowBorder: "1px solid var(--th-surface-border)",
       };
     return {
       style: {
@@ -1490,8 +1490,8 @@ function AIRiskSummaryPanel({
         color: "#60a5fa",
         border: "1px solid rgba(59,130,246,0.2)",
       } as React.CSSProperties,
-      rowBg:     "rgba(255,255,255,0.02)",
-      rowBorder: "1px solid rgba(255,255,255,0.05)",
+      rowBg:     "var(--th-subtle-bg)",
+      rowBorder: "1px solid var(--th-surface-border)",
     };
   };
 
@@ -1505,7 +1505,7 @@ function AIRiskSummaryPanel({
       <div
         style={{
           padding: "20px 24px 16px",
-          background: "linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(59,130,246,0.06) 100%)",
+          background: "var(--th-insights-header-bg)",
           ...DIVIDER,
         }}
       >
@@ -1525,7 +1525,7 @@ function AIRiskSummaryPanel({
           >
             <Sparkles size={13} style={{ color: "#a78bfa" }} />
           </div>
-          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+          <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
             Risk Summary
           </span>
           <div
@@ -1566,8 +1566,8 @@ function AIRiskSummaryPanel({
                 style={{
                   padding: "12px 14px",
                   borderRadius: "12px",
-                  background: "rgba(255,255,255,0.025)",
-                  border: "1px solid rgba(255,255,255,0.05)",
+                  background: "var(--th-subtle-bg)",
+                  border: "1px solid var(--th-surface-border)",
                 }}
               >
                 <div className="skeleton h-2 w-16 rounded mb-2.5" />
@@ -1711,8 +1711,8 @@ function AIRiskSummaryPanel({
                   marginTop: "10px",
                   padding: "12px 14px",
                   borderRadius: "11px",
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.05)",
+                  background: "var(--th-subtle-bg)",
+                  border: "1px solid var(--th-surface-border)",
                   borderLeft: "3px solid rgba(239,68,68,0.45)",
                 }}
               >
@@ -1733,11 +1733,11 @@ function AIRiskSummaryPanel({
                     key={r.id}
                     style={
                       topRisks.length > 1 && idx < topRisks.length - 1
-                        ? { marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.05)" }
+                        ? { marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px solid var(--th-divider)" }
                         : undefined
                     }
                   >
-                    <p style={{ fontSize: "0.74rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "4px" }}>
+                    <p style={{ fontSize: "0.74rem", fontWeight: 600, color: "var(--th-text-1)", marginBottom: "4px" }}>
                       {formatRiskTitle(r.title)}
                     </p>
                     {r.source_snippet && (
@@ -1837,7 +1837,7 @@ function RiskDistributionCard({
         >
           <BarChart2 size={13} style={{ color: "#f87171" }} />
         </div>
-        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
           Risk Levels
         </span>
       </div>
@@ -1852,8 +1852,8 @@ function RiskDistributionCard({
               justifyContent: "space-between",
               marginBottom: "20px",
               padding: "10px 14px",
-              background: "rgba(255,255,255,0.025)",
-              border: "1px solid rgba(255,255,255,0.05)",
+              background: "var(--th-subtle-bg)",
+              border: "1px solid var(--th-surface-border)",
               borderRadius: "10px",
             }}
           >
@@ -1862,7 +1862,7 @@ function RiskDistributionCard({
               style={{
                 fontSize: "1rem",
                 fontWeight: 700,
-                color: total > 0 ? "#f1f5f9" : "#475569",
+                color: total > 0 ? "var(--th-text-1)" : "var(--th-text-3)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -1894,7 +1894,7 @@ function RiskDistributionCard({
                       boxShadow: `0 0 7px ${glow}`,
                     }}
                   />
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{label}</span>
+                  <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>{label}</span>
                 </div>
                 {loading ? (
                   <div className="skeleton h-3.5 w-8 rounded" />
@@ -1913,7 +1913,7 @@ function RiskDistributionCard({
                       style={{
                         fontSize: "0.82rem",
                         fontWeight: 600,
-                        color: value > 0 ? color : "#3d4a5a",
+                        color: value > 0 ? color : "var(--th-text-4)",
                         fontVariantNumeric: "tabular-nums",
                         minWidth: "16px",
                         textAlign: "right",
@@ -2005,7 +2005,7 @@ function TopClauseIssuesCard({
         >
           <Flag size={13} style={{ color: "#818cf8" }} />
         </div>
-        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
           Risk Categories
         </span>
       </div>
@@ -2064,7 +2064,7 @@ function TopClauseIssuesCard({
                           background: color,
                         }}
                       />
-                      <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                      <span style={{ fontSize: "0.78rem", color: "var(--th-text-2)" }}>
                         {formatRiskType(type)}
                       </span>
                     </div>
@@ -2072,7 +2072,7 @@ function TopClauseIssuesCard({
                       style={{
                         fontSize: "0.78rem",
                         fontWeight: 600,
-                        color: "#f1f5f9",
+                        color: "var(--th-text-1)",
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
@@ -2083,7 +2083,7 @@ function TopClauseIssuesCard({
                     style={{
                       height: "4px",
                       borderRadius: "999px",
-                      background: "rgba(255,255,255,0.04)",
+                      background: "var(--th-subtle-bg)",
                       overflow: "hidden",
                     }}
                   >
@@ -2165,7 +2165,7 @@ function ComplianceScoreCard({
         >
           <Shield size={13} style={{ color: "#34d399" }} />
         </div>
-        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#f1f5f9" }}>
+        <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "var(--th-text-1)" }}>
           Overall Contract Risk Score
         </span>
       </div>
@@ -2204,7 +2204,7 @@ function ComplianceScoreCard({
                   cy="50"
                   r="38"
                   fill="none"
-                  stroke="rgba(255,255,255,0.05)"
+                  stroke="var(--th-gauge-track)"
                   strokeWidth="8"
                 />
                 <circle
@@ -2237,7 +2237,7 @@ function ComplianceScoreCard({
                   style={{
                     fontSize: "1.6rem",
                     fontWeight: 700,
-                    color: "#f8fafc",
+                    color: "var(--th-text-1)",
                     lineHeight: 1,
                   }}
                 >
@@ -2260,8 +2260,8 @@ function ComplianceScoreCard({
             {/* Score breakdown */}
             <div
               style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
+                background: "var(--th-subtle-bg)",
+                border: "1px solid var(--th-surface-border)",
                 borderRadius: "12px",
                 padding: "12px 14px",
               }}
@@ -2317,7 +2317,7 @@ function ComplianceScoreCard({
                     alignItems: "center",
                     justifyContent: "space-between",
                     paddingTop: "8px",
-                    borderTop: "1px solid rgba(255,255,255,0.05)",
+                    borderTop: "1px solid var(--th-divider)",
                     marginTop: "2px",
                   }}
                 >
@@ -2537,7 +2537,7 @@ export default function RisksPage() {
             alignItems: "center",
             justifyContent: "space-between",
             paddingTop: "28px",
-            borderTop: "1px solid rgba(255,255,255,0.04)",
+            borderTop: "1px solid var(--th-divider)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>

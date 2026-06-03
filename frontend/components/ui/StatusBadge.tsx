@@ -8,25 +8,24 @@ type Status =
   | "ready"
   | string;
 
-const STATUS_MAP: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  // Contract processing statuses (backend values)
-  completed:        { bg: "rgba(16,185,129,0.12)",  text: "#34d399", dot: "#10b981", label: "Analyzed"         },
-  analyzed:         { bg: "rgba(16,185,129,0.12)",  text: "#34d399", dot: "#10b981", label: "Analyzed"         },
-  ready:            { bg: "rgba(16,185,129,0.12)",  text: "#34d399", dot: "#10b981", label: "Ready"            },
-  indexed:          { bg: "rgba(34,211,238,0.10)",  text: "#67e8f9", dot: "#22d3ee", label: "Indexed"          },
-  analysis_pending: { bg: "rgba(139,92,246,0.12)",  text: "#c4b5fd", dot: "#a78bfa", label: "Analyzing"        },
-  indexing:         { bg: "rgba(34,211,238,0.10)",  text: "#67e8f9", dot: "#22d3ee", label: "Indexing"         },
-  parsed:           { bg: "rgba(59,130,246,0.10)",  text: "#93c5fd", dot: "#3b82f6", label: "Parsed"           },
-  processing:       { bg: "rgba(245,158,11,0.12)",  text: "#fcd34d", dot: "#f59e0b", label: "Processing"       },
-  ocr_processing:   { bg: "rgba(245,158,11,0.10)",  text: "#fcd34d", dot: "#f59e0b", label: "OCR Processing"   },
-  uploaded:         { bg: "rgba(59,130,246,0.12)",  text: "#93c5fd", dot: "#3b82f6", label: "Uploaded"         },
-  pending:          { bg: "rgba(100,116,139,0.12)", text: "#94a3b8", dot: "#64748b", label: "Pending"             },
-  failed:           { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", dot: "#ef4444", label: "Failed"              },
-  analysis_failed:  { bg: "rgba(245,158,11,0.12)",  text: "#fcd34d", dot: "#f59e0b", label: "Analysis Unavailable" },
-  overdue:          { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", dot: "#ef4444", label: "Overdue"          },
+const STATUS_MAP: Record<string, { bg: string; textVar: string; dot: string; label: string }> = {
+  completed:        { bg: "rgba(16,185,129,0.12)",  textVar: "var(--badge-success-text)", dot: "#10b981", label: "Analyzed"              },
+  analyzed:         { bg: "rgba(16,185,129,0.12)",  textVar: "var(--badge-success-text)", dot: "#10b981", label: "Analyzed"              },
+  ready:            { bg: "rgba(16,185,129,0.12)",  textVar: "var(--badge-success-text)", dot: "#10b981", label: "Ready"                 },
+  indexed:          { bg: "rgba(34,211,238,0.10)",  textVar: "var(--badge-cyan-text)",    dot: "#22d3ee", label: "Indexed"               },
+  analysis_pending: { bg: "rgba(139,92,246,0.12)",  textVar: "var(--badge-purple-text)",  dot: "#a78bfa", label: "Analyzing"             },
+  indexing:         { bg: "rgba(34,211,238,0.10)",  textVar: "var(--badge-cyan-text)",    dot: "#22d3ee", label: "Indexing"              },
+  parsed:           { bg: "rgba(59,130,246,0.10)",  textVar: "var(--badge-blue-text)",    dot: "#3b82f6", label: "Parsed"               },
+  processing:       { bg: "rgba(245,158,11,0.12)",  textVar: "var(--badge-yellow-text)",  dot: "#f59e0b", label: "Processing"            },
+  ocr_processing:   { bg: "rgba(245,158,11,0.10)",  textVar: "var(--badge-yellow-text)",  dot: "#f59e0b", label: "OCR Processing"        },
+  uploaded:         { bg: "rgba(59,130,246,0.12)",  textVar: "var(--badge-blue-text)",    dot: "#3b82f6", label: "Uploaded"              },
+  pending:          { bg: "rgba(100,116,139,0.12)", textVar: "var(--badge-gray-text)",    dot: "#64748b", label: "Pending"              },
+  failed:           { bg: "rgba(239,68,68,0.12)",   textVar: "var(--badge-red-text)",     dot: "#ef4444", label: "Failed"               },
+  analysis_failed:  { bg: "rgba(245,158,11,0.12)",  textVar: "var(--badge-yellow-text)",  dot: "#f59e0b", label: "Analysis Unavailable"  },
+  overdue:          { bg: "rgba(239,68,68,0.12)",   textVar: "var(--badge-red-text)",     dot: "#ef4444", label: "Overdue"              },
 };
 
-const DEFAULT_STYLE = { bg: "rgba(100,116,139,0.1)", text: "#94a3b8", dot: "#64748b", label: "" };
+const DEFAULT_STYLE = { bg: "rgba(100,116,139,0.1)", textVar: "var(--badge-gray-text)", dot: "#64748b", label: "" };
 
 interface StatusBadgeProps {
   status: Status;
@@ -40,7 +39,7 @@ export default function StatusBadge({ status, pulse = false }: StatusBadgeProps)
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ background: s.bg, color: s.text }}
+      style={{ background: s.bg, color: s.textVar }}
     >
       <span className="relative flex h-1.5 w-1.5 shrink-0">
         {pulse && (
