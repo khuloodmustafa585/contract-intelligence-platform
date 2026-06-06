@@ -393,9 +393,10 @@ Responsibilities:
 * Alembic migrations
 * Contract lifecycle management
 * Analytics and dashboard backend logic
-* Policy and business rule implementation
 * Alerts and notification rules
 * Project documentation and technical planning
+* Backend debugging and enhancements
+
 
 ---
 
@@ -414,8 +415,6 @@ Responsibilities:
 * Ask AI functionality
 * Frontend implementation
 * Frontend-backend integration
-* Localization and translation support
-* Backend debugging and enhancements
 
 ---
 
