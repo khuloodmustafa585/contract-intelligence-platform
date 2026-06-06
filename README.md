@@ -388,6 +388,8 @@ npm run dev
 
 Responsibilities:
 
+* Project idea generation and concept development
+* Requirements analysis and system planning
 * Database design and architecture
 * SQLAlchemy models and relationships
 * Alembic migrations
@@ -396,6 +398,7 @@ Responsibilities:
 * Alerts and notification rules
 * Project documentation and technical planning
 * Backend debugging and enhancements
+* Team coordination and task organization
 
 
 ---
