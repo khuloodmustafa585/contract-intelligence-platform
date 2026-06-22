@@ -22,7 +22,6 @@ import {
   MapPin,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
-import RiskBadge from "@/components/ui/RiskBadge";
 import MetricCard from "@/components/ui/MetricCard";
 import { api, Risk, Contract } from "@/services/api";
 
@@ -449,7 +448,7 @@ function DetectedRisksTable({
     return `CTR-${String(contractId).padStart(4, "0")}`;
   }
 
-  const COLS = "2fr 1.1fr 0.85fr 1.8fr 0.85fr 36px";
+  const COLS = "2fr 1.1fr 1.8fr 0.85fr 36px";
 
   function toggleExpand(id: number) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -495,7 +494,7 @@ function DetectedRisksTable({
               borderBottom: "1px solid rgba(255,255,255,0.04)",
             }}
           >
-            {["Contract / Risk", "Clause Type", "Severity", "AI Explanation", "Date", ""].map((h) => (
+            {["Contract / Risk", "Clause Type", "AI Explanation", "Date", ""].map((h) => (
               <span
                 key={h}
                 style={{ fontSize: "0.58rem", fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}
@@ -523,7 +522,6 @@ function DetectedRisksTable({
                   <div className="skeleton h-2.5 w-20 rounded" />
                 </div>
                 <div className="skeleton h-5 w-24 rounded-lg" />
-                <div className="skeleton h-5 w-14 rounded-full" />
                 <div className="skeleton h-3 w-full rounded" />
                 <div className="skeleton h-3 w-16 rounded" />
                 <div />
@@ -635,9 +633,6 @@ function DetectedRisksTable({
                     >
                       {formatRiskType(risk.risk_type)}
                     </span>
-
-                    {/* Severity */}
-                    <div><RiskBadge level={risk.severity} /></div>
 
                     {/* AI Explanation (truncated) */}
                     <p
